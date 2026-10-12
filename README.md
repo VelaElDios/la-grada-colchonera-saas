@@ -74,7 +74,7 @@ Mientras no exista inicio de sesión (Hito 2), quien hace la petición se indica
 
 ## Despliegue
 
-- **URL pública:** _pendiente de publicar_
+- **URL pública:** https://la-grada-colchonera.onrender.com
 - Configuración en [`render.yaml`](render.yaml): Render construye con `npm ci`, arranca con `npm start` y comprueba la salud en `/api/health`.
 - Cada merge en `main` se despliega automáticamente. La capa gratuita suspende la app tras un rato de inactividad: la primera petición puede tardar unos segundos.
 
