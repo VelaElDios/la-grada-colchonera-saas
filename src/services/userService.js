@@ -112,6 +112,39 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
     return toPublicUser(user);
   }
 
+  /**
+   * Inicio de sesión con un proveedor externo (OAuth), con el email que nos da el proveedor.
+   * - Si no hay cuenta con ese email, se crea ya activa (el proveedor ha verificado el correo).
+   * - Si hay una cuenta local pendiente, queda confirmada por el mismo motivo.
+   * - Una cuenta eliminada no puede volver a entrar, tampoco con OAuth.
+   * @returns {Promise<{ user: object, created: boolean }>}
+   */
+  async function loginWithOAuth({ provider, email, emailVerified } = {}) {
+    if (provider === AUTH_PROVIDERS.LOCAL || !Object.values(AUTH_PROVIDERS).includes(provider)) {
+      throw new ValidationError('El proveedor de autenticación no es válido');
+    }
+    if (emailVerified !== true) {
+      throw new UnauthorizedError('Tu cuenta del proveedor externo no tiene el email verificado');
+    }
+    const normalizedEmail = normalizeEmail(email);
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      throw new ValidationError('El proveedor externo no ha devuelto un email válido');
+    }
+
+    const existing = await userRepository.findByEmail(normalizedEmail);
+    if (!existing) {
+      return { user: await createUser({ email: normalizedEmail, authProvider: provider }), created: true };
+    }
+    if (existing.status === STATUS.DELETED) {
+      throw new ForbiddenError('Esta cuenta ha sido eliminada');
+    }
+    if (existing.status === STATUS.PENDING) {
+      const confirmed = await userRepository.update(existing.id, { status: STATUS.ACTIVE });
+      return { user: toPublicUser(confirmed), created: false };
+    }
+    return { user: toPublicUser(existing), created: false };
+  }
+
   /** Marca la cuenta como confirmada (lo hace el enlace del correo de confirmación). */
   async function confirmUser(id) {
     const user = await findUserOrFail(id);
@@ -246,6 +279,7 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
     createUser,
     registerUser,
     authenticate,
+    loginWithOAuth,
     confirmUser,
     getUserById,
     findUserByEmail,
