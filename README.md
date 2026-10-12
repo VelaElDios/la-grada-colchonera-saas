@@ -13,7 +13,7 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 
 | Qué | Dónde |
 |---|---|
-| Aplicación desplegada | https://la-grada-colchonera.onrender.com |
+| Aplicación desplegada | Google Cloud Run: https://la-grada-colchonera-1081564062572.europe-southwest1.run.app · Render: https://la-grada-colchonera.onrender.com |
 | Entregas por hito (releases) | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) |
 | Pull requests (24: uno por tarea y uno por cierre de hito) | [VelaElDios/la-grada-colchonera-saas/pulls](https://github.com/VelaElDios/la-grada-colchonera-saas/pulls?q=is%3Apr+is%3Aclosed+sort%3Acreated-asc) |
 | Integración continua (GitHub Actions) | [Ejecuciones del workflow *CI*](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml) |
@@ -84,7 +84,8 @@ flowchart LR
 | `express-session`, `bcryptjs` | Autenticación | Sesión en el servidor con cookie `httpOnly`; contraseñas guardadas solo como hash bcrypt. |
 | `node:test` + `pg-mem` | Pruebas | Framework incluido en Node. `pg-mem` emula PostgreSQL en local y el CI usa un PostgreSQL 17 real. |
 | GitHub Actions | Integración continua | Ejecuta las pruebas en cada PR y en cada cambio de `main` y de las ramas de hito; las ramas protegidas exigen que pasen. |
-| Render (capa gratuita) | Despliegue continuo | Cada cambio en `main` se publica solo. Configuración como código en `render.yaml`. |
+| Docker + Google Cloud Run | Despliegue continuo (principal) | Imagen reproducible y despliegue sin servidor que escala a cero, con los créditos de Google Cloud para educación. Secretos en Secret Manager y acceso desde GitHub sin claves (Workload Identity Federation). |
+| Render (capa gratuita) | Despliegue continuo (alternativo) | Cada cambio en `main` se publica solo. Configuración como código en `render.yaml`. |
 | DoneTonic | Gestión ágil | Backlog de PBIs, sprint, tablero de tareas y gráficas (burndown, burnup y velocity). |
 
 ## Estructura del proyecto
@@ -108,8 +109,10 @@ public/
   js/api.js            Cliente de comunicación con la API
 tests/                 Pruebas automatizadas (unitarias, de API y de base de datos)
 docs/                  Capturas, gestión del proyecto y revisión de la entrega
+Dockerfile             Imagen de la aplicación (Cloud Run)
+scripts/gcp/           Preparación de Google Cloud (una sola vez)
 render.yaml            Despliegue en Render (Blueprint)
-.github/workflows/     Integración continua
+.github/workflows/     Integración continua y despliegue en Cloud Run
 ```
 
 ## Ejecutar en local
@@ -207,12 +210,20 @@ Las contraseñas, hashes, cookies y secretos nunca se registran: el logger los s
 
 ## Despliegue
 
-- **URL pública:** https://la-grada-colchonera.onrender.com
-- **Servidor:** Render, capa gratuita. La configuración está en [`render.yaml`](render.yaml): Render construye con `npm ci`, arranca con `npm start` y comprueba la salud en `/api/health`.
+La aplicación se despliega de forma continua en **dos plataformas** a partir de la misma rama `main`. Las dos usan la misma base de datos (Neon), así que muestran los mismos datos.
+
+| | Google Cloud Run | Render |
+|---|---|---|
+| URL | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app | https://la-grada-colchonera.onrender.com |
+| Cómo se despliega | Workflow [`deploy-cloud-run.yml`](.github/workflows/deploy-cloud-run.yml): cuando el CI pasa en `main`, construye la imagen [`Dockerfile`](Dockerfile), la sube a Artifact Registry y la despliega | Render detecta el cambio en `main` y despliega según [`render.yaml`](render.yaml) |
+| Secretos | Secret Manager, leídos por una cuenta de servicio que solo puede acceder a ellos | Variables de entorno del panel de Render |
+| Acceso desde GitHub | Workload Identity Federation (token temporal, sin claves guardadas) | Integración de Render con GitHub |
+| Coste | Créditos de Google Cloud para educación. Escala a cero cuando no hay tráfico | Capa gratuita |
+
 - **Base de datos:** PostgreSQL en Neon (región Frankfurt). Al arrancar, la aplicación aplica las migraciones y crea el primer administrador.
-- **Secretos:** se configuran en el panel de Render. `SESSION_SECRET` lo genera Render; `DATABASE_URL`, `ADMIN_EMAIL` y `ADMIN_PASSWORD` se introducen a mano.
-- Cada merge en `main` se despliega automáticamente. Si la nueva versión no arranca (por ejemplo, si falta un secreto), Render mantiene la anterior.
-- La capa gratuita suspende la aplicación tras un rato sin uso, así que la primera petición puede tardar unos segundos.
+- **Preparar Google Cloud:** solo una vez, con [`scripts/gcp/preparar-cloud-run.sh`](scripts/gcp/preparar-cloud-run.sh) en Cloud Shell. El script crea el proyecto, las APIs, Artifact Registry, los secretos, las cuentas de servicio y la federación de identidad. Al terminar, muestra las variables que hay que añadir al repositorio: `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_WIF_PROVIDER` y `GCP_DEPLOY_SA`.
+- **Si una versión no arranca**, por ejemplo porque falta un secreto, ni Cloud Run ni Render la ponen en marcha: siguen sirviendo la anterior.
+- **Arranque en frío:** Cloud Run (con 0 instancias mínimas) y la capa gratuita de Render detienen la aplicación cuando no hay tráfico, así que la primera petición puede tardar unos segundos.
 
 ## Flujo de trabajo
 
