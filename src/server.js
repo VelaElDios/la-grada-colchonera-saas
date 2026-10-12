@@ -3,10 +3,14 @@ const config = require('./config');
 const { bootstrap } = require('./bootstrap');
 
 async function main() {
-  const { app, storage, close } = await bootstrap(config);
+  const { app, storage, admin, close } = await bootstrap(config);
 
   if (storage === 'memoria') {
     console.warn('Sin DATABASE_URL: los datos se guardan en memoria y se perderán al reiniciar');
+  }
+
+  if (admin && admin.action !== 'unchanged') {
+    console.log(`Administrador ${admin.action === 'created' ? 'creado' : 'promocionado'}: ${admin.user.email}`);
   }
 
   const server = app.listen(config.port, () => {

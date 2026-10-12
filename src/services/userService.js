@@ -143,6 +143,7 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
   /**
    * Elimina un usuario. El administrador puede eliminar a cualquiera;
    * un usuario normal solo puede eliminar su propia cuenta.
+   * Nunca se elimina al último administrador activo.
    */
   async function deleteUser(actor, targetId) {
     if (!actor || actor.status === STATUS.DELETED) {
@@ -156,6 +157,9 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
     if (target.status === STATUS.DELETED) {
       throw new NotFoundError('Usuario no encontrado');
     }
+    if (target.role === ROLES.ADMIN && (await isLastActiveAdmin(target.id))) {
+      throw new ForbiddenError('No se puede eliminar al último administrador');
+    }
 
     const deleted = await userRepository.update(targetId, {
       status: STATUS.DELETED,
@@ -164,7 +168,74 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
     return toPublicUser(deleted);
   }
 
+  /** ¿Es este usuario el único administrador activo? (siempre debe quedar al menos uno) */
+  async function isLastActiveAdmin(userId) {
+    const admins = (await userRepository.findAll())
+      .filter((u) => u.role === ROLES.ADMIN && u.status === STATUS.ACTIVE);
+    return admins.length === 1 && admins[0].id === userId;
+  }
+
+  function requireActiveAdmin(actor) {
+    if (!actor || actor.role !== ROLES.ADMIN || actor.status !== STATUS.ACTIVE) {
+      throw new ForbiddenError('Solo un administrador puede hacer esto');
+    }
+  }
+
+  /** Cambia el rol de un usuario. Solo lo puede hacer un administrador. */
+  async function changeRole(actor, targetId, role) {
+    requireActiveAdmin(actor);
+    if (!Object.values(ROLES).includes(role)) {
+      throw new ValidationError('El rol no es válido');
+    }
+    const target = await findUserOrFail(targetId);
+    if (target.status === STATUS.DELETED) {
+      throw new NotFoundError('Usuario no encontrado');
+    }
+    if (target.role === role) return toPublicUser(target);
+    if (target.role === ROLES.ADMIN && (await isLastActiveAdmin(target.id))) {
+      throw new ForbiddenError('Debe quedar al menos un administrador');
+    }
+    return toPublicUser(await userRepository.update(targetId, { role }));
+  }
+
+  /**
+   * Garantiza que existe el primer administrador (se llama al arrancar con ADMIN_EMAIL y ADMIN_PASSWORD).
+   * - Si la cuenta ya existe, la convierte en administradora (sin tocar su contraseña).
+   * - Si no existe, la crea activa y con rol de administrador.
+   * @returns {Promise<{ user: object, action: 'created' | 'promoted' | 'unchanged' }>}
+   */
+  async function ensureAdmin({ email, password } = {}) {
+    const normalizedEmail = normalizeEmail(email);
+    if (!EMAIL_REGEX.test(normalizedEmail)) {
+      throw new ValidationError('ADMIN_EMAIL no es un email válido');
+    }
+
+    const existing = await userRepository.findByEmail(normalizedEmail);
+    if (existing) {
+      if (existing.status === STATUS.DELETED) {
+        throw new ConflictError('La cuenta indicada en ADMIN_EMAIL está eliminada');
+      }
+      if (existing.role === ROLES.ADMIN) return { user: toPublicUser(existing), action: 'unchanged' };
+      const promoted = await userRepository.update(existing.id, { role: ROLES.ADMIN });
+      return { user: toPublicUser(promoted), action: 'promoted' };
+    }
+
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      throw new ValidationError(`ADMIN_PASSWORD debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`);
+    }
+    const created = await userRepository.create({
+      email: normalizedEmail,
+      role: ROLES.ADMIN,
+      authProvider: AUTH_PROVIDERS.LOCAL,
+      status: STATUS.ACTIVE,
+      passwordHash: await requirePasswordHasher().hash(password),
+    });
+    return { user: toPublicUser(created), action: 'created' };
+  }
+
   return {
+    changeRole,
+    ensureAdmin,
     createUser,
     registerUser,
     authenticate,

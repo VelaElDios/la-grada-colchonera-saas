@@ -65,23 +65,32 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 | `NODE_ENV` | No | `production` en el despliegue (cookies solo por HTTPS y secretos obligatorios) |
 | `SESSION_SECRET` | Sí | Firma la cookie de sesión. Obligatorio en producción (mínimo 32 caracteres); en local, si falta, se genera uno aleatorio en cada arranque |
 | `DATABASE_URL` | Sí | Cadena de conexión de PostgreSQL (Neon). Obligatoria en producción; en local, si falta, los datos se guardan en memoria |
+| `ADMIN_EMAIL` | No | Email del primer administrador (se crea o se promociona al arrancar) |
+| `ADMIN_PASSWORD` | Sí | Contraseña del primer administrador (mínimo 8 caracteres). Solo se usa si la cuenta no existe |
 | `REQUIRE_EMAIL_CONFIRMATION` | No | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
 
 ## API
 
-| Método | Ruta | Sesión | Descripción |
+| Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/api/health` | No | Comprueba que el servidor está en marcha |
-| POST | `/api/auth/register` | No | Registro con email y contraseña (mínimo 8 caracteres) |
-| POST | `/api/auth/login` | No | Inicia sesión y deja la cookie `grada.sid` |
-| POST | `/api/auth/logout` | No | Cierra la sesión actual |
-| GET | `/api/auth/me` | Sí | Devuelve el usuario con sesión iniciada |
-| GET | `/api/users` | Sí | Listado de usuarios (email, rol y estado) |
-| GET | `/api/users/:id/active` | Sí | Indica si un usuario está activo |
-| DELETE | `/api/users/:id` | Sí | Elimina un usuario (admin: cualquiera; usuario: solo su cuenta) |
+| GET | `/api/health` | Público | Comprueba que el servidor está en marcha |
+| POST | `/api/auth/register` | Público | Registro con email y contraseña (mínimo 8 caracteres) |
+| POST | `/api/auth/login` | Público | Inicia sesión y deja la cookie `grada.sid` |
+| POST | `/api/auth/logout` | Público | Cierra la sesión actual |
+| GET | `/api/auth/me` | Sesión | Devuelve el usuario con sesión iniciada |
+| GET | `/api/users` | Admin | Listado de usuarios (email, rol y estado) |
+| GET | `/api/users/:id/active` | Propio o admin | Indica si un usuario está activo |
+| PATCH | `/api/users/:id/role` | Admin | Cambia el rol (`{ "role": "admin" \| "user" }`) |
+| DELETE | `/api/users/:id` | Propio o admin | Elimina una cuenta (baja lógica). Nunca se elimina al último administrador |
 
 Los errores se devuelven como `{ "error": { "code": "...", "message": "..." } }`.
-Las rutas marcadas con sesión responden `401 UNAUTHENTICATED` si no hay una sesión válida.
+Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; con sesión pero sin el rol necesario, `403 FORBIDDEN`.
+
+### Roles
+
+- **user:** gestiona su propia cuenta (ver su perfil y darse de baja).
+- **admin:** además, ve el listado de usuarios, cambia roles y elimina cuentas.
+- **Primer administrador:** al arrancar, si existen `ADMIN_EMAIL` y `ADMIN_PASSWORD`, se crea esa cuenta con rol de administrador (o se promociona si ya existía). Siempre debe quedar al menos un administrador activo.
 
 ## Despliegue
 

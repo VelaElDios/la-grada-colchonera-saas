@@ -21,3 +21,8 @@ services:
       # URL de la base de datos de Neon: se introduce a mano en el panel de Render (es un secreto)
       - key: DATABASE_URL
         sync: false
+      # Primer administrador (se introducen a mano en el panel de Render)
+      - key: ADMIN_EMAIL
+        sync: false
+      - key: ADMIN_PASSWORD
+        sync: false
