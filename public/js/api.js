@@ -61,6 +61,7 @@ const api = (() => {
     listUsers: () => peticion('GET', '/users'),
     isUserActive: (id) => peticion('GET', `/users/${encodeURIComponent(id)}/active`),
     deleteUser: (id) => peticion('DELETE', `/users/${encodeURIComponent(id)}`),
+    changeRole: (id, role) => peticion('PATCH', `/users/${encodeURIComponent(id)}/role`, { role }),
 
     /** Registra la función que se ejecuta cuando la sesión deja de ser válida. */
     alExpirarSesion: (funcion) => {
