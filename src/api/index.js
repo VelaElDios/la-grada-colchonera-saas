@@ -1,11 +1,12 @@
 // Capa API (presentación del backend): define las rutas HTTP y delega en la capa de lógica.
 const express = require('express');
 
+const { createAuthRouter } = require('./auth');
 const { createUsersRouter } = require('./users');
-const { currentUser } = require('./currentUser');
+const { currentUser, requireAuth } = require('./currentUser');
 const { errorHandler, notFoundHandler } = require('./errorHandler');
 
-function createApiRouter({ userService }) {
+function createApiRouter({ userService, config }) {
   const router = express.Router();
 
   router.use(currentUser({ userService }));
@@ -15,7 +16,9 @@ function createApiRouter({ userService }) {
     res.json({ status: 'ok' });
   });
 
-  router.use('/users', createUsersRouter({ userService }));
+  router.use('/auth', createAuthRouter({ userService, sessionCookieName: config.sessionCookieName }));
+  // Rutas protegidas: solo con sesión iniciada
+  router.use('/users', requireAuth, createUsersRouter({ userService }));
 
   router.use(notFoundHandler);
   router.use(errorHandler);

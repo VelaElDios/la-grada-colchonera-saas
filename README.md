@@ -58,23 +58,29 @@ Ver [`.env.example`](.env.example). Solo se documentan los nombres; los valores 
 | Variable | Descripción |
 |---|---|
 | `PORT` | Puerto HTTP del servidor (por defecto 3000) |
+| `NODE_ENV` | `production` en el despliegue (cookies solo por HTTPS) |
+| `SESSION_SECRET` | Secreto para firmar la cookie de sesión. Obligatorio en producción; en Render lo genera el Blueprint |
+| `REQUIRE_EMAIL_CONFIRMATION` | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
 
 ## API
 
-| Método | Ruta | Descripción |
-|---|---|---|
-| GET | `/api/health` | Comprueba que el servidor está en marcha |
-| POST | `/api/users` | Alta de usuario (`{ "email": "..." }`). Queda pendiente de confirmar |
-| GET | `/api/users` | Listado de usuarios (email, rol y estado) |
-| GET | `/api/users/:id/active` | Indica si un usuario está activo |
-| DELETE | `/api/users/:id` | Elimina un usuario (admin: cualquiera; usuario: solo su cuenta) |
+| Método | Ruta | Sesión | Descripción |
+|---|---|---|---|
+| GET | `/api/health` | No | Comprueba que el servidor está en marcha |
+| POST | `/api/auth/register` | No | Registro con email y contraseña (mínimo 8 caracteres) |
+| POST | `/api/auth/login` | No | Inicia sesión y deja la cookie `grada.sid` |
+| POST | `/api/auth/logout` | No | Cierra la sesión actual |
+| GET | `/api/auth/me` | Sí | Devuelve el usuario con sesión iniciada |
+| GET | `/api/users` | Sí | Listado de usuarios (email, rol y estado) |
+| GET | `/api/users/:id/active` | Sí | Indica si un usuario está activo |
+| DELETE | `/api/users/:id` | Sí | Elimina un usuario (admin: cualquiera; usuario: solo su cuenta) |
 
 Los errores se devuelven como `{ "error": { "code": "...", "message": "..." } }`.
-Mientras no exista inicio de sesión (Hito 2), quien hace la petición se indica con la cabecera provisional `X-User-Id`.
+Las rutas marcadas con sesión responden `401 UNAUTHENTICATED` si no hay una sesión válida.
 
 ## Despliegue
 
-- **URL pública:** _pendiente de publicar_
+- **URL pública:** https://la-grada-colchonera.onrender.com
 - Configuración en [`render.yaml`](render.yaml): Render construye con `npm ci`, arranca con `npm start` y comprueba la salud en `/api/health`.
 - Cada merge en `main` se despliega automáticamente. La capa gratuita suspende la app tras un rato de inactividad: la primera petición puede tardar unos segundos.
 

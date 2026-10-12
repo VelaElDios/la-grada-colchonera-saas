@@ -8,13 +8,16 @@
 </head>
 <body>
   <header class="cabecera">
-    <h1>La Grada Colchonera</h1>
-    <p>La red social de la afición rojiblanca</p>
+    <a class="logo" href="#/">La Grada Colchonera</a>
+    <nav id="nav" class="nav" aria-label="Navegación principal"></nav>
   </header>
 
   <main class="contenido">
-    <p>Estado del servidor: <span id="estado-servidor">comprobando…</span></p>
+    <p id="mensaje" class="mensaje" role="status" hidden></p>
+    <section id="app"></section>
   </main>
+
+  <footer class="pie">Proyecto de aficionado sin relación oficial con el Club Atlético de Madrid.</footer>
 
   <!-- Cliente de comunicación con la API (separado de la interfaz) -->
   <script src="/js/api.js"></script>
