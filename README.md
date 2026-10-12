@@ -37,7 +37,7 @@ memoria/             Memoria del proyecto (LuaLaTeX)
 
 ## Ejecutar en local
 
-Requisitos: Node.js 20 o superior.
+Requisitos: Node.js 20.12 o superior.
 
 ```bash
 npm install
@@ -51,16 +51,21 @@ npm start              # http://localhost:3000
 npm test
 ```
 
-## Variables de entorno
+## Variables de entorno y secretos
 
-Ver [`.env.example`](.env.example). Solo se documentan los nombres; los valores reales nunca se suben al repositorio.
+La configuración y los secretos llegan **solo por variables de entorno** ([`src/loadConfig.js`](src/loadConfig.js)); en el código y en el repositorio no hay ningún valor secreto.
 
-| Variable | Descripción |
-|---|---|
-| `PORT` | Puerto HTTP del servidor (por defecto 3000) |
-| `NODE_ENV` | `production` en el despliegue (cookies solo por HTTPS) |
-| `SESSION_SECRET` | Secreto para firmar la cookie de sesión. Obligatorio en producción; en Render lo genera el Blueprint |
-| `REQUIRE_EMAIL_CONFIRMATION` | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
+- **En local:** se copian las variables en un fichero `.env` (partiendo de [`.env.example`](.env.example)). Ese fichero está en `.gitignore` y nunca se sube.
+- **En producción (Render):** los valores se guardan en el panel del servicio (*Environment*). `SESSION_SECRET` lo genera Render y el resto se introduce a mano (`sync: false` en [`render.yaml`](render.yaml)).
+- Si en producción falta un secreto obligatorio, la aplicación no arranca y lo indica en el log, en lugar de funcionar de forma insegura.
+
+| Variable | Secreto | Descripción |
+|---|---|---|
+| `PORT` | No | Puerto HTTP del servidor (por defecto 3000) |
+| `NODE_ENV` | No | `production` en el despliegue (cookies solo por HTTPS y secretos obligatorios) |
+| `SESSION_SECRET` | Sí | Firma la cookie de sesión. Obligatorio en producción (mínimo 32 caracteres); en local, si falta, se genera uno aleatorio en cada arranque |
+| `DATABASE_URL` | Sí | Cadena de conexión de PostgreSQL (Neon). Obligatoria en producción; en local, si falta, los datos se guardan en memoria |
+| `REQUIRE_EMAIL_CONFIRMATION` | No | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
 
 ## API
 
