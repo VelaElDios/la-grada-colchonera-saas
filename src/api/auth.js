@@ -1,6 +1,6 @@
 // Rutas HTTP de autenticación: registro, inicio y cierre de sesión, y usuario actual.
 const express = require('express');
-const { requireUser } = require('./currentUser');
+const { requireAuth } = require('./currentUser');
 
 // express-session usa callbacks: se envuelven en promesas para usarlas con async/await
 const regenerate = (session) => new Promise((resolve, reject) => {
@@ -40,7 +40,7 @@ function createAuthRouter({ userService, sessionCookieName }) {
   });
 
   // Usuario de la sesión actual: permite recuperar la sesión al recargar la página
-  router.get('/me', requireUser, (req, res) => {
+  router.get('/me', requireAuth, (req, res) => {
     res.json(req.user);
   });
 

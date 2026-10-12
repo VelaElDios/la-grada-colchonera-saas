@@ -24,24 +24,33 @@ describe('API /api/users', () => {
     body: { email, password },
   })).cookie;
 
+  test('todas las rutas de /api/users rechazan las peticiones sin sesión (401)', async () => {
+    assert.equal((await srv.request('GET', '/users')).status, 401);
+    assert.equal((await srv.request('GET', `/users/${admin.id}/active`)).status, 401);
+    assert.equal((await srv.request('DELETE', `/users/${admin.id}`)).status, 401);
+  });
+
+  test('una cookie de sesión inventada no sirve (401)', async () => {
+    const res = await srv.request('GET', '/users', { cookie: 'grada.sid=s%3Ainventada.firma-falsa' });
+
+    assert.equal(res.status, 401);
+  });
+
   test('GET lista los usuarios con email, rol y estado', async () => {
     await registrar('fan1@grada.es');
 
-    const res = await srv.request('GET', '/users');
+    const res = await srv.request('GET', '/users', { cookie: await entrar('admin@grada.es', 'clave-del-admin') });
 
     assert.equal(res.status, 200);
     assert.ok(res.body.some((u) => u.email === 'fan1@grada.es' && u.role === 'user' && u.status === 'active'));
   });
 
   test('GET /:id/active indica si el usuario está activo y 404 si no existe', async () => {
-    const res = await srv.request('GET', `/users/${admin.id}/active`);
+    const cookie = await entrar('admin@grada.es', 'clave-del-admin');
+    const res = await srv.request('GET', `/users/${admin.id}/active`, { cookie });
 
     assert.deepEqual(res.body, { id: admin.id, active: true });
-    assert.equal((await srv.request('GET', '/users/no-existe/active')).status, 404);
-  });
-
-  test('DELETE sin sesión iniciada devuelve 401', async () => {
-    assert.equal((await srv.request('DELETE', `/users/${admin.id}`)).status, 401);
+    assert.equal((await srv.request('GET', '/users/no-existe/active', { cookie })).status, 404);
   });
 
   test('DELETE de otro usuario siendo usuario normal devuelve 403', async () => {

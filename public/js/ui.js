@@ -124,10 +124,6 @@ const NOMBRES_ESTADO = { pending: 'Pendiente de confirmar', active: 'Activa', de
 
 function vistaPerfil() {
   const usuario = estado.usuario;
-  if (!usuario) {
-    app.innerHTML = '<h2>Mi cuenta</h2><p><a href="#/entrar">Entra</a> para ver los datos de tu cuenta.</p>';
-    return;
-  }
   app.innerHTML = `
     <h2>Mi cuenta</h2>
     <dl class="datos">
@@ -152,11 +148,12 @@ async function cerrarSesion() {
   }
 }
 
+// protegida: solo con sesión iniciada · soloInvitados: solo sin sesión
 const vistas = {
   '/': { titulo: 'Inicio', render: vistaInicio },
-  '/entrar': { titulo: 'Entrar', render: vistaEntrar },
-  '/registro': { titulo: 'Registrarse', render: vistaRegistro },
-  '/perfil': { titulo: 'Mi cuenta', render: vistaPerfil },
+  '/entrar': { titulo: 'Entrar', render: vistaEntrar, soloInvitados: true },
+  '/registro': { titulo: 'Registrarse', render: vistaRegistro, soloInvitados: true },
+  '/perfil': { titulo: 'Mi cuenta', render: vistaPerfil, protegida: true },
 };
 
 // --- Navegación ---------------------------------------------------------------
@@ -180,6 +177,16 @@ function pintarNav() {
 async function render() {
   const vista = vistas[rutaActual()] || vistas['/'];
 
+  // Redirecciones de la interfaz (la protección real está en el servidor)
+  if (vista.protegida && !estado.usuario) {
+    ir('/entrar', estado.aviso || { texto: 'Inicia sesión para ver esa página.', tipo: 'error' });
+    return;
+  }
+  if (vista.soloInvitados && estado.usuario) {
+    ir('/perfil');
+    return;
+  }
+
   pintarNav();
   if (estado.aviso) {
     mostrarMensaje(estado.aviso.texto, estado.aviso.tipo);
@@ -198,6 +205,12 @@ async function iniciar() {
   } catch {
     estado.usuario = null;
   }
+  // Si el servidor rechaza una petición por falta de sesión, se vuelve a la pantalla de entrada
+  api.alExpirarSesion(() => {
+    estado.usuario = null;
+    ir('/entrar', { texto: 'Tu sesión ha caducado. Vuelve a entrar.', tipo: 'error' });
+  });
+
   window.addEventListener('hashchange', render);
   render();
 }

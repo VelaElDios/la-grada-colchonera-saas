@@ -21,7 +21,11 @@ function currentUser({ userService }) {
   };
 }
 
-function requireUser(req, res, next) {
+/**
+ * Protege una ruta: rechaza con 401 cualquier petición sin una sesión válida.
+ * La comprobación se hace en el servidor; ocultar botones en la interfaz no basta.
+ */
+function requireAuth(req, res, next) {
   if (!req.user) {
     return res.status(401).json({
       error: { code: 'UNAUTHENTICATED', message: 'Debes iniciar sesión' },
@@ -30,4 +34,4 @@ function requireUser(req, res, next) {
   return next();
 }
 
-module.exports = { currentUser, requireUser };
+module.exports = { currentUser, requireAuth };
