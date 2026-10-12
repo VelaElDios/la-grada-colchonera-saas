@@ -1,4 +1,5 @@
-# Ficheros auxiliares de LaTeX
+# Salida de la compilación (PDF incluido): se genera con latexmk y la publica el CI
+build/
 *.aux
 *.bbl
 *.bcf
@@ -6,11 +7,10 @@
 *.fdb_latexmk
 *.fls
 *.log
+*.lof
+*.lot
 *.out
 *.run.xml
 *.synctex.gz
 *.toc
-*.lof
-*.lot
-# PDF generado (se compila a partir de las fuentes)
 main.pdf

@@ -1,5 +1,13 @@
 \chapter{Integración y despliegue continuos}
+\label{cap:cicd}
+
 \section{Integración continua}
-% Workflow de GitHub Actions.
+% Workflow CI de GitHub Actions: jobs Pruebas (con PostgreSQL 17) e Imagen Docker.
+% Se ejecuta en cada PR y en cada cambio de main.
+
 \section{Despliegue continuo}
-% Proveedor cloud y URL pública.
+% Cloud Run: Dockerfile, Artifact Registry, Secret Manager y Workload Identity Federation.
+% El workflow se lanza cuando el CI pasa en main. Render se mantiene como alternativa.
+
+\section{Evidencias del proceso}
+% Historial de ramas, PRs y ejecuciones del CI. Por ejemplo, una ejecución que falló y cómo se resolvió.
