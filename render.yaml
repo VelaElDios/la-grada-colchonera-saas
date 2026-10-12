@@ -13,3 +13,8 @@ services:
     envVars:
       - key: NODE_VERSION
         value: "22"
+      - key: NODE_ENV
+        value: production
+      # Render genera un valor aleatorio y lo guarda como secreto (no está en el repositorio)
+      - key: SESSION_SECRET
+        generateValue: true

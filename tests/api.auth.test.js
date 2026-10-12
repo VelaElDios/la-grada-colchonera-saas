@@ -55,6 +55,56 @@ describe('API /api/auth', () => {
     });
   });
 
+  describe('sesión', () => {
+    const credenciales = { email: 'sesion@grada.es', password: 'aupa-atleti' };
+    let cookie;
+
+    before(async () => {
+      await srv.request('POST', '/auth/register', { body: credenciales });
+    });
+
+    test('al iniciar sesión se recibe una cookie de sesión HttpOnly', async () => {
+      const res = await fetch(`${srv.baseUrl}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credenciales),
+      });
+      const setCookie = res.headers.get('set-cookie');
+
+      assert.match(setCookie, /^grada\.sid=/);
+      assert.match(setCookie, /HttpOnly/i);
+      cookie = setCookie.split(';')[0];
+    });
+
+    test('GET /me devuelve el usuario de la sesión (se mantiene al recargar la página)', async () => {
+      const res = await srv.request('GET', '/auth/me', { cookie });
+
+      assert.equal(res.status, 200);
+      assert.equal(res.body.email, credenciales.email);
+    });
+
+    test('GET /me sin sesión devuelve 401', async () => {
+      assert.equal((await srv.request('GET', '/auth/me')).status, 401);
+    });
+
+    test('al cerrar sesión la sesión se invalida en el servidor', async () => {
+      const logout = await srv.request('POST', '/auth/logout', { cookie });
+      const despues = await srv.request('GET', '/auth/me', { cookie });
+
+      assert.equal(logout.status, 204);
+      assert.equal(despues.status, 401);
+    });
+
+    test('si se elimina la cuenta, su sesión deja de ser válida', async () => {
+      const { cookie: c } = await srv.request('POST', '/auth/login', { body: credenciales });
+      const yo = (await srv.request('GET', '/auth/me', { cookie: c })).body;
+
+      await srv.request('DELETE', `/users/${yo.id}`, { cookie: c });
+
+      assert.equal((await srv.request('GET', '/auth/me', { cookie: c })).status, 401);
+    });
+  });
+
   describe('con confirmación de correo obligatoria', () => {
     let srvConfirmacion;
 

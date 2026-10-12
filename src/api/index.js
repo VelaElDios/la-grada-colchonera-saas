@@ -6,7 +6,7 @@ const { createUsersRouter } = require('./users');
 const { currentUser } = require('./currentUser');
 const { errorHandler, notFoundHandler } = require('./errorHandler');
 
-function createApiRouter({ userService }) {
+function createApiRouter({ userService, config }) {
   const router = express.Router();
 
   router.use(currentUser({ userService }));
@@ -16,7 +16,7 @@ function createApiRouter({ userService }) {
     res.json({ status: 'ok' });
   });
 
-  router.use('/auth', createAuthRouter({ userService }));
+  router.use('/auth', createAuthRouter({ userService, sessionCookieName: config.sessionCookieName }));
   router.use('/users', createUsersRouter({ userService }));
 
   router.use(notFoundHandler);
