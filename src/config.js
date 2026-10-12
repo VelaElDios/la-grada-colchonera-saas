@@ -10,6 +10,9 @@ const config = {
   sessionSecret: process.env.SESSION_SECRET || (isProduction ? null : 'secreto-solo-para-desarrollo-local'),
   sessionCookieName: 'grada.sid',
 
+  // Base de datos PostgreSQL (Neon). Sin ella, los datos se guardan en memoria (desarrollo y pruebas).
+  databaseUrl: process.env.DATABASE_URL || null,
+
   // Mientras no exista el envío de correos (Hito 4), las cuentas locales quedan activas al
   // registrarse. Con REQUIRE_EMAIL_CONFIRMATION=true quedan pendientes hasta confirmar el correo.
   requireEmailConfirmation: process.env.REQUIRE_EMAIL_CONFIRMATION === 'true',

@@ -18,3 +18,6 @@ services:
       # Render genera un valor aleatorio y lo guarda como secreto (no está en el repositorio)
       - key: SESSION_SECRET
         generateValue: true
+      # URL de la base de datos de Neon: se introduce a mano en el panel de Render (es un secreto)
+      - key: DATABASE_URL
+        sync: false
