@@ -1,0 +1,30 @@
+# Integración continua: ejecuta las pruebas automáticas en cada pull request
+# y en cada cambio que llega a main o a una rama de hito.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - 'hito-*/integracion'
+
+jobs:
+  test:
+    name: Pruebas
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Instalar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Ejecutar pruebas
+        run: npm test
