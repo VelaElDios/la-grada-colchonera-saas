@@ -5,10 +5,12 @@ const { createAuthRouter } = require('./auth');
 const { createUsersRouter } = require('./users');
 const { currentUser, requireAuth } = require('./currentUser');
 const { errorHandler, notFoundHandler } = require('./errorHandler');
+const { requestLogger } = require('./requestLogger');
 
-function createApiRouter({ userService, config }) {
+function createApiRouter({ userService, config, logger }) {
   const router = express.Router();
 
+  router.use(requestLogger({ logger }));
   router.use(currentUser({ userService }));
 
   // Comprobación de que el servidor está vivo (útil para el despliegue y el CI)

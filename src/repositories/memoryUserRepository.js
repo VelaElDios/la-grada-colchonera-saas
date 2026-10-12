@@ -7,8 +7,8 @@
 //   findAll()           -> lista de usuarios
 //   update(id, changes) -> usuario actualizado | null
 //
-// En el Hito 3 se añadirá una implementación con base de datos que cumpla este mismo
-// contrato, de modo que la capa de lógica no tenga que cambiar.
+// La implementación con base de datos (postgresUserRepository.js) cumple este mismo contrato,
+// de modo que la capa de lógica no cambia. Esta se usa en las pruebas y en desarrollo sin BD.
 
 const { randomUUID } = require('node:crypto');
 

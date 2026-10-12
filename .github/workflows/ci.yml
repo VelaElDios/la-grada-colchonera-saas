@@ -13,6 +13,23 @@ jobs:
   test:
     name: Pruebas
     runs-on: ubuntu-latest
+
+    # PostgreSQL real para probar el repositorio de base de datos (en local se usa pg-mem)
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: grada
+          POSTGRES_PASSWORD: grada
+          POSTGRES_DB: grada_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U grada"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
     steps:
       - name: Descargar el código
         uses: actions/checkout@v4
@@ -28,3 +45,5 @@ jobs:
 
       - name: Ejecutar pruebas
         run: npm test
+        env:
+          TEST_DATABASE_URL: postgresql://grada:grada@localhost:5432/grada_test

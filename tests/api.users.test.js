@@ -9,7 +9,7 @@ describe('API /api/users', () => {
 
   before(async () => {
     srv = await createTestServer();
-    // El primer administrador se crea directamente en la capa de datos (en el Hito 3 lo hará un script)
+    // El administrador se crea directamente en la capa de datos (en producción lo crea ensureAdmin al arrancar)
     admin = await srv.seedUser({ email: 'admin@grada.es', role: 'admin', password: 'clave-del-admin' });
   });
 
@@ -68,6 +68,43 @@ describe('API /api/users', () => {
 
     assert.equal((await srv.request('DELETE', `/users/${a.id}`, { cookie: await entrar(a.email) })).status, 204);
     assert.equal((await srv.request('DELETE', `/users/${b.id}`, { cookie: await entrar(admin.email, 'clave-del-admin') })).status, 204);
+  });
+
+  test('un usuario normal no puede ver el listado de usuarios (403)', async () => {
+    const res = await srv.request('GET', '/users', { cookie: await entrar((await registrar('fan6@grada.es')).email) });
+
+    assert.equal(res.status, 403);
+    assert.equal(res.body.error.code, 'FORBIDDEN');
+  });
+
+  test('un usuario puede consultar su propio estado pero no el de otros (403)', async () => {
+    const yo = await registrar('fan7@grada.es');
+    const cookie = await entrar(yo.email);
+
+    assert.equal((await srv.request('GET', `/users/${yo.id}/active`, { cookie })).status, 200);
+    assert.equal((await srv.request('GET', `/users/${admin.id}/active`, { cookie })).status, 403);
+  });
+
+  test('PATCH /:id/role: el admin cambia roles y un usuario normal no puede (403)', async () => {
+    const fan = await registrar('fan8@grada.es');
+    const cookieAdmin = await entrar(admin.email, 'clave-del-admin');
+
+    assert.equal((await srv.request('PATCH', `/users/${fan.id}/role`, { cookie: await entrar(fan.email), body: { role: 'admin' } })).status, 403);
+
+    const ascenso = await srv.request('PATCH', `/users/${fan.id}/role`, { cookie: cookieAdmin, body: { role: 'admin' } });
+    assert.equal(ascenso.status, 200);
+    assert.equal(ascenso.body.role, 'admin');
+
+    const invalido = await srv.request('PATCH', `/users/${fan.id}/role`, { cookie: cookieAdmin, body: { role: 'jefe' } });
+    assert.equal(invalido.status, 400);
+
+    assert.equal((await srv.request('PATCH', `/users/${fan.id}/role`, { cookie: cookieAdmin, body: { role: 'user' } })).body.role, 'user');
+  });
+
+  test('el último administrador no puede eliminarse a sí mismo (403)', async () => {
+    const res = await srv.request('DELETE', `/users/${admin.id}`, { cookie: await entrar(admin.email, 'clave-del-admin') });
+
+    assert.equal(res.status, 403);
   });
 
   test('una ruta de la API que no existe devuelve 404 en JSON', async () => {

@@ -22,11 +22,16 @@ function errorHandler(err, req, res, next) {
 
   const status = HTTP_STATUS_BY_CODE[err.code];
   if (status) {
+    // Los accesos denegados quedan registrados (pueden indicar un intento de abuso)
+    if (status === 403) {
+      req.log?.warn('auth.forbidden', err.message, { userId: req.user?.id ?? null, path: req.originalUrl });
+    }
     return res.status(status).json({ error: { code: err.code, message: err.message } });
   }
 
-  // Error inesperado: se registra y no se dan detalles internos al cliente
-  console.error(err);
+  // Error inesperado: se registra con todo el detalle y no se dan detalles internos al cliente
+  if (req.log) req.log.error('http.error', 'Error interno', { error: err });
+  else console.error(err);
   return res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Error interno del servidor' } });
 }
 

@@ -37,7 +37,7 @@ memoria/             Memoria del proyecto (LuaLaTeX)
 
 ## Ejecutar en local
 
-Requisitos: Node.js 20 o superior.
+Requisitos: Node.js 20.12 o superior.
 
 ```bash
 npm install
@@ -51,32 +51,65 @@ npm start              # http://localhost:3000
 npm test
 ```
 
-## Variables de entorno
+## Variables de entorno y secretos
 
-Ver [`.env.example`](.env.example). Solo se documentan los nombres; los valores reales nunca se suben al repositorio.
+La configuración y los secretos llegan **solo por variables de entorno** ([`src/loadConfig.js`](src/loadConfig.js)); en el código y en el repositorio no hay ningún valor secreto.
 
-| Variable | Descripción |
-|---|---|
-| `PORT` | Puerto HTTP del servidor (por defecto 3000) |
-| `NODE_ENV` | `production` en el despliegue (cookies solo por HTTPS) |
-| `SESSION_SECRET` | Secreto para firmar la cookie de sesión. Obligatorio en producción; en Render lo genera el Blueprint |
-| `REQUIRE_EMAIL_CONFIRMATION` | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
+- **En local:** se copian las variables en un fichero `.env` (partiendo de [`.env.example`](.env.example)). Ese fichero está en `.gitignore` y nunca se sube.
+- **En producción (Render):** los valores se guardan en el panel del servicio (*Environment*). `SESSION_SECRET` lo genera Render y el resto se introduce a mano (`sync: false` en [`render.yaml`](render.yaml)).
+- Si en producción falta un secreto obligatorio, la aplicación no arranca y lo indica en el log, en lugar de funcionar de forma insegura.
+
+| Variable | Secreto | Descripción |
+|---|---|---|
+| `PORT` | No | Puerto HTTP del servidor (por defecto 3000) |
+| `NODE_ENV` | No | `production` en el despliegue (cookies solo por HTTPS y secretos obligatorios) |
+| `SESSION_SECRET` | Sí | Firma la cookie de sesión. Obligatorio en producción (mínimo 32 caracteres); en local, si falta, se genera uno aleatorio en cada arranque |
+| `DATABASE_URL` | Sí | Cadena de conexión de PostgreSQL (Neon). Obligatoria en producción; en local, si falta, los datos se guardan en memoria |
+| `ADMIN_EMAIL` | No | Email del primer administrador (se crea o se promociona al arrancar) |
+| `ADMIN_PASSWORD` | Sí | Contraseña del primer administrador (mínimo 8 caracteres). Solo se usa si la cuenta no existe |
+| `LOG_LEVEL` | No | Nivel del registro de actividad: `debug`, `info` (por defecto), `warn`, `error` o `silent` |
+| `REQUIRE_EMAIL_CONFIRMATION` | No | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
 
 ## API
 
-| Método | Ruta | Sesión | Descripción |
+| Método | Ruta | Acceso | Descripción |
 |---|---|---|---|
-| GET | `/api/health` | No | Comprueba que el servidor está en marcha |
-| POST | `/api/auth/register` | No | Registro con email y contraseña (mínimo 8 caracteres) |
-| POST | `/api/auth/login` | No | Inicia sesión y deja la cookie `grada.sid` |
-| POST | `/api/auth/logout` | No | Cierra la sesión actual |
-| GET | `/api/auth/me` | Sí | Devuelve el usuario con sesión iniciada |
-| GET | `/api/users` | Sí | Listado de usuarios (email, rol y estado) |
-| GET | `/api/users/:id/active` | Sí | Indica si un usuario está activo |
-| DELETE | `/api/users/:id` | Sí | Elimina un usuario (admin: cualquiera; usuario: solo su cuenta) |
+| GET | `/api/health` | Público | Comprueba que el servidor está en marcha |
+| POST | `/api/auth/register` | Público | Registro con email y contraseña (mínimo 8 caracteres) |
+| POST | `/api/auth/login` | Público | Inicia sesión y deja la cookie `grada.sid` |
+| POST | `/api/auth/logout` | Público | Cierra la sesión actual |
+| GET | `/api/auth/me` | Sesión | Devuelve el usuario con sesión iniciada |
+| GET | `/api/users` | Admin | Listado de usuarios (email, rol y estado) |
+| GET | `/api/users/:id/active` | Propio o admin | Indica si un usuario está activo |
+| PATCH | `/api/users/:id/role` | Admin | Cambia el rol (`{ "role": "admin" \| "user" }`) |
+| DELETE | `/api/users/:id` | Propio o admin | Elimina una cuenta (baja lógica). Nunca se elimina al último administrador |
 
 Los errores se devuelven como `{ "error": { "code": "...", "message": "..." } }`.
-Las rutas marcadas con sesión responden `401 UNAUTHENTICATED` si no hay una sesión válida.
+Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; con sesión pero sin el rol necesario, `403 FORBIDDEN`.
+
+### Roles
+
+- **user:** gestiona su propia cuenta (ver su perfil y darse de baja).
+- **admin:** además, ve el listado de usuarios, cambia roles y elimina cuentas.
+- **Primer administrador:** al arrancar, si existen `ADMIN_EMAIL` y `ADMIN_PASSWORD`, se crea esa cuenta con rol de administrador (o se promociona si ya existía). Siempre debe quedar al menos un administrador activo.
+
+## Registro de actividad (logs)
+
+La aplicación escribe cada evento relevante como una línea JSON en la salida estándar ([`src/logger.js`](src/logger.js)); en Render se consultan en la pestaña *Logs* del servicio y se pueden filtrar por texto (por ejemplo, `auth.login_failed`).
+
+| Evento | Nivel | Cuándo |
+|---|---|---|
+| `app.start`, `app.stop`, `app.storage` | info / warn | Arranque, parada y tipo de almacenamiento |
+| `admin.bootstrap` | info | Se crea o se promociona el primer administrador |
+| `http.request` | info (error si 5xx) | Cada petición a la API: método, ruta, estado, duración, usuario e id de petición (`X-Request-Id`) |
+| `user.registered` | info | Registro de una cuenta |
+| `auth.login` / `auth.logout` | info | Inicio y cierre de sesión |
+| `auth.login_failed` | warn | Intento de inicio de sesión rechazado (email, motivo e IP) |
+| `auth.forbidden` | warn | Acceso denegado por falta de permisos |
+| `user.role_changed`, `user.deleted` | info | Cambios de rol y bajas (quién lo hace y sobre quién) |
+| `http.error` | error | Errores inesperados, con su traza |
+
+Las contraseñas, hashes, cookies y secretos nunca se registran: el logger los sustituye por `[oculto]`.
 
 ## Despliegue
 

@@ -115,6 +115,63 @@ describe('Servicio de usuarios', () => {
     });
   });
 
+  describe('roles y primer administrador', () => {
+    test('un administrador puede dar y quitar el rol de administrador', async () => {
+      const admin = await service.createUser({ email: 'admin@grada.es', role: ROLES.ADMIN, authProvider: AUTH_PROVIDERS.GOOGLE });
+      const usuario = await service.createUser({ email: 'gimenez@grada.es', authProvider: AUTH_PROVIDERS.GOOGLE });
+
+      assert.equal((await service.changeRole(admin, usuario.id, ROLES.ADMIN)).role, ROLES.ADMIN);
+      assert.equal((await service.changeRole(admin, usuario.id, ROLES.USER)).role, ROLES.USER);
+    });
+
+    test('un usuario normal no puede cambiar roles', async () => {
+      const usuario = await service.createUser({ email: 'llorente@grada.es', authProvider: AUTH_PROVIDERS.GOOGLE });
+      await assert.rejects(service.changeRole(usuario, usuario.id, ROLES.ADMIN), ForbiddenError);
+    });
+
+    test('un rol que no existe se rechaza', async () => {
+      const admin = await service.createUser({ email: 'admin@grada.es', role: ROLES.ADMIN, authProvider: AUTH_PROVIDERS.GOOGLE });
+      await assert.rejects(service.changeRole(admin, admin.id, 'superadmin'), ValidationError);
+    });
+
+    test('siempre queda al menos un administrador: no se puede degradar ni eliminar al último', async () => {
+      const admin = await service.createUser({ email: 'admin@grada.es', role: ROLES.ADMIN, authProvider: AUTH_PROVIDERS.GOOGLE });
+
+      await assert.rejects(service.changeRole(admin, admin.id, ROLES.USER), ForbiddenError);
+      await assert.rejects(service.deleteUser(admin, admin.id), ForbiddenError);
+
+      const otro = await service.createUser({ email: 'admin2@grada.es', role: ROLES.ADMIN, authProvider: AUTH_PROVIDERS.GOOGLE });
+      await service.deleteUser(otro, admin.id); // con dos administradores, sí
+      assert.equal(await service.isUserActive(admin.id), false);
+    });
+
+    test('ensureAdmin crea el primer administrador, activo y con su contraseña', async () => {
+      const { user, action } = await service.ensureAdmin({ email: 'Presi@Grada.es', password: 'cholismo-2026' });
+
+      assert.equal(action, 'created');
+      assert.equal(user.email, 'presi@grada.es');
+      assert.equal(user.role, ROLES.ADMIN);
+      assert.equal(user.status, STATUS.ACTIVE);
+      assert.equal((await service.authenticate({ email: 'presi@grada.es', password: 'cholismo-2026' })).role, ROLES.ADMIN);
+    });
+
+    test('ensureAdmin promociona una cuenta existente y es idempotente', async () => {
+      const koke = await service.registerUser({ email: 'koke@grada.es', password: 'capitan-rojiblanco' });
+      await service.confirmUser(koke.id);
+
+      assert.equal((await service.ensureAdmin({ email: 'koke@grada.es' })).action, 'promoted');
+      assert.equal((await service.ensureAdmin({ email: 'koke@grada.es' })).action, 'unchanged');
+      // la contraseña de la cuenta no cambia
+      assert.equal((await service.authenticate({ email: 'koke@grada.es', password: 'capitan-rojiblanco' })).role, ROLES.ADMIN);
+    });
+
+    test('ensureAdmin exige una contraseña válida para crear la cuenta', async () => {
+      await assert.rejects(service.ensureAdmin({ email: 'nuevo@grada.es' }), ValidationError);
+      await assert.rejects(service.ensureAdmin({ email: 'nuevo@grada.es', password: 'corta' }), ValidationError);
+      await assert.rejects(service.ensureAdmin({ email: 'no-es-un-email', password: 'larga-suficiente' }), ValidationError);
+    });
+  });
+
   describe('registro e inicio de sesión', () => {
     test('el registro guarda un hash de la contraseña, nunca la contraseña en claro', async () => {
       const user = await service.registerUser({ email: 'simeone@grada.es', password: 'partido-a-partido' });

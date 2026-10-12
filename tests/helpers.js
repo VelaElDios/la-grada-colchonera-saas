@@ -8,6 +8,7 @@ const TEST_CONFIG = {
   requireEmailConfirmation: false,
   sessionSecret: 'secreto-de-pruebas',
   sessionCookieName: 'grada.sid',
+  logLevel: 'silent',
 };
 
 // Coste bajo de bcrypt para que las pruebas sean rápidas

@@ -132,10 +132,110 @@ function vistaPerfil() {
       <dt>Estado</dt><dd>${NOMBRES_ESTADO[usuario.status] || usuario.status}</dd>
       <dt>En la grada desde</dt><dd>${new Date(usuario.createdAt).toLocaleDateString('es-ES')}</dd>
     </dl>
-    <p><button id="cerrar-sesion" class="boton boton--secundario" type="button">Cerrar sesión</button></p>`;
+    <p><button id="cerrar-sesion" class="boton boton--secundario" type="button">Cerrar sesión</button></p>
+    <section class="zona-peligro">
+      <h3>Darme de baja</h3>
+      <p>Tu cuenta quedará eliminada y no podrás volver a entrar con ella.</p>
+      <button id="eliminar-cuenta" class="boton boton--peligro" type="button">Eliminar mi cuenta</button>
+    </section>`;
   // El email lo escribe el usuario: se inserta como texto para evitar inyección de HTML
   document.getElementById('perfil-email').textContent = usuario.email;
   document.getElementById('cerrar-sesion').addEventListener('click', cerrarSesion);
+  document.getElementById('eliminar-cuenta').addEventListener('click', eliminarMiCuenta);
+}
+
+async function eliminarMiCuenta() {
+  if (!confirm('¿Seguro que quieres eliminar tu cuenta? Esta acción no se puede deshacer.')) return;
+  try {
+    await api.deleteUser(estado.usuario.id);
+    await api.logout().catch(() => {});
+    estado.usuario = null;
+    ir('/', { texto: 'Tu cuenta se ha eliminado. ¡Gracias por pasar por la grada!', tipo: 'exito' });
+  } catch (error) {
+    mostrarMensaje(error.message, 'error');
+  }
+}
+
+/** Crea un elemento con texto (siempre como texto, nunca como HTML). */
+function crear(etiqueta, texto = '', clase = '') {
+  const elemento = document.createElement(etiqueta);
+  if (texto) elemento.textContent = texto;
+  if (clase) elemento.className = clase;
+  return elemento;
+}
+
+async function vistaAdmin() {
+  app.innerHTML = `
+    <h2>Panel de administración</h2>
+    <p>Usuarios registrados en la grada. Puedes cambiar su rol o eliminar su cuenta.</p>
+    <div class="tabla-contenedor">
+      <table class="tabla">
+        <thead><tr><th>Email</th><th>Rol</th><th>Estado</th><th>Alta</th><th>Acciones</th></tr></thead>
+        <tbody id="usuarios"><tr><td colspan="5">Cargando…</td></tr></tbody>
+      </table>
+    </div>`;
+  await pintarUsuarios();
+}
+
+async function pintarUsuarios() {
+  const cuerpo = document.getElementById('usuarios');
+  if (!cuerpo) return;
+  let usuarios;
+  try {
+    usuarios = await api.listUsers();
+  } catch (error) {
+    cuerpo.innerHTML = '';
+    mostrarMensaje(error.message, 'error');
+    return;
+  }
+
+  cuerpo.replaceChildren(...usuarios.map((usuario) => {
+    const fila = document.createElement('tr');
+    const esYo = usuario.id === estado.usuario.id;
+    fila.append(
+      crear('td', esYo ? `${usuario.email} (tú)` : usuario.email),
+      crear('td', NOMBRES_ROL[usuario.role] || usuario.role),
+      crear('td', NOMBRES_ESTADO[usuario.status] || usuario.status, `estado-${usuario.status}`),
+      crear('td', new Date(usuario.createdAt).toLocaleDateString('es-ES')),
+    );
+
+    const acciones = crear('td', '', 'acciones');
+    if (usuario.status !== 'deleted') {
+      const nuevoRol = usuario.role === 'admin' ? 'user' : 'admin';
+      const cambiar = crear('button', nuevoRol === 'admin' ? 'Hacer admin' : 'Quitar admin', 'boton boton--pequeno boton--secundario');
+      cambiar.type = 'button';
+      cambiar.addEventListener('click', () => accionAdmin(
+        () => api.changeRole(usuario.id, nuevoRol),
+        `Rol de ${usuario.email} actualizado.`,
+      ));
+
+      const eliminar = crear('button', 'Eliminar', 'boton boton--pequeno boton--peligro');
+      eliminar.type = 'button';
+      eliminar.addEventListener('click', () => {
+        if (!confirm(`¿Eliminar la cuenta de ${usuario.email}?`)) return;
+        accionAdmin(() => api.deleteUser(usuario.id), `Cuenta de ${usuario.email} eliminada.`);
+      });
+      acciones.append(cambiar, eliminar);
+    }
+    fila.append(acciones);
+    return fila;
+  }));
+}
+
+/** Ejecuta una acción del panel, muestra el resultado y refresca el listado. */
+async function accionAdmin(accion, textoExito) {
+  try {
+    await accion();
+    estado.usuario = await api.me(); // por si el administrador ha cambiado su propio rol
+    if (estado.usuario.role !== 'admin') {
+      ir('/perfil', { texto: 'Ya no tienes rol de administrador.', tipo: 'exito' });
+      return;
+    }
+    mostrarMensaje(textoExito, 'exito');
+    await pintarUsuarios();
+  } catch (error) {
+    mostrarMensaje(error.message, 'error');
+  }
 }
 
 async function cerrarSesion() {
@@ -148,19 +248,23 @@ async function cerrarSesion() {
   }
 }
 
-// protegida: solo con sesión iniciada · soloInvitados: solo sin sesión
+// protegida: solo con sesión iniciada · soloInvitados: solo sin sesión · soloAdmin: solo administradores
 const vistas = {
   '/': { titulo: 'Inicio', render: vistaInicio },
   '/entrar': { titulo: 'Entrar', render: vistaEntrar, soloInvitados: true },
   '/registro': { titulo: 'Registrarse', render: vistaRegistro, soloInvitados: true },
   '/perfil': { titulo: 'Mi cuenta', render: vistaPerfil, protegida: true },
+  '/admin': { titulo: 'Administración', render: vistaAdmin, protegida: true, soloAdmin: true },
 };
 
 // --- Navegación ---------------------------------------------------------------
 
 function pintarNav() {
   const ruta = rutaActual();
-  const enlaces = estado.usuario ? ['/', '/perfil'] : ['/', '/entrar', '/registro'];
+  let enlaces = ['/', '/entrar', '/registro'];
+  if (estado.usuario) {
+    enlaces = estado.usuario.role === 'admin' ? ['/', '/perfil', '/admin'] : ['/', '/perfil'];
+  }
   nav.innerHTML = enlaces
     .map((r) => `<a href="#${r}" class="${r === ruta ? 'activo' : ''}">${vistas[r].titulo}</a>`)
     .join('');
@@ -180,6 +284,10 @@ async function render() {
   // Redirecciones de la interfaz (la protección real está en el servidor)
   if (vista.protegida && !estado.usuario) {
     ir('/entrar', estado.aviso || { texto: 'Inicia sesión para ver esa página.', tipo: 'error' });
+    return;
+  }
+  if (vista.soloAdmin && estado.usuario.role !== 'admin') {
+    ir('/perfil', { texto: 'Esa página es solo para administradores.', tipo: 'error' });
     return;
   }
   if (vista.soloInvitados && estado.usuario) {
