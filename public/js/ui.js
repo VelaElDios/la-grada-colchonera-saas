@@ -135,9 +135,21 @@ function vistaPerfil() {
       <dt>Rol</dt><dd>${NOMBRES_ROL[usuario.role] || usuario.role}</dd>
       <dt>Estado</dt><dd>${NOMBRES_ESTADO[usuario.status] || usuario.status}</dd>
       <dt>En la grada desde</dt><dd>${new Date(usuario.createdAt).toLocaleDateString('es-ES')}</dd>
-    </dl>`;
+    </dl>
+    <p><button id="cerrar-sesion" class="boton boton--secundario" type="button">Cerrar sesión</button></p>`;
   // El email lo escribe el usuario: se inserta como texto para evitar inyección de HTML
   document.getElementById('perfil-email').textContent = usuario.email;
+  document.getElementById('cerrar-sesion').addEventListener('click', cerrarSesion);
+}
+
+async function cerrarSesion() {
+  try {
+    await api.logout();
+    estado.usuario = null;
+    ir('/', { texto: 'Has cerrado sesión. ¡Hasta el próximo partido!', tipo: 'exito' });
+  } catch (error) {
+    mostrarMensaje(error.message, 'error');
+  }
 }
 
 const vistas = {
@@ -155,6 +167,14 @@ function pintarNav() {
   nav.innerHTML = enlaces
     .map((r) => `<a href="#${r}" class="${r === ruta ? 'activo' : ''}">${vistas[r].titulo}</a>`)
     .join('');
+
+  if (estado.usuario) {
+    const salir = document.createElement('button');
+    salir.type = 'button';
+    salir.textContent = 'Salir';
+    salir.addEventListener('click', cerrarSesion);
+    nav.append(salir);
+  }
 }
 
 async function render() {
@@ -171,5 +191,15 @@ async function render() {
   await vista.render();
 }
 
-window.addEventListener('hashchange', render);
-render();
+async function iniciar() {
+  // Si ya había una sesión iniciada, se recupera: el usuario no tiene que volver a entrar al recargar
+  try {
+    estado.usuario = await api.me();
+  } catch {
+    estado.usuario = null;
+  }
+  window.addEventListener('hashchange', render);
+  render();
+}
+
+iniciar();

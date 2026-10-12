@@ -49,7 +49,7 @@ async function createTestServer({ config = {}, userRepository = createMemoryUser
     });
   }
 
-  return { request, seedUser, userRepository, close: () => server.close() };
+  return { request, seedUser, userRepository, baseUrl, close: () => server.close() };
 }
 
 module.exports = { createTestServer, passwordHasher };

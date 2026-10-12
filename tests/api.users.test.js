@@ -10,7 +10,7 @@ describe('API /api/users', () => {
   before(async () => {
     srv = await createTestServer();
     // El primer administrador se crea directamente en la capa de datos (en el Hito 3 lo hará un script)
-    admin = await srv.seedUser({ email: 'admin@grada.es', role: 'admin' });
+    admin = await srv.seedUser({ email: 'admin@grada.es', role: 'admin', password: 'clave-del-admin' });
   });
 
   after(() => srv.close());
@@ -18,6 +18,11 @@ describe('API /api/users', () => {
   const registrar = async (email) => (await srv.request('POST', '/auth/register', {
     body: { email, password: 'aupa-atleti' },
   })).body;
+
+  /** Inicia sesión y devuelve la cookie de sesión. */
+  const entrar = async (email, password = 'aupa-atleti') => (await srv.request('POST', '/auth/login', {
+    body: { email, password },
+  })).cookie;
 
   test('GET lista los usuarios con email, rol y estado', async () => {
     await registrar('fan1@grada.es');
@@ -35,7 +40,7 @@ describe('API /api/users', () => {
     assert.equal((await srv.request('GET', '/users/no-existe/active')).status, 404);
   });
 
-  test('DELETE sin identificarse devuelve 401', async () => {
+  test('DELETE sin sesión iniciada devuelve 401', async () => {
     assert.equal((await srv.request('DELETE', `/users/${admin.id}`)).status, 401);
   });
 
@@ -43,7 +48,7 @@ describe('API /api/users', () => {
     const a = await registrar('fan2@grada.es');
     const b = await registrar('fan3@grada.es');
 
-    const res = await srv.request('DELETE', `/users/${b.id}`, { headers: { 'X-User-Id': a.id } });
+    const res = await srv.request('DELETE', `/users/${b.id}`, { cookie: await entrar(a.email) });
 
     assert.equal(res.status, 403);
   });
@@ -52,8 +57,8 @@ describe('API /api/users', () => {
     const a = await registrar('fan4@grada.es');
     const b = await registrar('fan5@grada.es');
 
-    assert.equal((await srv.request('DELETE', `/users/${a.id}`, { headers: { 'X-User-Id': a.id } })).status, 204);
-    assert.equal((await srv.request('DELETE', `/users/${b.id}`, { headers: { 'X-User-Id': admin.id } })).status, 204);
+    assert.equal((await srv.request('DELETE', `/users/${a.id}`, { cookie: await entrar(a.email) })).status, 204);
+    assert.equal((await srv.request('DELETE', `/users/${b.id}`, { cookie: await entrar(admin.email, 'clave-del-admin') })).status, 204);
   });
 
   test('una ruta de la API que no existe devuelve 404 en JSON', async () => {

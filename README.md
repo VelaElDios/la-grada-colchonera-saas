@@ -58,6 +58,9 @@ Ver [`.env.example`](.env.example). Solo se documentan los nombres; los valores 
 | Variable | Descripción |
 |---|---|
 | `PORT` | Puerto HTTP del servidor (por defecto 3000) |
+| `NODE_ENV` | `production` en el despliegue (cookies solo por HTTPS) |
+| `SESSION_SECRET` | Secreto para firmar la cookie de sesión. Obligatorio en producción; en Render lo genera el Blueprint |
+| `REQUIRE_EMAIL_CONFIRMATION` | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
 
 ## API
 
