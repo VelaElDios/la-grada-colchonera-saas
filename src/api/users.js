@@ -1,16 +1,11 @@
 // Rutas HTTP de usuarios. Solo traducen petición/respuesta: las reglas están en userService.
+// (El alta de usuarios se hace con el registro: POST /api/auth/register.)
 // (Express 5 pasa automáticamente al manejador de errores lo que lancen las funciones async.)
 const express = require('express');
 const { requireUser } = require('./currentUser');
 
 function createUsersRouter({ userService }) {
   const router = express.Router();
-
-  // Alta de usuario. El rol NO se acepta desde el cliente: siempre se crea como usuario normal.
-  router.post('/', async (req, res) => {
-    const user = await userService.createUser({ email: req.body?.email });
-    res.status(201).json(user);
-  });
 
   // Listado de usuarios (en el Hito 3 quedará restringido al administrador)
   router.get('/', async (req, res) => {
