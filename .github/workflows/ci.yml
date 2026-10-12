@@ -47,3 +47,23 @@ jobs:
         run: npm test
         env:
           TEST_DATABASE_URL: postgresql://grada:grada@localhost:5432/grada_test
+
+  docker:
+    name: Imagen Docker
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Construir la imagen
+        run: docker build -t la-grada-colchonera:ci .
+
+      - name: Arrancar el contenedor y comprobar /api/health
+        run: |
+          docker run -d --name grada -p 8080:8080 -e NODE_ENV=development la-grada-colchonera:ci
+          for i in $(seq 1 20); do
+            if curl -fsS http://localhost:8080/api/health; then exit 0; fi
+            sleep 1
+          done
+          docker logs grada
+          exit 1
