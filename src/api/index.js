@@ -8,7 +8,7 @@ const { currentUser, requireAuth } = require('./currentUser');
 const { errorHandler, notFoundHandler } = require('./errorHandler');
 const { requestLogger } = require('./requestLogger');
 
-function createApiRouter({ userService, config, logger }) {
+function createApiRouter({ userService, accountConfirmation, config, logger }) {
   const router = express.Router();
 
   router.use(requestLogger({ logger }));
@@ -19,7 +19,12 @@ function createApiRouter({ userService, config, logger }) {
     res.json({ status: 'ok' });
   });
 
-  router.use('/auth', createAuthRouter({ userService, sessionCookieName: config.sessionCookieName }));
+  router.use('/auth', createAuthRouter({
+    userService,
+    accountConfirmation,
+    sessionCookieName: config.sessionCookieName,
+    publicUrl: config.publicUrl,
+  }));
   // Público (sin sesión): comprueba si el dominio de un email está permitido
   router.use('/prueba', createPruebaRouter({ allowedDomains: config.allowedDomains || [] }));
   // Rutas protegidas: solo con sesión iniciada

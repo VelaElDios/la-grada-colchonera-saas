@@ -8,6 +8,9 @@ const defaultConfig = require('./config');
 const { createMemoryUserRepository } = require('./repositories/memoryUserRepository');
 const { createPasswordHasher } = require('./services/passwordHasher');
 const { createUserService } = require('./services/userService');
+const { createAccountConfirmationService } = require('./services/accountConfirmationService');
+const { createTokenSigner } = require('./services/tokenSigner');
+const { createMailer } = require('./integrations/mailer');
 const { createApiRouter } = require('./api');
 const { createLogger } = require('./logger');
 
@@ -19,16 +22,22 @@ function createApp({
   passwordHasher = createPasswordHasher(),
   sessionStore, // dónde se guardan las sesiones (sin indicarlo: en memoria)
   logger = createLogger({ level: config.logLevel || 'info' }),
+  mailer = createMailer(config.mail, { logger }), // servicio de correo (SMTP o registro)
 } = {}) {
   const userService = createUserService({
     userRepository,
     passwordHasher,
     requireEmailConfirmation: config.requireEmailConfirmation,
   });
+  const accountConfirmation = createAccountConfirmationService({
+    userService,
+    mailer,
+    tokenSigner: createTokenSigner({ secret: config.sessionSecret }),
+  });
 
   const app = express();
 
-  // En Render la app está detrás de un proxy HTTPS: hace falta para que la cookie "secure" funcione
+  // En Cloud Run (y en Render) la app está detrás de un proxy HTTPS: hace falta para que la cookie "secure" funcione
   if (config.isProduction) app.set('trust proxy', 1);
 
   app.use(express.json());
@@ -60,7 +69,7 @@ function createApp({
   }));
 
   // Capa API: toda la comunicación cliente-servidor pasa por /api
-  app.use('/api', createApiRouter({ userService, config, logger }));
+  app.use('/api', createApiRouter({ userService, accountConfirmation, config, logger }));
 
   // El backend sirve el frontend (mismo origen)
   app.use(express.static(path.join(__dirname, '..', 'public')));

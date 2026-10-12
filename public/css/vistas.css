@@ -63,3 +63,6 @@
   .tabla td { border: 0; padding: var(--s-1) 0; display: flex; justify-content: space-between; gap: var(--s-3); align-items: center; }
   .tabla td::before { content: attr(data-etiqueta); color: var(--gris-300); font-size: var(--t-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
 }
+
+/* Reenvío del correo de confirmación (cuenta pendiente) */
+.aviso-reenvio { display: grid; gap: var(--s-3); padding: var(--s-4); border: 1px dashed var(--rojo-texto); border-radius: var(--r-md); font-size: var(--t-sm); color: var(--gris-300); }

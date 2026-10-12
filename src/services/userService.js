@@ -9,6 +9,7 @@ const {
   NotFoundError,
   ConflictError,
   ForbiddenError,
+  AccountPendingError,
 } = require('./errors');
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -106,12 +107,12 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
       throw new ForbiddenError('Esta cuenta ha sido eliminada');
     }
     if (user.status === STATUS.PENDING) {
-      throw new ForbiddenError('Debes confirmar tu correo antes de iniciar sesión');
+      throw new AccountPendingError('Debes confirmar tu correo antes de iniciar sesión. Revisa tu bandeja de entrada (y la carpeta de spam).');
     }
     return toPublicUser(user);
   }
 
-  /** Marca la cuenta como confirmada (en el Hito 4 lo hará el enlace del correo). */
+  /** Marca la cuenta como confirmada (lo hace el enlace del correo de confirmación). */
   async function confirmUser(id) {
     const user = await findUserOrFail(id);
     if (user.status === STATUS.DELETED) {
@@ -123,6 +124,12 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
 
   async function getUserById(id) {
     return toPublicUser(await findUserOrFail(id));
+  }
+
+  /** Busca un usuario por su email. Devuelve null si no existe. */
+  async function findUserByEmail(email) {
+    const user = await userRepository.findByEmail(normalizeEmail(email));
+    return user ? toPublicUser(user) : null;
   }
 
   /** Listado de usuarios con, al menos, email, rol y estado. */
@@ -241,6 +248,7 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
     authenticate,
     confirmUser,
     getUserById,
+    findUserByEmail,
     listUsers,
     isUserActive,
     deleteUser,
