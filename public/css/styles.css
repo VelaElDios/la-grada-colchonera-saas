@@ -126,3 +126,64 @@ body {
   color: var(--blanco);
   background: var(--azul);
 }
+
+/* --- Panel de administración y baja de cuenta --- */
+.tabla-contenedor {
+  overflow-x: auto;
+}
+
+.tabla {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.tabla th,
+.tabla td {
+  padding: 0.6rem 0.5rem;
+  border-bottom: 1px solid #e5e5e5;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.tabla th {
+  background: #f7f7f7;
+}
+
+.tabla .acciones {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.estado-active { color: #1d7a3a; }
+.estado-pending { color: #a86b00; }
+.estado-deleted { color: #888; text-decoration: line-through; }
+
+.boton--pequeno {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.boton--peligro {
+  background: #fff;
+  color: #b00020;
+  border: 1px solid #b00020;
+}
+
+.boton--peligro:hover {
+  background: #b00020;
+  color: #fff;
+}
+
+.zona-peligro {
+  margin-top: 2rem;
+  padding: 1rem;
+  border: 1px solid #f0c2c2;
+  border-radius: 8px;
+  background: #fff7f7;
+}
+
+.zona-peligro h3 {
+  margin-top: 0;
+}

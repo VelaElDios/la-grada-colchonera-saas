@@ -23,3 +23,11 @@ test('la interfaz y el cliente de comunicación son ficheros separados', async (
   assert.equal((await fetch(`${baseUrl}/js/ui.js`)).status, 200);
   assert.equal((await fetch(`${baseUrl}/js/api.js`)).status, 200);
 });
+
+test('la interfaz incluye el panel de administración y la baja de cuenta', async () => {
+  const ui = await (await fetch(`${baseUrl}/js/ui.js`)).text();
+  const cliente = await (await fetch(`${baseUrl}/js/api.js`)).text();
+  assert.match(ui, /'\/admin'/);
+  assert.match(ui, /eliminarMiCuenta/);
+  assert.match(cliente, /changeRole/);
+});
