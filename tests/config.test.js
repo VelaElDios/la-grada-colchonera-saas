@@ -43,3 +43,24 @@ test('el fichero .env con los secretos locales está excluido del repositorio', 
   const gitignore = fs.readFileSync(path.join(__dirname, '..', '.gitignore'), 'utf8').split(/\r?\n/);
   assert.ok(gitignore.includes('.env'));
 });
+
+test('la confirmación por correo está activada salvo que se desactive a propósito', () => {
+  assert.equal(loadConfig({}).requireEmailConfirmation, true);
+  assert.equal(loadConfig({ REQUIRE_EMAIL_CONFIRMATION: 'true' }).requireEmailConfirmation, true);
+  assert.equal(loadConfig({ REQUIRE_EMAIL_CONFIRMATION: 'false' }).requireEmailConfirmation, false);
+});
+
+test('el correo saliente se configura con SMTP_URL y MAIL_FROM (los dos juntos)', () => {
+  assert.equal(loadConfig({}).mail.smtpUrl, null);
+  assert.throws(() => loadConfig({ SMTP_URL: 'smtps://u:p@smtp.ejemplo.com:465' }), /MAIL_FROM/);
+
+  const config = loadConfig({ SMTP_URL: 'smtps://u:p@smtp.ejemplo.com:465', MAIL_FROM: 'La Grada <a@b.es>' });
+  assert.equal(config.mail.smtpUrl, 'smtps://u:p@smtp.ejemplo.com:465');
+  assert.equal(config.mail.from, 'La Grada <a@b.es>');
+});
+
+test('PUBLIC_URL se normaliza (sin barra final) y debe ser una URL http(s)', () => {
+  assert.equal(loadConfig({}).publicUrl, null);
+  assert.equal(loadConfig({ PUBLIC_URL: 'https://grada.example.com/' }).publicUrl, 'https://grada.example.com');
+  assert.throws(() => loadConfig({ PUBLIC_URL: 'grada.example.com' }), /PUBLIC_URL/);
+});

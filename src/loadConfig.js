@@ -1,5 +1,5 @@
 // Construye la configuración a partir de las variables de entorno.
-// Los secretos (SESSION_SECRET, DATABASE_URL, ADMIN_PASSWORD...) SOLO llegan por variables de
+// Los secretos (SESSION_SECRET, DATABASE_URL, ADMIN_PASSWORD, SMTP_URL...) SOLO llegan por variables de
 // entorno: nunca se escriben en el código ni se suben al repositorio.
 const { randomBytes } = require('node:crypto');
 const { parseAllowedDomains } = require('./services/domainPolicy');
@@ -23,6 +23,12 @@ function loadConfig(env) {
       throw new Error(`SESSION_SECRET debe tener al menos ${MIN_SESSION_SECRET_LENGTH} caracteres`);
     }
   }
+  if (env.SMTP_URL && !env.MAIL_FROM) {
+    throw new Error('Con SMTP_URL hay que indicar también MAIL_FROM (el remitente de los correos)');
+  }
+  if (env.PUBLIC_URL && !/^https?:\/\/[^/]+/.test(env.PUBLIC_URL)) {
+    throw new Error('PUBLIC_URL debe empezar por http:// o https://');
+  }
 
   return Object.freeze({
     port: Number(env.PORT) || 3000,
@@ -36,9 +42,19 @@ function loadConfig(env) {
     // Base de datos PostgreSQL (Neon). Sin ella (solo en desarrollo), los datos se guardan en memoria.
     databaseUrl: env.DATABASE_URL || null,
 
-    // Mientras no exista el envío de correos (Hito 4), las cuentas locales quedan activas al
-    // registrarse. Con REQUIRE_EMAIL_CONFIRMATION=true quedan pendientes hasta confirmar el correo.
-    requireEmailConfirmation: env.REQUIRE_EMAIL_CONFIRMATION === 'true',
+    // Las cuentas locales quedan pendientes hasta que se confirma el correo (requisito 4.1).
+    // Solo se puede desactivar a propósito con REQUIRE_EMAIL_CONFIRMATION=false.
+    requireEmailConfirmation: env.REQUIRE_EMAIL_CONFIRMATION !== 'false',
+
+    // URL pública de la aplicación, para los enlaces de los correos y la vuelta de OAuth.
+    // Si no se indica, se usa la dirección con la que llega cada petición.
+    publicUrl: env.PUBLIC_URL ? env.PUBLIC_URL.replace(/\/+$/, '') : null,
+
+    // Correo saliente (ver src/integrations/mailer.js). Sin SMTP_URL, los correos se escriben en el registro.
+    mail: Object.freeze({
+      smtpUrl: env.SMTP_URL || null,
+      from: env.MAIL_FROM || 'La Grada Colchonera <no-responder@localhost>',
+    }),
 
     // Nivel de detalle del registro de actividad: debug, info, warn, error o silent.
     // Durante las pruebas automáticas (node --test) no se escribe nada salvo que se indique.

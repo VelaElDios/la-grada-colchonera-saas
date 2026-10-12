@@ -8,7 +8,7 @@
 
 const LEVELS = { debug: 10, info: 20, warn: 30, error: 40, silent: 100 };
 
-const SENSITIVE_KEYS = /pass(word)?|hash|secret|token|cookie|authorization|database_?url/i;
+const SENSITIVE_KEYS = /pass(word)?|hash|secret|token|cookie|authorization|database_?url|smtp_?url/i;
 
 /** Copia de los datos con los campos sensibles ocultos (también en objetos anidados). */
 function redact(value, depth = 0) {
