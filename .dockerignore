@@ -1,0 +1,16 @@
+# Lo que NO entra en la imagen: dependencias locales, secretos, pruebas, documentación y git
+node_modules
+npm-debug.log*
+.env
+.env.*
+!.env.example
+.git
+.github
+tests
+docs
+memoria
+scripts
+*.md
+render.yaml
+Dockerfile
+.dockerignore
