@@ -59,6 +59,19 @@ Ver [`.env.example`](.env.example). Solo se documentan los nombres; los valores 
 |---|---|
 | `PORT` | Puerto HTTP del servidor (por defecto 3000) |
 
+## API
+
+| Método | Ruta | Descripción |
+|---|---|---|
+| GET | `/api/health` | Comprueba que el servidor está en marcha |
+| POST | `/api/users` | Alta de usuario (`{ "email": "..." }`). Queda pendiente de confirmar |
+| GET | `/api/users` | Listado de usuarios (email, rol y estado) |
+| GET | `/api/users/:id/active` | Indica si un usuario está activo |
+| DELETE | `/api/users/:id` | Elimina un usuario (admin: cualquiera; usuario: solo su cuenta) |
+
+Los errores se devuelven como `{ "error": { "code": "...", "message": "..." } }`.
+Mientras no exista inicio de sesión (Hito 2), quien hace la petición se indica con la cabecera provisional `X-User-Id`.
+
 ## Despliegue
 
 - **URL pública:** _pendiente de publicar_
