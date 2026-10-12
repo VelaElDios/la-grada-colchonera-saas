@@ -7,23 +7,9 @@ Esta página reúne todo lo que se ha gestionado en **DoneTonic**, para que pued
 | Herramienta | [DoneTonic](https://app.donetonic.com) |
 | Espacio de trabajo / equipo | *TFG* / *Colchoneros* |
 | Sprint | **Sprint 1**, del 29/09/2026 al 27/10/2026 |
-| Product Backlog | 18 PBIs (P1–P18) con 28 tareas (T1–T28), etiquetados por hito (H1–H4) |
+| Product Backlog | 19 PBIs (P1–P19) con 30 tareas (T1–T30), etiquetados por hito (H1–H4) |
 | Prioridad | Orden del backlog de P1 a P18, siguiendo los hitos. Todos los PBIs son **MUST** porque son requisitos obligatorios del enunciado |
-| Alcance de la entrega | Hitos 1, 2 y 3 (P1–P14) más P18 (README y revisión). P15–P17 pertenecen al Hito 4 y quedan fuera de esta entrega |
-
-## Capturas de DoneTonic
-
-| Tablero del Sprint 1 |
-|---|
-| ![Tablero del Sprint 1 en DoneTonic con los PBIs terminados](../capturas/donetonic/01-tablero-sprint.png) |
-
-| Gráficas de seguimiento (Paneles Scrum) |
-|---|
-| ![Gráficas de burnup, burndown y velocity del Sprint 1](../capturas/donetonic/02-graficas.png) |
-
-| Detalle de un PBI |
-|---|
-| ![Detalle de un PBI con su descripción y criterios de aceptación](../capturas/donetonic/03-backlog-o-pbi.png) |
+| Alcance de la entrega | Hitos 1, 2 y 3 (P1–P14), P18 (README y revisión) y P19 (despliegue en Google Cloud Run con los créditos de educación). P15–P17 pertenecen al Hito 4 y quedan fuera de esta entrega |
 
 ## Cómo se ha trabajado
 
@@ -66,6 +52,7 @@ Un hito está **hecho** cuando su rama está en `main`, desplegada en https://la
 | P16 | H4 | Confirmación de cuenta por correo electrónico | Fuera de alcance | — |
 | P17 | H4 | Manejo de errores y feedback al usuario | Fuera de alcance | — |
 | P18 | H4 | README completo y revisión de la entrega | Hecho | Cierre del sprint |
+| P19 | H4 | Despliegue continuo en Google Cloud Run | Hecho | Cierre del sprint |
 
 > Aunque P17 (manejo de errores) es del Hito 4, la aplicación ya tiene parte de esa funcionalidad desde el Hito 1: un manejador de errores común con el formato `{"error": {"code", "message"}}` y mensajes de error y de éxito en la interfaz.
 
@@ -95,12 +82,14 @@ Un hito está **hecho** cuando su rama está en `main`, desplegada en https://la
 | P14 | T20 | Configurar el logging de la actividad relevante | `hito-3/T20-logging` | [#23](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/23) | Hecho |
 | P18 | T27 | Completar el README | `hito-4/T27-readme-completo` | [#25](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/25) | Hecho |
 |  | T28 | Etiquetas de hito y revisión final | `hito-4/T28-revision-entrega` | [#26](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/26) | Hecho |
+| P19 | T29 | Contenerizar la aplicación con Docker | `hito-4/T29-docker` | [#27](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/27) | Hecho |
+|  | T30 | Despliegue continuo en Cloud Run con GitHub Actions | `hito-4/T30-cloud-run` | [#28](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/28) | Hecho |
 
-Cierres de hito: [#9](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/9) (Hito 1 → `main`), [#17](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/17) (Hito 2 → `main`), [#24](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/24) (Hito 3 → `main`) y [#27](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/27) (cierre del sprint → `main`).
+Cierres de hito: [#9](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/9) (Hito 1 → `main`), [#17](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/17) (Hito 2 → `main`), [#24](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/24) (Hito 3 → `main`) y [#29](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/29) (cierre del sprint → `main`).
 
 ## Evolución del sprint
 
-PBIs pendientes del alcance de la entrega (P1–P14 y P18; 15 en total) según se cerraba cada hito. Es lo que muestran las gráficas *Backlog Burndown* y *Sprint Burndown* de DoneTonic:
+PBIs pendientes del alcance de la entrega (P1–P14, P18 y P19; 16 en total) según se cerraba cada hito. Es lo que muestran las gráficas *Backlog Burndown* y *Sprint Burndown* de DoneTonic:
 
 | Momento | PBIs hechos | PBIs pendientes |
 |---|---|---|
@@ -108,13 +97,16 @@ PBIs pendientes del alcance de la entrega (P1–P14 y P18; 15 en total) según s
 | Cierre del Hito 1 (release `hito-1`) | 6 | 9 |
 | Cierre del Hito 2 (release `hito-2`) | 10 | 5 |
 | Cierre del Hito 3 (release `hito-3`) | 14 | 1 |
-| Cierre del sprint (P18) | 15 | 0 |
+| Se añade P19 (Cloud Run) para usar los créditos de Google Cloud | 14 | 2 |
+| Cierre del sprint (P18 y P19) | 16 | 0 |
 
 ```mermaid
 xychart-beta
     title "Burndown de la entrega (PBIs pendientes)"
-    x-axis ["Inicio", "Hito 1", "Hito 2", "Hito 3", "Cierre"]
+    x-axis ["Inicio", "Hito 1", "Hito 2", "Hito 3", "+P19", "Cierre"]
     y-axis "PBIs pendientes" 0 --> 15
-    line [15, 9, 5, 1, 0]
-    bar [15, 9, 5, 1, 0]
+    line [15, 9, 5, 1, 2, 0]
+    bar [15, 9, 5, 1, 2, 0]
 ```
+
+> **Cambio de alcance durante el sprint:** el profesor repartió créditos de Google Cloud para educación. Para aprovecharlos se añadió al sprint el PBI **P19** (despliegue en Google Cloud Run), con sus tareas T29 y T30. Render se mantiene como despliegue alternativo.
