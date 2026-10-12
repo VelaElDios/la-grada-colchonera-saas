@@ -2,11 +2,11 @@
 
 Comprobación, requisito a requisito, de que la entrega cumple lo pedido en la especificación del Sprint 1. Cada fila indica dónde está la prueba.
 
-**Estado:** todos los requisitos de los Hitos 1, 2 y 3 están cumplidos, integrados en `main` y desplegados en https://la-grada-colchonera.onrender.com.
+**Estado:** todos los requisitos de los Hitos 1, 2 y 3 están cumplidos, integrados en `main` y desplegados en **Google Cloud Run** (https://la-grada-colchonera-1081564062572.europe-southwest1.run.app) y en **Render** (https://la-grada-colchonera.onrender.com).
 
 ## Cómo comprobarlo en cinco minutos
 
-1. Abrir https://la-grada-colchonera.onrender.com. Al estar en la capa gratuita, la primera carga puede tardar unos segundos. El inicio muestra *Estado del servidor: en marcha*.
+1. Abrir https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (o la URL de Render). La aplicación se apaga cuando no hay tráfico, así que la primera carga puede tardar unos segundos. El inicio muestra *Estado del servidor: en marcha*.
 2. **Registrarse** con cualquier email y una contraseña de 8 caracteres o más. Una contraseña corta se rechaza.
 3. **Entrar** con esa cuenta y **recargar la página**: la sesión se mantiene.
 4. Ir a `#/admin`: como usuario normal, la aplicación devuelve a *Mi cuenta*. La API responde `403` en `/api/users`.
@@ -21,7 +21,7 @@ Comprobación, requisito a requisito, de que la entrega cumple lo pedido en la e
 | Repositorio en GitHub con un flujo de trabajo definido | GitHub Flow por hitos: `main` ← `hito-N/integracion` ← `hito-N/Tx-…`. Ramas protegidas que exigen PR y CI en verde | [`CONTRIBUTING.md`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/CONTRIBUTING.md), [ramas](https://github.com/VelaElDios/la-grada-colchonera-saas/branches/all), [PRs](https://github.com/VelaElDios/la-grada-colchonera-saas/pulls?q=is%3Apr+is%3Aclosed+sort%3Acreated-asc) |
 | Arquitectura en capas | Presentación (`public/`), API (`src/api`), lógica (`src/services`) y datos (`src/repositories`) | [README › Arquitectura](../README.md#arquitectura) |
 | Integración continua | GitHub Actions ejecuta las pruebas en cada PR y en cada cambio de `main` y de las ramas de hito | [`.github/workflows/ci.yml`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/.github/workflows/ci.yml), [ejecuciones](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml) |
-| Despliegue continuo en una URL pública | Render despliega `main` automáticamente con comprobación de salud en `/api/health` | [`render.yaml`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/render.yaml), https://la-grada-colchonera.onrender.com |
+| Despliegue continuo en una URL pública | Cada cambio en `main` con el CI en verde se despliega solo en Google Cloud Run (imagen Docker, Artifact Registry, Secret Manager y Workload Identity Federation) y en Render | [`deploy-cloud-run.yml`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/.github/workflows/deploy-cloud-run.yml), [`Dockerfile`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/Dockerfile), [`render.yaml`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/render.yaml) |
 | Lógica de gestión de usuarios (alta, listado con email, rol y estado, comprobar si está activo, eliminar) | `userService`: el administrador elimina a cualquiera y un usuario solo a sí mismo | [`src/services/userService.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/services/userService.js) |
 | Pruebas unitarias automatizadas de la lógica (al menos 5) | 80 pruebas con `node:test`; las de la lógica, en `tests/userService.test.js` | [`tests/`](https://github.com/VelaElDios/la-grada-colchonera-saas/tree/main/tests) |
 | Capa API que expone la lógica | API REST JSON con un formato de error común | [README › API](../README.md#api), [`src/api/`](https://github.com/VelaElDios/la-grada-colchonera-saas/tree/main/src/api) |
@@ -52,7 +52,8 @@ Comprobación, requisito a requisito, de que la entrega cumple lo pedido en la e
 | Gestión ágil del trabajo (PBIs, sprint, tareas) | 18 PBIs priorizados y Sprint 1 en DoneTonic. Cada tarea tiene su rama y su PR | [`docs/gestion/README.md`](gestion/README.md) |
 | README completo | Descripción, capturas, arquitectura, tecnologías, ejecución, pruebas, variables, API, despliegue y flujo de trabajo | [`README.md`](../README.md) |
 | Etiquetas por hito | Releases `hito-1`, `hito-2` y `hito-3`, más `sprint-1` al cerrar la entrega | [releases](https://github.com/VelaElDios/la-grada-colchonera-saas/releases) |
-| Sin secretos en el repositorio | `.env` en `.gitignore`. Una prueba automática lo comprueba | [`.gitignore`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/.gitignore), [`tests/config.test.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/tests/config.test.js) |
+| Uso de Google Cloud (créditos de educación) | Despliegue en Cloud Run preparado con un script reproducible | [`scripts/gcp/preparar-cloud-run.sh`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/scripts/gcp/preparar-cloud-run.sh), [README › Despliegue](../README.md#despliegue) |
+| Sin secretos en el repositorio | `.env` en `.gitignore`; en Cloud Run, en Secret Manager. Una prueba automática lo comprueba | [`.gitignore`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/.gitignore), [`tests/config.test.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/tests/config.test.js) |
 
 ## Fuera del alcance de esta entrega (Hito 4)
 
