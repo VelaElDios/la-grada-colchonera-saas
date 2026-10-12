@@ -28,4 +28,7 @@ async function createTestPool() {
   return pool;
 }
 
-module.exports = { createTestPool };
+// Algunas pruebas necesitan un PostgreSQL real (pg-mem no emula todo lo que usa connect-pg-simple)
+const REAL_DATABASE = Boolean(process.env.TEST_DATABASE_URL);
+
+module.exports = { createTestPool, REAL_DATABASE };
