@@ -7,16 +7,16 @@ Esta página reúne todo lo que se ha gestionado en **DoneTonic**, para que pued
 | Herramienta | [DoneTonic](https://app.donetonic.com) |
 | Espacio de trabajo / equipo | *TFG* / *Colchoneros* |
 | Sprint | **Sprint 1**, del 29/09/2026 al 27/10/2026 |
-| Product Backlog | 19 PBIs (P1–P19) con 30 tareas (T1–T30), etiquetados por hito (H1–H4) |
+| Product Backlog | 19 PBIs (P1–P19) con 32 tareas (T1–T32), etiquetados por hito (H1–H4) |
 | Prioridad | Orden del backlog de P1 a P18, siguiendo los hitos. Todos los PBIs son **MUST** porque son requisitos obligatorios del enunciado |
-| Alcance de la entrega | Hitos 1, 2 y 3 (P1–P14), P18 (README y revisión) y P19 (despliegue en Google Cloud Run con los créditos de educación). P15–P17 pertenecen al Hito 4 y quedan fuera de esta entrega |
+| Alcance de la entrega | Hitos 1, 2 y 3 (P1–P14), P18 (README y revisión) y P19 (despliegue en Google Cloud Run con los créditos de educación). El profesor ha limitado esta primera entrega a los Hitos 1–3, así que P15–P17 (Hito 4) quedan para la siguiente |
 
 ## Cómo se ha trabajado
 
 1. **Del enunciado al backlog.** Cada requisito de la especificación del Sprint 1 se convirtió en un PBI, con descripción y criterios de aceptación. Los PBIs se agruparon por hito y se ordenaron por prioridad.
 2. **Del PBI a las tareas.** Cada PBI se dividió en el menor número de tareas que tuviera sentido, entre una y dos.
 3. **De la tarea al código.** Cada tarea tiene una rama propia `hito-N/Tx-descripcion`. Se integra en la rama del hito mediante un pull request titulado `[Tx] ...`, que exige el CI en verde.
-4. **Cierre de hito.** La rama `hito-N/integracion` se integra en `main` con otro pull request. Render la despliega y se publica una release `hito-N`.
+4. **Cierre de hito.** La rama `hito-N/integracion` se integra en `main` con otro pull request. El despliegue continuo la publica (Render y, desde el cierre del sprint, Google Cloud Run) y se crea una release `hito-N`.
 5. **Seguimiento.** Al fusionar cada PR, su tarea pasa a *HECHO* en el tablero. Cuando todas las tareas de un PBI están hechas, el PBI pasa a *HECHO*. Las gráficas de DoneTonic se actualizan solas.
 
 ### Definición de hecho (DoD)
@@ -28,7 +28,7 @@ Una tarea solo se considera **hecha** cuando cumple todo esto:
 - el PR está fusionado en la rama del hito;
 - la documentación (README, `.env.example`) está actualizada si hace falta.
 
-Un hito está **hecho** cuando su rama está en `main`, desplegada en https://la-grada-colchonera.onrender.com y publicada como release.
+Un hito está **hecho** cuando su rama está en `main`, desplegada en la URL pública (https://la-grada-colchonera-1081564062572.europe-southwest1.run.app) y publicada como release.
 
 ## Backlog y estado
 
@@ -48,9 +48,9 @@ Un hito está **hecho** cuando su rama está en `main`, desplegada en https://la
 | P12 | H3 | Gestión de secretos con variables de entorno | Hecho | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) |
 | P13 | H3 | Roles de usuario y administrador | Hecho | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) |
 | P14 | H3 | Registro (log) de la actividad | Hecho | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) |
-| P15 | H4 | Inicio de sesión con proveedor externo (OAuth) | Fuera de alcance | — |
-| P16 | H4 | Confirmación de cuenta por correo electrónico | Fuera de alcance | — |
-| P17 | H4 | Manejo de errores y feedback al usuario | Fuera de alcance | — |
+| P15 | H4 | Inicio de sesión con proveedor externo (OAuth) | Siguiente entrega | — |
+| P16 | H4 | Confirmación de cuenta por correo electrónico | Siguiente entrega | — |
+| P17 | H4 | Manejo de errores y feedback al usuario | Siguiente entrega | — |
 | P18 | H4 | README completo y revisión de la entrega | Hecho | Cierre del sprint |
 | P19 | H4 | Despliegue continuo en Google Cloud Run | Hecho | Cierre del sprint |
 
@@ -82,10 +82,12 @@ Un hito está **hecho** cuando su rama está en `main`, desplegada en https://la
 | P14 | T20 | Configurar el logging de la actividad relevante | `hito-3/T20-logging` | [#23](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/23) | Hecho |
 | P18 | T27 | Completar el README | `hito-4/T27-readme-completo` | [#25](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/25) | Hecho |
 |  | T28 | Etiquetas de hito y revisión final | `hito-4/T28-revision-entrega` | [#26](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/26) | Hecho |
+|  | T31 | Revisión frase a frase contra el enunciado y README final | `hito-4/T31-revision-enunciado` | [#30](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/30) | Hecho |
+|  | T32 | Carpeta de la memoria en LuaLaTeX | `hito-4/T32-carpeta-memoria` | [#31](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/31) | Hecho |
 | P19 | T29 | Contenerizar la aplicación con Docker | `hito-4/T29-docker` | [#27](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/27) | Hecho |
 |  | T30 | Despliegue continuo en Cloud Run con GitHub Actions | `hito-4/T30-cloud-run` | [#28](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/28) | Hecho |
 
-Cierres de hito: [#9](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/9) (Hito 1 → `main`), [#17](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/17) (Hito 2 → `main`), [#24](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/24) (Hito 3 → `main`) y [#29](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/29) (cierre del sprint → `main`).
+Cierres de hito: [#9](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/9) (Hito 1 → `main`), [#17](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/17) (Hito 2 → `main`), [#24](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/24) (Hito 3 → `main`) [#29](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/29) (cierre del sprint → `main`) y [#32](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/32) (revisión final y memoria → `main`).
 
 ## Evolución del sprint
 

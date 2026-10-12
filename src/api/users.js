@@ -1,8 +1,8 @@
 // Rutas HTTP de usuarios. Solo traducen petición/respuesta: las reglas están en userService.
 // (El alta de usuarios se hace con el registro: POST /api/auth/register.)
 // Todas exigen sesión (se aplica en api/index.js) y, además, el rol adecuado:
-//   - listado y cambio de rol: solo administradores;
-//   - consultar o eliminar una cuenta: el propio usuario o un administrador.
+//   - listado, comprobar si un usuario está activo y cambio de rol: solo administradores (apartado 4.2);
+//   - eliminar una cuenta: el propio usuario o un administrador.
 // (Express 5 pasa automáticamente al manejador de errores lo que lancen las funciones async.)
 const express = require('express');
 
@@ -19,8 +19,8 @@ function createUsersRouter({ userService }) {
     res.json(await userService.listUsers());
   });
 
-  // Comprobar si un usuario está activo
-  router.get('/:id/active', propioOAdmin, async (req, res) => {
+  // Comprobar si un usuario está activo (confirmado y no eliminado): solo administradores
+  router.get('/:id/active', soloAdmin, async (req, res) => {
     const active = await userService.isUserActive(req.params.id);
     res.json({ id: req.params.id, active });
   });
