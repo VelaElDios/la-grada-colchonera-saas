@@ -1,4 +1,15 @@
 \chapter{Calidad y pruebas}
+\label{cap:pruebas}
+
 \section{Estrategia de pruebas}
-\section{Pruebas unitarias}
-\section{Registro de actividad y manejo de errores}
+% Pruebas unitarias de la lógica, pruebas de la API y del repositorio (memoria y PostgreSQL).
+% Un único comando: npm test. pg-mem en local y PostgreSQL 17 real en el CI.
+
+\section{Pruebas unitarias de la lógica}
+% Casos destacados (incluidos los de error): email repetido, cuenta pendiente, un usuario que elimina a otro, último administrador.
+
+\section{Manejo de errores}
+% Errores de negocio tipados, traducción a códigos HTTP y feedback en la interfaz.
+
+\section{Registro de actividad}
+% Logs JSON, eventos registrados y ocultación de datos sensibles.

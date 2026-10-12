@@ -1,62 +1,122 @@
 # Revisión de la entrega (Sprint 1, Hitos 1–3)
 
-Comprobación, requisito a requisito, de que la entrega cumple lo pedido en la especificación del Sprint 1. Cada fila indica dónde está la prueba.
+Comprobación, frase a frase, de la especificación del proyecto (*Procesos de Ingeniería del Software, curso 2026-2027*). Cada fila indica cómo se cumple el requisito y dónde está la prueba.
 
-**Estado:** todos los requisitos de los Hitos 1, 2 y 3 están cumplidos, integrados en `main` y desplegados en **Google Cloud Run** (https://la-grada-colchonera-1081564062572.europe-southwest1.run.app) y en **Render** (https://la-grada-colchonera.onrender.com).
+| | |
+|---|---|
+| **Repositorio** | https://github.com/VelaElDios/la-grada-colchonera-saas |
+| **Aplicación desplegada** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (Google Cloud Run) |
+| **Alcance** | Hitos 1, 2 y 3. El profesor ha limitado esta primera entrega a esos tres hitos; el Hito 4 queda para la siguiente |
+| **Estado** | Todos los requisitos de los Hitos 1–3 están cumplidos, integrados en `main` y desplegados |
+
+**Leyenda:** ✅ cumplido · ⏳ pertenece al Hito 4 (siguiente entrega)
 
 ## Cómo comprobarlo en cinco minutos
 
-1. Abrir https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (o la URL de Render). La aplicación se apaga cuando no hay tráfico, así que la primera carga puede tardar unos segundos. El inicio muestra *Estado del servidor: en marcha*.
-2. **Registrarse** con cualquier email y una contraseña de 8 caracteres o más. Una contraseña corta se rechaza.
+1. Abrir https://la-grada-colchonera-1081564062572.europe-southwest1.run.app. Si la aplicación estaba parada, la primera carga tarda unos segundos. El inicio muestra *Estado del servidor: en marcha*.
+2. **Registrarse** con cualquier email y una contraseña de 8 caracteres o más. Una contraseña corta o un email repetido se rechazan con un mensaje claro.
 3. **Entrar** con esa cuenta y **recargar la página**: la sesión se mantiene.
-4. Ir a `#/admin`: como usuario normal, la aplicación devuelve a *Mi cuenta*. La API responde `403` en `/api/users`.
+4. Ir a `#/admin`: un usuario normal vuelve a *Mi cuenta*. La API responde `403` en `/api/users`.
 5. **Salir** y abrir `/api/users` directamente: responde `401`.
 6. Desde *Mi cuenta*, **eliminar la cuenta**: ya no se puede volver a entrar con ella.
-7. El panel de administración se ve en las [capturas del README](../README.md#capturas). Las credenciales del administrador son secretos y no están en el repositorio.
+7. **Entrar como administrador** con las credenciales enviadas con la entrega: aparece *Administración* con el listado de usuarios (email, rol y estado). Ver [README › Acceso como administrador](../README.md#acceso-como-administrador-para-la-revisión).
 
-## Hito 1: esqueleto y backend · release [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1)
+## 3. Arquitectura obligatoria
 
-| Requisito | Cómo se cumple | Evidencia |
+| Requisito | | Cómo se cumple | Evidencia |
+|---|---|---|---|
+| El backend sirve el frontend (mismo origen) | ✅ | Express sirve `public/` con `express.static` en el mismo servidor que la API | [`src/app.js`](../src/app.js), [`tests/frontend.test.js`](../tests/frontend.test.js) |
+| El cliente no accede a la base de datos ni ejecuta lógica de negocio | ✅ | El navegador solo habla con `/api`. Las reglas (permisos, último administrador, hash…) están en `src/services` | [README › Arquitectura](../README.md#arquitectura) |
+| Comunicación cliente-servidor solo a través de una API | ✅ | API REST JSON bajo `/api` | [README › API](../README.md#api) |
+| Backend: capas API, lógica y datos en módulos separados | ✅ | `src/api/` → `src/services/` → `src/repositories/`. La lógica recibe el repositorio por parámetro, así que no sabe si los datos están en memoria o en PostgreSQL | [`src/api/`](../src/api), [`src/services/`](../src/services), [`src/repositories/`](../src/repositories) |
+| Frontend: presentación y cliente de comunicación separados | ✅ | `public/js/ui.js` solo pinta vistas; todas las peticiones pasan por `public/js/api.js` | [`ui.js`](../public/js/ui.js), [`api.js`](../public/js/api.js) |
+
+**Dónde está la frontera entre capas:**
+
+- `src/api/users.js` llama a `userService.*` (API → lógica).
+- `src/services/userService.js` llama a `userRepository.*` (lógica → datos).
+- `src/app.js` es el único sitio donde se conectan las tres.
+- En el navegador, `ui.js` llama a `api.*` (presentación → cliente).
+
+## 4.1. Gestión de usuarios
+
+| Requisito | | Cómo se cumple | Evidencia |
+|---|---|---|---|
+| Registro de usuario local | ✅ | `POST /api/auth/register` valida el email y la contraseña (mínimo 8) y rechaza los emails repetidos (`409`) | [`src/api/auth.js`](../src/api/auth.js), captura 02 |
+| … con confirmación por correo (la cuenta queda pendiente) | ⏳ | Hito 4. El modelo ya tiene el estado `pending` y la lógica impide entrar a una cuenta pendiente (hay una prueba de ello). Se activa con `REQUIRE_EMAIL_CONFIRMATION=true` cuando exista el envío de correos | [`src/models/user.js`](../src/models/user.js), [`tests/userService.test.js`](../tests/userService.test.js) |
+| Inicio de sesión local (email + contraseña) | ✅ | `POST /api/auth/login`. El mensaje es el mismo si el email no existe o si la contraseña es incorrecta, para no revelar qué cuentas existen | [`src/services/userService.js`](../src/services/userService.js), captura 03 |
+| Inicio de sesión con un proveedor externo (OAuth) | ⏳ | Hito 4. El modelo ya distingue `authProvider: local \| google` | [`src/models/user.js`](../src/models/user.js) |
+| Cierre de sesión invalidando la sesión | ✅ | `POST /api/auth/logout` destruye la sesión **en el servidor** (en la tabla `session`) y borra la cookie; la cookie antigua deja de valer | [`tests/api.auth.test.js`](../tests/api.auth.test.js) |
+| La sesión se mantiene entre recargas | ✅ | Cookie `httpOnly` con la sesión guardada en PostgreSQL. Al cargar, la interfaz llama a `GET /api/auth/me` | [`src/app.js`](../src/app.js), [`public/js/ui.js`](../public/js/ui.js) (`iniciar`) |
+
+## 4.2. Roles y consultas sobre usuarios
+
+| Requisito | | Cómo se cumple | Evidencia |
+|---|---|---|---|
+| Dos roles como mínimo: usuario y administrador | ✅ | `ROLES = { user, admin }` | [`src/models/user.js`](../src/models/user.js) |
+| Listar usuarios (solo admin), con email, rol y estado | ✅ | `GET /api/users` con `requireRole('admin')`. El panel *Administración* muestra email, rol, estado y fecha de alta | [`src/api/users.js`](../src/api/users.js), captura 06 |
+| Comprobar si un usuario está activo (solo admin) | ✅ | `GET /api/users/:id/active` con `requireRole('admin')`. Un usuario normal recibe `403`, también si pregunta por su propia cuenta | [`tests/api.users.test.js`](../tests/api.users.test.js) |
+| «Activo» = cuenta confirmada (u OAuth) y no eliminada; no es «conectado» | ✅ | `isUserActive` devuelve `status === 'active'`; las cuentas pendientes y eliminadas no están activas | [`src/services/userService.js`](../src/services/userService.js) |
+| El admin elimina a cualquiera; un usuario solo su propia cuenta | ✅ | La API comprueba el permiso (`requireSelfOrRole`) y la lógica vuelve a comprobarlo (`deleteUser`). Además, nunca se elimina al último administrador | [`tests/userService.test.js`](../tests/userService.test.js) |
+| Un usuario eliminado no puede volver a iniciar sesión | ✅ | Baja lógica (`status = 'deleted'`): el login se rechaza y una sesión abierta deja de valer en la siguiente petición | [`src/api/currentUser.js`](../src/api/currentUser.js), [`tests/api.users.test.js`](../tests/api.users.test.js) |
+| Las restricciones se aplican en el servidor | ✅ | `requireAuth` (`401`), `requireRole` y `requireSelfOrRole` (`403`). La interfaz solo oculta los enlaces | [`src/api/currentUser.js`](../src/api/currentUser.js), captura 05 |
+| Cómo se crea el primer administrador (justificado) | ✅ | Con las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` al arrancar (`ensureAdmin`): no hay contraseñas en el código y no hace falta tocar la base de datos a mano | [README › Roles](../README.md#roles), [`src/bootstrap.js`](../src/bootstrap.js) |
+
+## 5. Requisitos no funcionales y seguridad
+
+| Requisito | | Cómo se cumple | Evidencia |
+|---|---|---|---|
+| Persistencia real: los datos sobreviven a un reinicio | ✅ | PostgreSQL en Neon con migraciones versionadas; las sesiones también se guardan en la base de datos | [`src/db/`](../src/db), [`tests/api.database.test.js`](../tests/api.database.test.js) |
+| Ningún secreto en el código ni en el repositorio | ✅ | Solo variables de entorno: Secret Manager en Cloud Run y `.env` (ignorado por git) en local. En producción la aplicación no arranca si falta un secreto | [`src/loadConfig.js`](../src/loadConfig.js), [`tests/config.test.js`](../tests/config.test.js) |
+| Archivo de ejemplo con los nombres de las variables, sin valores | ✅ | `.env.example` | [`.env.example`](../.env.example) |
+| Contraseñas con una función de hash segura | ✅ | bcrypt (`bcryptjs`, coste 10). La API nunca devuelve el hash y el registro de actividad lo oculta | [`src/services/passwordHasher.js`](../src/services/passwordHasher.js) |
+| Las rutas autenticadas rechazan peticiones sin sesión; las de admin, a quien no tiene el rol | ✅ | `401 UNAUTHENTICATED` y `403 FORBIDDEN` | [`tests/api.users.test.js`](../tests/api.users.test.js) |
+| Desplegada en un proveedor cloud con capa gratuita y URL pública | ✅ | Google Cloud Run (capa gratuita y créditos de educación). Render se mantiene como alternativa | [README › Despliegue](../README.md#despliegue) |
+
+## 6. Calidad y pruebas
+
+| Requisito | | Cómo se cumple | Evidencia |
+|---|---|---|---|
+| Al menos 5 pruebas unitarias de la capa de lógica sobre gestión de usuarios | ✅ | `tests/userService.test.js`: registro con email repetido, cuenta pendiente que intenta entrar, usuario normal que intenta eliminar a otro, último administrador… | [`tests/userService.test.js`](../tests/userService.test.js) |
+| Al menos una comprueba un caso de error | ✅ | Muchas: `ConflictError`, `ForbiddenError`, `ValidationError`, `NotFoundError`… | [`tests/userService.test.js`](../tests/userService.test.js) |
+| Pruebas automatizadas, con un framework y un único comando documentado | ✅ | `node:test`; se ejecutan con `npm test` (80 pruebas) | [README › Pruebas](../README.md#pruebas) |
+| Manejo explícito de errores con feedback claro | ✅ (base) | Errores de negocio tipados que la API traduce a un formato común `{ error: { code, message } }`; la interfaz muestra cada mensaje. El pulido (P17) es del Hito 4 | [`src/api/errorHandler.js`](../src/api/errorHandler.js), capturas 02 y 03 |
+| Registro (log) de la actividad relevante | ✅ | Una línea JSON por evento (peticiones, logins, intentos fallidos, bajas, cambios de rol…), visible en Cloud Logging. Las contraseñas y los secretos se ocultan | [README › Logs](../README.md#registro-de-actividad-logs) |
+| Historial de commits incremental | ✅ | Un commit por paso, con la tarea en el título (`[Tx] …`), en ramas y PRs separados | [commits](https://github.com/VelaElDios/la-grada-colchonera-saas/commits/main) |
+
+## 7. Flujo de trabajo y pipeline de CI/CD
+
+| Requisito | | Cómo se cumple | Evidencia |
+|---|---|---|---|
+| Rama por cambio; no se trabaja sobre `main` | ✅ | Una rama por tarea (`hito-N/Tx-…`) | [ramas](https://github.com/VelaElDios/la-grada-colchonera-saas/branches/all), [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| Pruebas en local antes de abrir el PR | ✅ | Paso obligatorio de `CONTRIBUTING.md` (`npm test`) | [`CONTRIBUTING.md`](../CONTRIBUTING.md) |
+| Integración mediante pull request | ✅ | Un PR por tarea y otro por cierre de hito | [PRs](https://github.com/VelaElDios/la-grada-colchonera-saas/pulls?q=is%3Apr+is%3Aclosed+sort%3Acreated-asc) |
+| CI en cada PR y en cada cambio de `main`; no se integra con el CI en rojo | ✅ | GitHub Actions (*Pruebas* con PostgreSQL 17 real e *Imagen Docker*). `main` está protegida y exige el check en verde | [`ci.yml`](../.github/workflows/ci.yml), [ejecuciones](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml) |
+| Despliegue continuo de cada cambio en `main`, sin desplegar a mano | ✅ | Cuando el CI pasa en `main`, [`deploy-cloud-run.yml`](../.github/workflows/deploy-cloud-run.yml) construye la imagen y la despliega en Cloud Run (Workload Identity Federation, sin claves) | [ejecuciones del despliegue](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/deploy-cloud-run.yml) |
+| La configuración del CI y del despliegue está en el repositorio | ✅ | `.github/workflows/`, `Dockerfile`, `render.yaml` y `scripts/gcp/preparar-cloud-run.sh` | [README › Despliegue](../README.md#despliegue) |
+| Etiqueta al terminar cada hito | ✅ | Releases `hito-1`, `hito-2`, `hito-3` y `sprint-1` | [releases](https://github.com/VelaElDios/la-grada-colchonera-saas/releases) |
+
+## 8. Entrega del Sprint 1
+
+| Requisito | | Cómo se cumple |
 |---|---|---|
-| Repositorio en GitHub con un flujo de trabajo definido | GitHub Flow por hitos: `main` ← `hito-N/integracion` ← `hito-N/Tx-…`. Ramas protegidas que exigen PR y CI en verde | [`CONTRIBUTING.md`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/CONTRIBUTING.md), [ramas](https://github.com/VelaElDios/la-grada-colchonera-saas/branches/all), [PRs](https://github.com/VelaElDios/la-grada-colchonera-saas/pulls?q=is%3Apr+is%3Aclosed+sort%3Acreated-asc) |
-| Arquitectura en capas | Presentación (`public/`), API (`src/api`), lógica (`src/services`) y datos (`src/repositories`) | [README › Arquitectura](../README.md#arquitectura) |
-| Integración continua | GitHub Actions ejecuta las pruebas en cada PR y en cada cambio de `main` y de las ramas de hito | [`.github/workflows/ci.yml`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/.github/workflows/ci.yml), [ejecuciones](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml) |
-| Despliegue continuo en una URL pública | Cada cambio en `main` con el CI en verde se despliega solo en Google Cloud Run (imagen Docker, Artifact Registry, Secret Manager y Workload Identity Federation) y en Render | [`deploy-cloud-run.yml`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/.github/workflows/deploy-cloud-run.yml), [`Dockerfile`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/Dockerfile), [`render.yaml`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/render.yaml) |
-| Lógica de gestión de usuarios (alta, listado con email, rol y estado, comprobar si está activo, eliminar) | `userService`: el administrador elimina a cualquiera y un usuario solo a sí mismo | [`src/services/userService.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/services/userService.js) |
-| Pruebas unitarias automatizadas de la lógica (al menos 5) | 80 pruebas con `node:test`; las de la lógica, en `tests/userService.test.js` | [`tests/`](https://github.com/VelaElDios/la-grada-colchonera-saas/tree/main/tests) |
-| Capa API que expone la lógica | API REST JSON con un formato de error común | [README › API](../README.md#api), [`src/api/`](https://github.com/VelaElDios/la-grada-colchonera-saas/tree/main/src/api) |
+| URL del repositorio | ✅ | https://github.com/VelaElDios/la-grada-colchonera-saas |
+| URL pública funcionando durante la evaluación | ✅ | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app. Puede tardar unos segundos en la primera petición si estaba parada |
+| README: tecnologías con una frase que justifique cada una | ✅ | [README › Tecnologías](../README.md#tecnologías) |
+| README: cómo ejecutar en local | ✅ | [README › Ejecutar en local](../README.md#ejecutar-en-local) |
+| README: cómo ejecutar las pruebas | ✅ | [README › Pruebas](../README.md#pruebas) |
+| README: variables de entorno (solo nombres) | ✅ | [README › Variables](../README.md#variables-de-entorno-y-secretos) y [`.env.example`](../.env.example) |
+| README: cómo acceder como administrador (sin publicar contraseñas) | ✅ | [README › Acceso como administrador](../README.md#acceso-como-administrador-para-la-revisión). Las credenciales se envían con la entrega |
 
-## Hito 2: autenticación y separación de capas · release [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2)
+## Gestión del proyecto
 
-| Requisito | Cómo se cumple | Evidencia |
-|---|---|---|
-| Frontend con la interfaz separada del cliente de comunicación | `ui.js` solo pinta vistas; todas las peticiones pasan por `api.js` | [`public/js/ui.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/public/js/ui.js), [`public/js/api.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/public/js/api.js) |
-| Registro e inicio de sesión locales | `POST /api/auth/register` y `/login`. Contraseñas guardadas solo como hash bcrypt; error genérico ante credenciales incorrectas | [`src/api/auth.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/api/auth.js), capturas 02 y 03 |
-| La sesión se mantiene y se puede cerrar | Cookie `httpOnly` y `sameSite`, `secure` en producción. `GET /api/auth/me` la recupera al recargar y `POST /api/auth/logout` la destruye en el servidor | [`src/app.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/app.js), [`tests/api.auth.test.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/tests/api.auth.test.js) |
-| Rutas protegidas en el servidor | El middleware `requireAuth` responde `401` sin sesión válida (también con cookies inventadas) | [`src/api/currentUser.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/api/currentUser.js), [`tests/api.users.test.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/tests/api.users.test.js) |
+| Qué | Dónde |
+|---|---|
+| Backlog (19 PBIs), sprint, tareas y su trazabilidad con ramas y PRs | [`docs/gestion/README.md`](gestion/README.md) |
+| Memoria del proyecto (LuaLaTeX) | [`memoria/`](../memoria/README.md) |
 
-## Hito 3: persistencia, seguridad y administración · release [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3)
+## Pendiente para la siguiente entrega (Hito 4)
 
-| Requisito | Cómo se cumple | Evidencia |
-|---|---|---|
-| Persistencia en una base de datos real | PostgreSQL en Neon con migraciones SQL versionadas. El repositorio de PostgreSQL sustituye al de memoria con el mismo contrato, y las sesiones también se guardan en la base de datos | [`src/db/`](https://github.com/VelaElDios/la-grada-colchonera-saas/tree/main/src/db), [`src/repositories/postgresUserRepository.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/repositories/postgresUserRepository.js), [`tests/userRepository.test.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/tests/userRepository.test.js) |
-| Gestión de secretos | Los secretos solo llegan por variables de entorno (panel de Render y `.env` local ignorado por git). En producción la aplicación no arranca si falta alguno | [`src/loadConfig.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/loadConfig.js), [`.env.example`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/.env.example), [README › Variables](../README.md#variables-de-entorno-y-secretos) |
-| Roles de usuario y administrador | Autorización en el servidor (`403`). Primer administrador creado desde `ADMIN_EMAIL` y `ADMIN_PASSWORD`, y siempre queda al menos un administrador | [`src/api/users.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/api/users.js), [README › Roles](../README.md#roles) |
-| Panel de administración y baja de la propia cuenta | Vista *Administración*: listado de usuarios, cambio de rol y eliminación. *Mi cuenta*: «Eliminar mi cuenta» | capturas 04, 05, 06 y 07 |
-| Registro (log) de la actividad | Una línea JSON por evento (peticiones, logins, intentos fallidos, bajas, cambios de rol…) visible en los logs de Render; las contraseñas y secretos se ocultan | [`src/logger.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/src/logger.js), [README › Logs](../README.md#registro-de-actividad-logs) |
-
-## Gestión, documentación y entrega
-
-| Requisito | Cómo se cumple | Evidencia |
-|---|---|---|
-| Gestión ágil del trabajo (PBIs, sprint, tareas) | 18 PBIs priorizados y Sprint 1 en DoneTonic. Cada tarea tiene su rama y su PR | [`docs/gestion/README.md`](gestion/README.md) |
-| README completo | Descripción, capturas, arquitectura, tecnologías, ejecución, pruebas, variables, API, despliegue y flujo de trabajo | [`README.md`](../README.md) |
-| Etiquetas por hito | Releases `hito-1`, `hito-2` y `hito-3`, más `sprint-1` al cerrar la entrega | [releases](https://github.com/VelaElDios/la-grada-colchonera-saas/releases) |
-| Uso de Google Cloud (créditos de educación) | Despliegue en Cloud Run preparado con un script reproducible | [`scripts/gcp/preparar-cloud-run.sh`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/scripts/gcp/preparar-cloud-run.sh), [README › Despliegue](../README.md#despliegue) |
-| Sin secretos en el repositorio | `.env` en `.gitignore`; en Cloud Run, en Secret Manager. Una prueba automática lo comprueba | [`.gitignore`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/.gitignore), [`tests/config.test.js`](https://github.com/VelaElDios/la-grada-colchonera-saas/blob/main/tests/config.test.js) |
-
-## Fuera del alcance de esta entrega (Hito 4)
-
-- **P15:** inicio de sesión con proveedor externo (OAuth). El modelo de usuario ya distingue `authProvider: local | google`.
-- **P16:** confirmación de cuenta por correo. La lógica ya admite el estado `pending` y se activa con `REQUIRE_EMAIL_CONFIRMATION=true`.
-- **P17:** manejo de errores y feedback avanzados. Ya existe un manejador de errores común y mensajes de error y de éxito en la interfaz.
+- **P15:** inicio de sesión con un proveedor externo (OAuth, Google).
+- **P16:** confirmación de la cuenta por correo electrónico mediante un servicio de correo transaccional. Cuando esté, `REQUIRE_EMAIL_CONFIRMATION` pasará a `true`.
+- **P17:** manejo de errores y feedback al usuario, revisado de principio a fin.

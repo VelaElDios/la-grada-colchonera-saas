@@ -1,33 +1,57 @@
-% Memoria del proyecto La Grada Colchonera
-% Compilar con: latexmk -lualatex main.tex   (o lualatex + biber + lualatex x2)
-\documentclass[11pt,a4paper,oneside]{report}
+% Memoria del proyecto La Grada Colchonera (Procesos de Ingeniería del Software, 2026-2027)
+% Compilar con LuaLaTeX (ver README.md):   latexmk        (usa la configuración de .latexmkrc)
+\documentclass[11pt,a4paper,oneside]{book}
 
+% --- Idioma y tipografía (LuaLaTeX: UTF-8 y fuentes OpenType con fontspec) ---
 \usepackage{fontspec}
-\usepackage[spanish,es-tabla]{babel}
+\usepackage[spanish,es-tabla,es-noshorthands]{babel}
+\usepackage{csquotes}
+
+% --- Página ---
 \usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{setspace}
+\onehalfspacing
+
+% --- Figuras, tablas y código ---
 \usepackage{graphicx}
 \usepackage{booktabs}
+\usepackage{tabularx}
 \usepackage{xcolor}
 \usepackage{listings}
-\usepackage{csquotes}
+\usepackage{caption}
+
+% --- Bibliografía (biblatex + biber) y enlaces ---
 \usepackage[backend=biber,style=ieee]{biblatex}
+\addbibresource{bibliografia.bib}
 \usepackage[hidelinks]{hyperref}
 
-\addbibresource{bibliografia.bib}
-\graphicspath{{figuras/}}
+% Las capturas de la aplicación se reutilizan desde docs/ para no duplicarlas
+\graphicspath{{figuras/}{../docs/capturas/app/}}
 
 \definecolor{rojiblanco}{HTML}{C8102E}
-\lstset{basicstyle=\ttfamily\small, breaklines=true, frame=single}
+\lstset{basicstyle=\ttfamily\small, breaklines=true, frame=single, columns=fullflexible}
 
-\title{\textbf{La Grada Colchonera}\\[0.5em]\large Aplicación SaaS en capas con gestión de usuarios}
-\author{Javier Vela\\Procesos de Ingeniería del Software}
-\date{Curso 2026--2027}
+% Datos del trabajo (se usan en la portada y en los metadatos del PDF)
+\newcommand{\titulo}{La Grada Colchonera}
+\newcommand{\subtitulo}{Aplicación SaaS en capas con gestión de usuarios}
+\newcommand{\autor}{Javier Vela}
+\newcommand{\asignatura}{Procesos de Ingeniería del Software}
+\newcommand{\curso}{Curso 2026--2027}
+\newcommand{\repositorio}{https://github.com/VelaElDios/la-grada-colchonera-saas}
+\newcommand{\despliegue}{https://la-grada-colchonera-1081564062572.europe-southwest1.run.app}
+
+\hypersetup{pdftitle={\titulo}, pdfauthor={\autor}, pdfsubject={\asignatura}}
 
 \begin{document}
 
-\maketitle
+\frontmatter
+\include{preliminares/portada}
+\include{preliminares/resumen}
 \tableofcontents
+\listoffigures
+\listoftables
 
+\mainmatter
 \include{capitulos/01-introduccion}
 \include{capitulos/02-gestion}
 \include{capitulos/03-arquitectura}
@@ -36,6 +60,11 @@
 \include{capitulos/06-cicd}
 \include{capitulos/07-conclusiones}
 
+\appendix
+\include{anexos/A-manual-usuario}
+\include{anexos/B-trazabilidad}
+
+\backmatter
 \printbibliography[heading=bibintoc]
 
 \end{document}

@@ -1,0 +1,37 @@
+# Compila la memoria (LuaLaTeX + biber) cuando cambia algo en memoria/ y publica el PDF
+# como artefacto de la ejecución. Así se comprueba que la memoria siempre compila.
+name: Memoria
+
+on:
+  pull_request:
+    paths:
+      - 'memoria/**'
+      - '.github/workflows/memoria.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'memoria/**'
+      - '.github/workflows/memoria.yml'
+  workflow_dispatch:
+
+jobs:
+  pdf:
+    name: Compilar la memoria
+    runs-on: ubuntu-latest
+    steps:
+      - name: Descargar el código
+        uses: actions/checkout@v4
+
+      - name: Compilar con LuaLaTeX (latexmk + biber)
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: main.tex
+          working_directory: memoria
+          latexmk_use_lualatex: true
+
+      - name: Publicar el PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: memoria-pdf
+          path: memoria/build/main.pdf
+          if-no-files-found: error

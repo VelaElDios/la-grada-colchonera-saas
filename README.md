@@ -2,23 +2,34 @@
 
 [![CI](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml/badge.svg)](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml)
 [![Última versión](https://img.shields.io/github/v/release/VelaElDios/la-grada-colchonera-saas?label=versi%C3%B3n)](https://github.com/VelaElDios/la-grada-colchonera-saas/releases)
-[![Desplegado en Render](https://img.shields.io/badge/demo-onrender.com-46e3b7)](https://la-grada-colchonera.onrender.com)
+[![Desplegado en Cloud Run](https://img.shields.io/badge/demo-Google%20Cloud%20Run-4285F4)](https://la-grada-colchonera-1081564062572.europe-southwest1.run.app)
 
 Red social para la afición rojiblanca. Proyecto individual de **Procesos de Ingeniería del Software (curso 2026-2027)**, planteado como un TFG.
 El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: gestión de usuarios con registro, inicio de sesión, roles, base de datos real, despliegue continuo y gestión ágil del trabajo.
 
 > Proyecto de aficionado sin relación oficial con el Club Atlético de Madrid.
 
+## Entrega del Sprint 1
+
+| | |
+|---|---|
+| **Repositorio** | https://github.com/VelaElDios/la-grada-colchonera-saas |
+| **Aplicación desplegada** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (Google Cloud Run) |
+| **Alcance** | Hitos 1, 2 y 3 del enunciado. El Hito 4 (OAuth y confirmación por correo) queda para la siguiente entrega |
+| **Acceso de administrador** | Ver [Acceso como administrador para la revisión](#acceso-como-administrador-para-la-revisión). Las credenciales se envían junto con la entrega |
+| **Revisión requisito a requisito** | [`docs/revision-entrega.md`](docs/revision-entrega.md) |
+
 ## Enlaces rápidos
 
 | Qué | Dónde |
 |---|---|
-| Aplicación desplegada | Google Cloud Run: https://la-grada-colchonera-1081564062572.europe-southwest1.run.app · Render: https://la-grada-colchonera.onrender.com |
-| Entregas por hito (releases) | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) |
-| Pull requests (24: uno por tarea y uno por cierre de hito) | [VelaElDios/la-grada-colchonera-saas/pulls](https://github.com/VelaElDios/la-grada-colchonera-saas/pulls?q=is%3Apr+is%3Aclosed+sort%3Acreated-asc) |
+| Aplicación desplegada | Google Cloud Run (principal): https://la-grada-colchonera-1081564062572.europe-southwest1.run.app · Render (alternativo): https://la-grada-colchonera.onrender.com |
+| Entregas por hito (releases) | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) |
+| Pull requests (uno por tarea y uno por cierre de hito) | [VelaElDios/la-grada-colchonera-saas/pulls](https://github.com/VelaElDios/la-grada-colchonera-saas/pulls?q=is%3Apr+is%3Aclosed+sort%3Acreated-asc) |
 | Integración continua (GitHub Actions) | [Ejecuciones del workflow *CI*](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml) |
 | Gestión del proyecto (DoneTonic: PBIs, tareas, sprint y gráficas) | [`docs/gestion/README.md`](docs/gestion/README.md) |
 | Revisión de la entrega frente al enunciado | [`docs/revision-entrega.md`](docs/revision-entrega.md) |
+| Memoria del proyecto (LuaLaTeX) | [`memoria/`](memoria/README.md) |
 
 ## Capturas
 
@@ -41,12 +52,12 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 
 | Hito | Contenido | PBIs (DoneTonic) | Entrega |
 |---|---|---|---|
-| **1. Esqueleto y backend** | Repositorio con GitHub Flow, CI con GitHub Actions, despliegue continuo en Render, lógica de gestión de usuarios en memoria, pruebas unitarias y API REST. | P1–P6 · T1–T8 | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · PRs #1–#10 |
-| **2. Autenticación y separación de capas** | Frontend separado en interfaz (`ui.js`) y cliente de la API (`api.js`), registro e inicio de sesión locales con contraseñas cifradas (bcrypt), sesión que se mantiene al recargar, cierre de sesión en el servidor y rutas protegidas. | P7–P10 · T9–T14 | [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · PRs #11–#17 |
+| **1. Esqueleto y backend** | Repositorio con GitHub Flow, CI con GitHub Actions, despliegue continuo en Render (al cerrar el sprint, también en Google Cloud Run), lógica de gestión de usuarios en memoria, pruebas unitarias y API REST. | P1–P6 · T1–T8 | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · PRs #1–#10 |
+| **2. Autenticación y separación de capas** | Frontend separado en interfaz (`ui.js`) y cliente de la API (`api.js`), registro e inicio de sesión locales con las contraseñas guardadas como hash bcrypt (nunca en claro ni cifradas de forma reversible), sesión que se mantiene al recargar, cierre de sesión en el servidor y rutas protegidas. | P7–P10 · T9–T14 | [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · PRs #11–#17 |
 | **3. Persistencia, seguridad y administración** | PostgreSQL (Neon) con migraciones, sesiones guardadas en la base de datos, secretos solo en variables de entorno, roles usuario/administrador con primer administrador, panel de administración, baja de la propia cuenta y logs estructurados. | P11–P14 · T15–T20 | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · PRs #18–#24 |
-| **Cierre del sprint** | README completo, capturas, documentación de la gestión y revisión de la entrega. | P18 · T27–T28 | PRs de `hito-4/*` |
+| **Cierre del sprint** | README completo, capturas, documentación de la gestión, revisión de la entrega frente al enunciado, despliegue en Google Cloud Run y carpeta de la memoria. | P18–P19 · T27–T32 | [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) · PRs de `hito-4/*` |
 
-Los PBIs P15–P17 (OAuth, confirmación por correo y manejo de errores avanzado) pertenecen al Hito 4 y quedan fuera del alcance de esta entrega.
+El profesor ha limitado esta primera entrega a los Hitos 1–3. Los PBIs del Hito 4 (P15 OAuth, P16 confirmación por correo y P17 manejo de errores avanzado) quedan para la siguiente entrega. La base ya está preparada: el modelo de usuario tiene el estado `pending` y el campo `authProvider` (`local` o `google`).
 
 ## Arquitectura
 
@@ -65,7 +76,7 @@ flowchart LR
     REPO -- "producción" --> PG[("PostgreSQL<br/>Neon")]
     REPO -. "desarrollo y pruebas" .-> MEM[("Memoria")]
     API -- "sesiones" --> PG
-    API -- "logs JSON" --> LOGS["stdout<br/>Logs de Render"]
+    API -- "logs JSON" --> LOGS["stdout<br/>Cloud Logging"]
 ```
 
 - **Presentación** (`public/`): HTML, CSS y JavaScript sin framework. `ui.js` solo pinta vistas; todas las peticiones pasan por `api.js`.
@@ -75,16 +86,18 @@ flowchart LR
 
 ## Tecnologías
 
+Cada tecnología lleva una frase que justifica por qué se ha elegido.
+
 | Tecnología | Para qué | Justificación |
 |---|---|---|
 | Node.js 22 + Express 5 | Servidor y API REST | Un único lenguaje (JavaScript) en cliente y servidor y un framework mínimo en el que las capas se ven como módulos simples. Express 5 pasa los errores asíncronos al manejador común. |
-| HTML, CSS y JavaScript | Frontend | El propio backend sirve el frontend (mismo origen, sin CORS) y no hace falta compilar nada. |
+| HTML, CSS y JavaScript sin framework | Frontend | El propio backend sirve el frontend (mismo origen, sin CORS), no hace falta compilar nada y la frontera entre interfaz (`ui.js`) y cliente (`api.js`) se ve en dos ficheros. |
 | PostgreSQL en Neon (capa gratuita) | Base de datos | Base de datos relacional real, gestionada y gratuita. Las tablas se crean con migraciones SQL versionadas. |
 | `pg`, `connect-pg-simple` | Acceso a PostgreSQL y sesiones | Consultas parametrizadas (sin inyección SQL) y sesiones guardadas en la base de datos, que sobreviven a reinicios y despliegues. |
 | `express-session`, `bcryptjs` | Autenticación | Sesión en el servidor con cookie `httpOnly`; contraseñas guardadas solo como hash bcrypt. |
 | `node:test` + `pg-mem` | Pruebas | Framework incluido en Node. `pg-mem` emula PostgreSQL en local y el CI usa un PostgreSQL 17 real. |
 | GitHub Actions | Integración continua | Ejecuta las pruebas en cada PR y en cada cambio de `main` y de las ramas de hito; las ramas protegidas exigen que pasen. |
-| Docker + Google Cloud Run | Despliegue continuo (principal) | Imagen reproducible y despliegue sin servidor que escala a cero, con los créditos de Google Cloud para educación. Secretos en Secret Manager y acceso desde GitHub sin claves (Workload Identity Federation). |
+| Docker + Google Cloud Run | Despliegue continuo (principal) | Imagen reproducible y despliegue sin servidor que escala a cero (Cloud Run tiene capa gratuita y además usamos los créditos de Google Cloud para educación). Secretos en Secret Manager y acceso desde GitHub sin claves (Workload Identity Federation). |
 | Render (capa gratuita) | Despliegue continuo (alternativo) | Cada cambio en `main` se publica solo. Configuración como código en `render.yaml`. |
 | DoneTonic | Gestión ágil | Backlog de PBIs, sprint, tablero de tareas y gráficas (burndown, burnup y velocity). |
 
@@ -109,6 +122,7 @@ public/
   js/api.js            Cliente de comunicación con la API
 tests/                 Pruebas automatizadas (unitarias, de API y de base de datos)
 docs/                  Capturas, gestión del proyecto y revisión de la entrega
+memoria/               Memoria del proyecto en LuaLaTeX
 Dockerfile             Imagen de la aplicación (Cloud Run)
 scripts/gcp/           Preparación de Google Cloud (una sola vez)
 render.yaml            Despliegue en Render (Blueprint)
@@ -131,14 +145,21 @@ npm start              # http://localhost:3000
 
 ## Pruebas
 
+Todas las pruebas son automáticas (`node:test`) y se ejecutan con **un único comando**:
+
 ```bash
-npm test                                   # pruebas con pg-mem (no necesita PostgreSQL)
-TEST_DATABASE_URL=postgresql://... npm test   # además, contra un PostgreSQL real
+npm test
 ```
 
-80 pruebas automatizadas:
+No hace falta tener PostgreSQL: en local, las pruebas de base de datos usan `pg-mem`. Para lanzarlas además contra un PostgreSQL real (como hace el CI):
 
-- **Lógica:** registro, autenticación, roles, bajas y último administrador.
+```bash
+TEST_DATABASE_URL=postgresql://usuario:clave@localhost:5432/grada_test npm test
+```
+
+Son 80 pruebas automatizadas:
+
+- **Lógica (pruebas unitarias):** registro, email repetido, cuenta pendiente que intenta entrar, usuario normal que intenta eliminar a otro, roles, bajas y último administrador. Muchas comprueban casos de error, no solo el camino feliz.
 - **Repositorios:** el mismo contrato para memoria y para PostgreSQL.
 - **API:** códigos 401 y 403, sesión, cambio de rol y baja.
 - **Configuración y secretos.**
@@ -153,7 +174,8 @@ El CI ejecuta todas las pruebas contra un PostgreSQL 17 real.
 La configuración y los secretos llegan **solo por variables de entorno** ([`src/loadConfig.js`](src/loadConfig.js)); en el código y en el repositorio no hay ningún valor secreto.
 
 - **En local:** se copian las variables en un fichero `.env` (partiendo de [`.env.example`](.env.example)). Ese fichero está en `.gitignore` y nunca se sube.
-- **En producción (Render):** los valores se guardan en el panel del servicio (*Environment*). `SESSION_SECRET` lo genera Render y el resto se introduce a mano (`sync: false` en [`render.yaml`](render.yaml)).
+- **En producción (Cloud Run):** los secretos están en **Secret Manager** (`database-url`, `session-secret`, `admin-email` y `admin-password`) y Cloud Run los entrega a la aplicación como variables de entorno. Solo los puede leer la cuenta de servicio con la que se ejecuta la aplicación.
+- **En Render (alternativo):** los valores se guardan en el panel del servicio (*Environment*). `SESSION_SECRET` lo genera Render y el resto se introduce a mano (`sync: false` en [`render.yaml`](render.yaml)).
 - Si en producción falta un secreto obligatorio, la aplicación no arranca y lo indica en el log, en lugar de funcionar de forma insegura.
 
 | Variable | Secreto | Descripción |
@@ -165,7 +187,7 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 | `ADMIN_EMAIL` | No | Email del primer administrador (se crea o se promociona al arrancar) |
 | `ADMIN_PASSWORD` | Sí | Contraseña del primer administrador (mínimo 8 caracteres). Solo se usa si la cuenta no existe |
 | `LOG_LEVEL` | No | Nivel del registro de actividad: `debug`, `info` (por defecto), `warn`, `error` o `silent` |
-| `REQUIRE_EMAIL_CONFIRMATION` | No | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
+| `REQUIRE_EMAIL_CONFIRMATION` | No | `true` para que las cuentas nuevas queden pendientes hasta confirmar el correo. Por defecto `false`, porque el envío de correos es del Hito 4 |
 
 ## API
 
@@ -177,7 +199,7 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 | POST | `/api/auth/logout` | Público | Cierra la sesión actual |
 | GET | `/api/auth/me` | Sesión | Devuelve el usuario con sesión iniciada |
 | GET | `/api/users` | Admin | Listado de usuarios (email, rol y estado) |
-| GET | `/api/users/:id/active` | Propio o admin | Indica si un usuario está activo |
+| GET | `/api/users/:id/active` | Admin | Indica si un usuario está activo: confirmado y no eliminado (no si está conectado) |
 | PATCH | `/api/users/:id/role` | Admin | Cambia el rol (`{ "role": "admin" \| "user" }`) |
 | DELETE | `/api/users/:id` | Propio o admin | Elimina una cuenta (baja lógica). Nunca se elimina al último administrador |
 
@@ -187,12 +209,23 @@ Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; c
 ### Roles
 
 - **user:** gestiona su propia cuenta (ver su perfil y darse de baja).
-- **admin:** además, ve el listado de usuarios, cambia roles y elimina cuentas.
+- **admin:** además, ve el listado de usuarios, comprueba si un usuario está activo, cambia roles y elimina cualquier cuenta.
 - **Primer administrador:** al arrancar, si existen `ADMIN_EMAIL` y `ADMIN_PASSWORD`, se crea esa cuenta con rol de administrador (o se promociona si ya existía). Siempre debe quedar al menos un administrador activo.
+- Todas estas restricciones se comprueban **en el servidor** (`401` o `403`): la interfaz solo oculta lo que no se puede usar.
+
+**Por qué el primer administrador se crea con variables de entorno.** Es lo único que no necesita entrar en la base de datos a mano ni dejar una contraseña en el código o en un script del repositorio. La contraseña llega como secreto (Secret Manager en Cloud Run, `.env` en local) y solo se guarda su hash. Además, se ejecuta en cada arranque sin repetir nada: si la cuenta ya existe, no se toca su contraseña.
+
+## Acceso como administrador para la revisión
+
+1. Abrir https://la-grada-colchonera-1081564062572.europe-southwest1.run.app. La primera carga puede tardar unos segundos si la aplicación estaba parada.
+2. Pulsar **Entrar** e introducir el email y la contraseña del administrador. **No están en el repositorio:** se envían junto con la entrega. Son los valores de los secretos `admin-email` y `admin-password` de Secret Manager.
+3. En el menú aparece **Administración**: listado de usuarios con email, rol, estado y fecha de alta, y botones para cambiar el rol o eliminar una cuenta.
+
+Para probar también los permisos de un usuario normal, basta con registrar una cuenta nueva desde **Registrarse**. Como el envío de correos es del Hito 4, la cuenta queda activa al momento.
 
 ## Registro de actividad (logs)
 
-La aplicación escribe cada evento relevante como una línea JSON en la salida estándar ([`src/logger.js`](src/logger.js)); en Render se consultan en la pestaña *Logs* del servicio y se pueden filtrar por texto (por ejemplo, `auth.login_failed`).
+La aplicación escribe cada evento relevante como una línea JSON en la salida estándar ([`src/logger.js`](src/logger.js)). En Cloud Run se consultan en **Cloud Logging**, en la pestaña *Registros* del servicio, y en Render en la pestaña *Logs*. Se pueden filtrar por texto, por ejemplo `auth.login_failed`.
 
 | Evento | Nivel | Cuándo |
 |---|---|---|
@@ -257,13 +290,23 @@ gitGraph
 - `hito-N/integracion`: rama de cada hito. Reúne las tareas del hito y se integra en `main` con un PR al cerrarlo, que se publica como release `hito-N`.
 - `hito-N/Tx-descripcion`: una rama por tarea de DoneTonic, que se integra en la rama de su hito mediante un PR titulado `[Tx] ...`.
 - `main` y `hito-*/integracion` están protegidas: solo admiten cambios por PR y exigen que el check **Pruebas** del CI esté en verde.
+- Antes de abrir cada PR se ejecuta `npm test` en local. Después, el CI vuelve a ejecutar las pruebas en el PR y otra vez al llegar a `main`, y entonces se despliega en Cloud Run sin intervención manual.
 
 ## Gestión del proyecto
 
-El trabajo se ha planificado y seguido en **DoneTonic** (espacio *TFG*, equipo *Colchoneros*, Sprint 1 del 29/09/2026 al 27/10/2026). Hay 18 PBIs priorizados por hito, cada uno con sus tareas, y cada tarea corresponde a una rama y a un PR de este repositorio.
+El trabajo se ha planificado y seguido en **DoneTonic** (espacio *TFG*, equipo *Colchoneros*, Sprint 1 del 29/09/2026 al 27/10/2026). Hay 19 PBIs priorizados por hito, cada uno con sus tareas, y cada tarea corresponde a una rama y a un PR de este repositorio.
 
 En [`docs/gestion/README.md`](docs/gestion/README.md) están:
 
 - el backlog completo con el estado de cada PBI;
 - la trazabilidad tarea → rama → PR → release;
-- capturas del tablero y de las gráficas de seguimiento (burnup, burndown y velocity).
+- el burndown del sprint y las gráficas de seguimiento que hay en DoneTonic (burnup, burndown y velocity).
+- capturas del tablero, de las gráficas y del backlog en DoneTonic.
+
+| Tablero del Sprint 1 | Gráficas del sprint |
+|---|---|
+| ![Tablero del Sprint 1 en DoneTonic](docs/capturas/donetonic/01-tablero-sprint.png) | ![Sprint Burnup y Burndown en DoneTonic](docs/capturas/donetonic/02-graficas-sprint.png) |
+
+## Memoria
+
+La memoria del proyecto, planteada como un TFG, está en [`memoria/`](memoria/README.md). Se escribe en LaTeX y se compila con **LuaLaTeX**. Allí se explica cómo generar el PDF.

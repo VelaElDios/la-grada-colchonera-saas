@@ -1,7 +1,18 @@
 \chapter{Arquitectura}
+\label{cap:arquitectura}
+
 \section{Visión general}
-% Separación cliente-servidor: el backend sirve el frontend y toda la comunicación va por la API.
+% Separación cliente-servidor: el backend sirve el frontend (mismo origen) y toda la comunicación va por la API.
+
 \section{Arquitectura en capas}
-% Backend: API, lógica de negocio y acceso a datos. Frontend: presentación y cliente de comunicación.
+% Backend: API (src/api), lógica (src/services) y datos (src/repositories).
+% Frontend: presentación (ui.js) y cliente de comunicación (api.js).
+% Dónde está exactamente la frontera entre capas y por qué la lógica no cambió al pasar de memoria a PostgreSQL.
+
+\section{Modelo de datos}
+% Tabla users (id, email, password_hash, role, status, auth_provider, created_at, deleted_at)
+% y tabla session. Migraciones versionadas.
+
 \section{Decisiones tecnológicas}
-% Node.js + Express \cite{expressjs}, base de datos, autenticación... y por qué.
+% Una justificación por tecnología: Node.js + Express \cite{expressjs}, PostgreSQL (Neon),
+% express-session + connect-pg-simple, bcrypt, node:test, GitHub Actions, Docker y Cloud Run.
