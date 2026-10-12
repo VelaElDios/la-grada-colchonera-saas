@@ -9,6 +9,7 @@ const { createMemoryUserRepository } = require('./repositories/memoryUserReposit
 const { createPasswordHasher } = require('./services/passwordHasher');
 const { createUserService } = require('./services/userService');
 const { createApiRouter } = require('./api');
+const { createLogger } = require('./logger');
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
@@ -17,6 +18,7 @@ function createApp({
   userRepository = createMemoryUserRepository(),
   passwordHasher = createPasswordHasher(),
   sessionStore, // dónde se guardan las sesiones (sin indicarlo: en memoria)
+  logger = createLogger({ level: config.logLevel || 'info' }),
 } = {}) {
   const userService = createUserService({
     userRepository,
@@ -48,7 +50,7 @@ function createApp({
   }));
 
   // Capa API: toda la comunicación cliente-servidor pasa por /api
-  app.use('/api', createApiRouter({ userService, config }));
+  app.use('/api', createApiRouter({ userService, config, logger }));
 
   // El backend sirve el frontend (mismo origen)
   app.use(express.static(path.join(__dirname, '..', 'public')));

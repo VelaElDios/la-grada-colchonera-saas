@@ -41,6 +41,7 @@ function requireAuth(req, res, next) {
 function requireRole(...roles) {
   return (req, res, next) => {
     if (!req.user || !roles.includes(req.user.role)) {
+      req.log?.warn('auth.forbidden', 'Acceso denegado por rol', { userId: req.user?.id ?? null, path: req.originalUrl });
       return res.status(403).json({
         error: { code: 'FORBIDDEN', message: 'No tienes permiso para acceder a este recurso' },
       });
@@ -53,6 +54,7 @@ function requireRole(...roles) {
 function requireSelfOrRole(...roles) {
   return (req, res, next) => {
     if (req.user && (req.user.id === req.params.id || roles.includes(req.user.role))) return next();
+    req.log?.warn('auth.forbidden', 'Acceso denegado a una cuenta ajena', { userId: req.user?.id ?? null, path: req.originalUrl });
     return res.status(403).json({
       error: { code: 'FORBIDDEN', message: 'No tienes permiso para acceder a este recurso' },
     });

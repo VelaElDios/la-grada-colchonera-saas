@@ -11,6 +11,7 @@ const { createMemoryUserRepository } = require('./repositories/memoryUserReposit
 const { createPostgresUserRepository } = require('./repositories/postgresUserRepository');
 const { createPasswordHasher } = require('./services/passwordHasher');
 const { createUserService } = require('./services/userService');
+const { createLogger } = require('./logger');
 
 /**
  * Prepara la capa de datos para la configuración dada.
@@ -50,13 +51,25 @@ async function createDataLayer(config, { pool: givenPool } = {}) {
 
 /** Crea la app lista para escuchar, con su capa de datos y el primer administrador. */
 async function bootstrap(config, options = {}) {
+  const logger = options.logger || createLogger({ level: config.logLevel || 'info' });
   const data = await createDataLayer(config, options);
+  logger.info('app.storage', `Datos guardados en ${data.storage}`, { storage: data.storage });
+  if (data.storage === 'memoria') {
+    logger.warn('app.storage', 'Sin DATABASE_URL: los datos se perderán al reiniciar');
+  }
+
   const passwordHasher = options.passwordHasher || createPasswordHasher();
 
   let admin = null;
   if (config.admin) {
     const userService = createUserService({ userRepository: data.userRepository, passwordHasher });
     admin = await userService.ensureAdmin(config.admin);
+    if (admin.action !== 'unchanged') {
+      logger.info('admin.bootstrap', admin.action === 'created' ? 'Primer administrador creado' : 'Cuenta promocionada a administrador', {
+        userId: admin.user.id,
+        email: admin.user.email,
+      });
+    }
   }
 
   const app = createApp({
@@ -64,8 +77,9 @@ async function bootstrap(config, options = {}) {
     userRepository: data.userRepository,
     sessionStore: data.sessionStore,
     passwordHasher,
+    logger,
   });
-  return { app, admin, ...data };
+  return { app, admin, logger, ...data };
 }
 
 module.exports = { bootstrap, createDataLayer };

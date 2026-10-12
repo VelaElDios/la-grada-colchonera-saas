@@ -18,7 +18,7 @@ describe('API con PostgreSQL', { skip: !REAL_DATABASE && 'necesita TEST_DATABASE
     pool = await createTestPool();
     data = await createDataLayer({}, { pool });
     const app = createApp({
-      config: { isProduction: false, requireEmailConfirmation: false, sessionSecret: 'secreto', sessionCookieName: 'grada.sid' },
+      config: { isProduction: false, requireEmailConfirmation: false, sessionSecret: 'secreto', sessionCookieName: 'grada.sid', logLevel: 'silent' },
       userRepository: data.userRepository,
       sessionStore: data.sessionStore,
       passwordHasher: createPasswordHasher({ rounds: 4 }),
