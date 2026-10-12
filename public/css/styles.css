@@ -70,6 +70,9 @@ body {
 
 .contenido h2 { margin-top: 0; color: var(--azul); }
 
+/* Vistas con tablas (panel de administración): contenedor más ancho */
+.contenido--ancho { width: min(960px, calc(100% - 2rem)); }
+
 .estado { color: var(--gris); }
 
 /* Mensajes al usuario */
@@ -152,7 +155,12 @@ body {
 
 .tabla .acciones {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
+}
+
+.tabla td:first-child {
+  overflow-wrap: anywhere;
 }
 
 .estado-active { color: #1d7a3a; }

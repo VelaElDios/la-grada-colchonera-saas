@@ -2,6 +2,7 @@
 // No hace peticiones HTTP: todo pasa por el cliente de comunicación `api` (js/api.js).
 
 const app = document.getElementById('app');
+const contenido = document.querySelector('.contenido');
 const nav = document.getElementById('nav');
 const mensaje = document.getElementById('mensaje');
 
@@ -254,7 +255,7 @@ const vistas = {
   '/entrar': { titulo: 'Entrar', render: vistaEntrar, soloInvitados: true },
   '/registro': { titulo: 'Registrarse', render: vistaRegistro, soloInvitados: true },
   '/perfil': { titulo: 'Mi cuenta', render: vistaPerfil, protegida: true },
-  '/admin': { titulo: 'Administración', render: vistaAdmin, protegida: true, soloAdmin: true },
+  '/admin': { titulo: 'Administración', render: vistaAdmin, protegida: true, soloAdmin: true, ancho: true },
 };
 
 // --- Navegación ---------------------------------------------------------------
@@ -296,6 +297,7 @@ async function render() {
   }
 
   pintarNav();
+  contenido.classList.toggle('contenido--ancho', Boolean(vista.ancho));
   if (estado.aviso) {
     mostrarMensaje(estado.aviso.texto, estado.aviso.tipo);
     estado.aviso = null;
