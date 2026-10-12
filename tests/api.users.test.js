@@ -77,12 +77,13 @@ describe('API /api/users', () => {
     assert.equal(res.body.error.code, 'FORBIDDEN');
   });
 
-  test('un usuario puede consultar su propio estado pero no el de otros (403)', async () => {
+  test('comprobar si un usuario está activo es solo del administrador: un usuario normal recibe 403, también con su cuenta', async () => {
     const yo = await registrar('fan7@grada.es');
     const cookie = await entrar(yo.email);
 
-    assert.equal((await srv.request('GET', `/users/${yo.id}/active`, { cookie })).status, 200);
+    assert.equal((await srv.request('GET', `/users/${yo.id}/active`, { cookie })).status, 403);
     assert.equal((await srv.request('GET', `/users/${admin.id}/active`, { cookie })).status, 403);
+    assert.equal((await srv.request('GET', `/users/${yo.id}/active`, { cookie: await entrar(admin.email, 'clave-del-admin') })).status, 200);
   });
 
   test('PATCH /:id/role: el admin cambia roles y un usuario normal no puede (403)', async () => {
