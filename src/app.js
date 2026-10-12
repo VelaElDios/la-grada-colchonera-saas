@@ -3,12 +3,22 @@
 const path = require('node:path');
 const express = require('express');
 
+const defaultConfig = require('./config');
 const { createMemoryUserRepository } = require('./repositories/memoryUserRepository');
+const { createPasswordHasher } = require('./services/passwordHasher');
 const { createUserService } = require('./services/userService');
 const { createApiRouter } = require('./api');
 
-function createApp({ userRepository = createMemoryUserRepository() } = {}) {
-  const userService = createUserService({ userRepository });
+function createApp({
+  config = defaultConfig,
+  userRepository = createMemoryUserRepository(),
+  passwordHasher = createPasswordHasher(),
+} = {}) {
+  const userService = createUserService({
+    userRepository,
+    passwordHasher,
+    requireEmailConfirmation: config.requireEmailConfirmation,
+  });
 
   const app = express();
   app.use(express.json());

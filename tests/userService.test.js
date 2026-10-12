@@ -4,14 +4,18 @@ const assert = require('node:assert/strict');
 
 const { createUserService } = require('../src/services/userService');
 const { createMemoryUserRepository } = require('../src/repositories/memoryUserRepository');
-const { ValidationError, ConflictError, ForbiddenError, NotFoundError } = require('../src/services/errors');
+const { ValidationError, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError } = require('../src/services/errors');
+const { createPasswordHasher } = require('../src/services/passwordHasher');
 const { ROLES, STATUS, AUTH_PROVIDERS } = require('../src/models/user');
 
 describe('Servicio de usuarios', () => {
   let service;
+  let repo;
+  const passwordHasher = createPasswordHasher({ rounds: 4 });
 
   beforeEach(() => {
-    service = createUserService({ userRepository: createMemoryUserRepository() });
+    repo = createMemoryUserRepository();
+    service = createUserService({ userRepository: repo, passwordHasher });
   });
 
   describe('alta', () => {
@@ -108,6 +112,60 @@ describe('Servicio de usuarios', () => {
       const eliminado = await service.deleteUser(usuario, usuario.id);
 
       await assert.rejects(service.deleteUser(eliminado, usuario.id), ForbiddenError);
+    });
+  });
+
+  describe('registro e inicio de sesión', () => {
+    test('el registro guarda un hash de la contraseña, nunca la contraseña en claro', async () => {
+      const user = await service.registerUser({ email: 'simeone@grada.es', password: 'partido-a-partido' });
+
+      const guardado = await repo.findById(user.id);
+      assert.ok(guardado.passwordHash);
+      assert.notEqual(guardado.passwordHash, 'partido-a-partido');
+      assert.equal(await passwordHasher.verify('partido-a-partido', guardado.passwordHash), true);
+    });
+
+    test('el registro rechaza contraseñas de menos de 8 caracteres', async () => {
+      await assert.rejects(service.registerUser({ email: 'cerezo@grada.es', password: '1234567' }), ValidationError);
+    });
+
+    test('inicia sesión con las credenciales correctas de una cuenta activa', async () => {
+      const user = await service.registerUser({ email: 'arda@grada.es', password: 'partido-a-partido' });
+      await service.confirmUser(user.id);
+
+      const autenticado = await service.authenticate({ email: 'ARDA@grada.es', password: 'partido-a-partido' });
+
+      assert.equal(autenticado.id, user.id);
+    });
+
+    test('con contraseña incorrecta o email desconocido lanza UnauthorizedError', async () => {
+      const user = await service.registerUser({ email: 'diego@grada.es', password: 'partido-a-partido' });
+      await service.confirmUser(user.id);
+
+      await assert.rejects(service.authenticate({ email: 'diego@grada.es', password: 'otra-clave' }), UnauthorizedError);
+      await assert.rejects(service.authenticate({ email: 'nadie@grada.es', password: 'partido-a-partido' }), UnauthorizedError);
+    });
+
+    test('una cuenta pendiente de confirmar no puede iniciar sesión', async () => {
+      await service.registerUser({ email: 'joao@grada.es', password: 'partido-a-partido' });
+
+      await assert.rejects(service.authenticate({ email: 'joao@grada.es', password: 'partido-a-partido' }), ForbiddenError);
+    });
+
+    test('una cuenta eliminada no puede volver a iniciar sesión', async () => {
+      const user = await service.registerUser({ email: 'witsel@grada.es', password: 'partido-a-partido' });
+      await service.confirmUser(user.id);
+      await service.deleteUser(user, user.id);
+
+      await assert.rejects(service.authenticate({ email: 'witsel@grada.es', password: 'partido-a-partido' }), ForbiddenError);
+    });
+
+    test('sin confirmación de correo obligatoria, la cuenta queda activa al registrarse', async () => {
+      const sinConfirmacion = createUserService({ userRepository: createMemoryUserRepository(), passwordHasher, requireEmailConfirmation: false });
+
+      const user = await sinConfirmacion.registerUser({ email: 'nahuel@grada.es', password: 'partido-a-partido' });
+
+      assert.equal(user.status, STATUS.ACTIVE);
     });
   });
 });
