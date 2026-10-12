@@ -67,6 +67,7 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 | `DATABASE_URL` | Sí | Cadena de conexión de PostgreSQL (Neon). Obligatoria en producción; en local, si falta, los datos se guardan en memoria |
 | `ADMIN_EMAIL` | No | Email del primer administrador (se crea o se promociona al arrancar) |
 | `ADMIN_PASSWORD` | Sí | Contraseña del primer administrador (mínimo 8 caracteres). Solo se usa si la cuenta no existe |
+| `LOG_LEVEL` | No | Nivel del registro de actividad: `debug`, `info` (por defecto), `warn`, `error` o `silent` |
 | `REQUIRE_EMAIL_CONFIRMATION` | No | `true` para exigir confirmar el correo antes de entrar (Hito 4). Por defecto `false` |
 
 ## API
@@ -91,6 +92,24 @@ Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; c
 - **user:** gestiona su propia cuenta (ver su perfil y darse de baja).
 - **admin:** además, ve el listado de usuarios, cambia roles y elimina cuentas.
 - **Primer administrador:** al arrancar, si existen `ADMIN_EMAIL` y `ADMIN_PASSWORD`, se crea esa cuenta con rol de administrador (o se promociona si ya existía). Siempre debe quedar al menos un administrador activo.
+
+## Registro de actividad (logs)
+
+La aplicación escribe cada evento relevante como una línea JSON en la salida estándar ([`src/logger.js`](src/logger.js)); en Render se consultan en la pestaña *Logs* del servicio y se pueden filtrar por texto (por ejemplo, `auth.login_failed`).
+
+| Evento | Nivel | Cuándo |
+|---|---|---|
+| `app.start`, `app.stop`, `app.storage` | info / warn | Arranque, parada y tipo de almacenamiento |
+| `admin.bootstrap` | info | Se crea o se promociona el primer administrador |
+| `http.request` | info (error si 5xx) | Cada petición a la API: método, ruta, estado, duración, usuario e id de petición (`X-Request-Id`) |
+| `user.registered` | info | Registro de una cuenta |
+| `auth.login` / `auth.logout` | info | Inicio y cierre de sesión |
+| `auth.login_failed` | warn | Intento de inicio de sesión rechazado (email, motivo e IP) |
+| `auth.forbidden` | warn | Acceso denegado por falta de permisos |
+| `user.role_changed`, `user.deleted` | info | Cambios de rol y bajas (quién lo hace y sobre quién) |
+| `http.error` | error | Errores inesperados, con su traza |
+
+Las contraseñas, hashes, cookies y secretos nunca se registran: el logger los sustituye por `[oculto]`.
 
 ## Despliegue
 

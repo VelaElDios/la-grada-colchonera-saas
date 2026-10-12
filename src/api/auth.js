@@ -18,22 +18,36 @@ function createAuthRouter({ userService, sessionCookieName }) {
       email: req.body?.email,
       password: req.body?.password,
     });
+    req.log.info('user.registered', 'Nuevo usuario registrado', { userId: user.id, email: user.email, status: user.status });
     res.status(201).json(user);
   });
 
   router.post('/login', async (req, res) => {
-    const user = await userService.authenticate({
-      email: req.body?.email,
-      password: req.body?.password,
-    });
+    let user;
+    try {
+      user = await userService.authenticate({
+        email: req.body?.email,
+        password: req.body?.password,
+      });
+    } catch (error) {
+      // Intento fallido: se registra el email (no la contraseña) para detectar abusos
+      req.log.warn('auth.login_failed', 'Inicio de sesión rechazado', {
+        email: typeof req.body?.email === 'string' ? req.body.email.trim().toLowerCase() : null,
+        reason: error.code,
+        ip: req.ip,
+      });
+      throw error;
+    }
     // Nueva sesión al iniciar sesión (evita la fijación de sesión)
     await regenerate(req.session);
     req.session.userId = user.id;
+    req.log.info('auth.login', 'Inicio de sesión', { userId: user.id, role: user.role });
     res.json(user);
   });
 
   // Cierra la sesión invalidándola en el servidor, no solo borrando la cookie del navegador
   router.post('/logout', async (req, res) => {
+    if (req.user) req.log.info('auth.logout', 'Cierre de sesión', { userId: req.user.id });
     await destroy(req.session);
     res.clearCookie(sessionCookieName);
     res.status(204).end();

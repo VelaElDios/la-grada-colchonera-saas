@@ -5,7 +5,7 @@ const assert = require('node:assert/strict');
 const { bootstrap } = require('../src/bootstrap');
 const { createPasswordHasher } = require('../src/services/passwordHasher');
 
-const BASE = { isProduction: false, requireEmailConfirmation: false, sessionSecret: 'x'.repeat(40), sessionCookieName: 'grada.sid' };
+const BASE = { isProduction: false, requireEmailConfirmation: false, sessionSecret: 'x'.repeat(40), sessionCookieName: 'grada.sid', logLevel: 'silent' };
 const passwordHasher = createPasswordHasher({ rounds: 4 });
 
 test('sin DATABASE_URL los datos se guardan en memoria', async () => {

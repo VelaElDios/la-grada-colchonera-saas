@@ -39,6 +39,10 @@ function loadConfig(env) {
     // registrarse. Con REQUIRE_EMAIL_CONFIRMATION=true quedan pendientes hasta confirmar el correo.
     requireEmailConfirmation: env.REQUIRE_EMAIL_CONFIRMATION === 'true',
 
+    // Nivel de detalle del registro de actividad: debug, info, warn, error o silent.
+    // Durante las pruebas automáticas (node --test) no se escribe nada salvo que se indique.
+    logLevel: env.LOG_LEVEL || (env.NODE_TEST_CONTEXT ? 'silent' : 'info'),
+
     // Primer administrador: se crea (o se promociona) al arrancar si se indica su email
     admin: env.ADMIN_EMAIL ? Object.freeze({ email: env.ADMIN_EMAIL, password: env.ADMIN_PASSWORD || null }) : null,
   });

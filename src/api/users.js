@@ -27,12 +27,19 @@ function createUsersRouter({ userService }) {
 
   // Cambiar el rol de un usuario: { "role": "admin" | "user" }
   router.patch('/:id/role', soloAdmin, async (req, res) => {
-    res.json(await userService.changeRole(req.user, req.params.id, req.body?.role));
+    const user = await userService.changeRole(req.user, req.params.id, req.body?.role);
+    req.log.info('user.role_changed', 'Rol de usuario cambiado', { actorId: req.user.id, targetId: user.id, role: user.role });
+    res.json(user);
   });
 
   // Eliminar un usuario (la lógica vuelve a comprobar los permisos y protege al último admin)
   router.delete('/:id', propioOAdmin, async (req, res) => {
     await userService.deleteUser(req.user, req.params.id);
+    req.log.info('user.deleted', 'Cuenta eliminada', {
+      actorId: req.user.id,
+      targetId: req.params.id,
+      self: req.user.id === req.params.id,
+    });
     res.status(204).end();
   });
 
