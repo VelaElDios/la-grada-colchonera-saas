@@ -1,0 +1,41 @@
+% Memoria del proyecto La Grada Colchonera
+% Compilar con: latexmk -lualatex main.tex   (o lualatex + biber + lualatex x2)
+\documentclass[11pt,a4paper,oneside]{report}
+
+\usepackage{fontspec}
+\usepackage[spanish,es-tabla]{babel}
+\usepackage[a4paper,margin=2.5cm]{geometry}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{listings}
+\usepackage{csquotes}
+\usepackage[backend=biber,style=ieee]{biblatex}
+\usepackage[hidelinks]{hyperref}
+
+\addbibresource{bibliografia.bib}
+\graphicspath{{figuras/}}
+
+\definecolor{rojiblanco}{HTML}{C8102E}
+\lstset{basicstyle=\ttfamily\small, breaklines=true, frame=single}
+
+\title{\textbf{La Grada Colchonera}\\[0.5em]\large Aplicación SaaS en capas con gestión de usuarios}
+\author{Javier Vela\\Procesos de Ingeniería del Software}
+\date{Curso 2026--2027}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\include{capitulos/01-introduccion}
+\include{capitulos/02-gestion}
+\include{capitulos/03-arquitectura}
+\include{capitulos/04-implementacion}
+\include{capitulos/05-pruebas}
+\include{capitulos/06-cicd}
+\include{capitulos/07-conclusiones}
+
+\printbibliography[heading=bibintoc]
+
+\end{document}
