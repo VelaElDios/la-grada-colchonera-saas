@@ -1,0 +1,2 @@
+# Figuras propias de la memoria (diagramas, capturas de DoneTonic...).
+# Las capturas de la aplicación se toman de docs/capturas/app (ver \graphicspath en main.tex).

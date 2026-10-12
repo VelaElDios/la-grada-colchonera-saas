@@ -1,7 +1,29 @@
 \chapter{Implementación}
+\label{cap:implementacion}
+
 \section{Gestión de usuarios}
+% Alta, listado, comprobar si está activo y eliminar. Baja lógica (status = deleted).
+
 \section{Autenticación y sesión}
+% Registro e inicio de sesión locales, sesión en el servidor con cookie httpOnly,
+% mantenimiento entre recargas y cierre de sesión que invalida la sesión.
+
 \section{Persistencia}
+% Repositorio de PostgreSQL con el mismo contrato que el de memoria; consultas parametrizadas.
+
 \section{Roles y autorización}
+% requireAuth, requireRole y requireSelfOrRole; comprobaciones también en la lógica.
+% Primer administrador desde variables de entorno (y su justificación). Protección del último administrador.
+
 \section{Seguridad}
-% Hash de contraseñas, secretos en variables de entorno, rutas protegidas.
+% Hash de contraseñas (bcrypt), secretos fuera del repositorio (.env y Secret Manager),
+% rutas protegidas y mensajes que no revelan qué cuentas existen.
+
+\section{Interfaz de usuario}
+% Vistas, navegación por hash, mensajes de error y de éxito. Capturas, por ejemplo:
+% \begin{figure}[htbp]
+%   \centering
+%   \includegraphics[width=0.8\textwidth]{06-panel-admin}
+%   \caption{Panel de administración}
+%   \label{fig:panel-admin}
+% \end{figure}
