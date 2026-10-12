@@ -301,6 +301,11 @@ En [`docs/gestion/README.md`](docs/gestion/README.md) están:
 - el backlog completo con el estado de cada PBI;
 - la trazabilidad tarea → rama → PR → release;
 - el burndown del sprint y las gráficas de seguimiento que hay en DoneTonic (burnup, burndown y velocity).
+- capturas del tablero, de las gráficas y del backlog en DoneTonic.
+
+| Tablero del Sprint 1 | Gráficas del sprint |
+|---|---|
+| ![Tablero del Sprint 1 en DoneTonic](docs/capturas/donetonic/01-tablero-sprint.png) | ![Sprint Burnup y Burndown en DoneTonic](docs/capturas/donetonic/02-graficas-sprint.png) |
 
 ## Memoria
 

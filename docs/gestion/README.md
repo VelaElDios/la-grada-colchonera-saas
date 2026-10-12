@@ -30,6 +30,22 @@ Una tarea solo se considera **hecha** cuando cumple todo esto:
 
 Un hito está **hecho** cuando su rama está en `main`, desplegada en la URL pública (https://la-grada-colchonera-1081564062572.europe-southwest1.run.app) y publicada como release.
 
+## Capturas de DoneTonic
+
+Estado del Sprint 1 en DoneTonic al cerrar la entrega (12/10/2026). Los Hitos 1–3, P18 y P19 están hechos; quedan pendientes los tres PBIs del Hito 4 (P15–P17), que son de la siguiente entrega.
+
+**Tablero del Sprint 1.** Cada fila es un PBI con sus tareas repartidas por columnas de estado; los PBIs en verde están hechos.
+
+![Tablero del Sprint 1 en DoneTonic](../capturas/donetonic/01-tablero-sprint.png)
+
+**Gráficas de seguimiento (*Paneles Scrum*).** Sprint Burnup y Sprint Burndown: 84 % completado y 3 PBIs pendientes, los del Hito 4. En el mismo panel están también el Backlog Burndown, el Backlog Burnup y el Velocity Chart, que se completan al cerrar el sprint.
+
+![Sprint Burnup y Sprint Burndown en DoneTonic](../capturas/donetonic/02-graficas-sprint.png)
+
+**Product Backlog y Sprint Backlog.** PBIs priorizados y etiquetados por hito, todos dentro del Sprint 1 (`#S1`, del 29/09 al 27/10).
+
+![Backlog del proyecto en DoneTonic](../capturas/donetonic/03-backlog.png)
+
 ## Backlog y estado
 
 | PBI | Hito | Título | Estado | Entrega |
