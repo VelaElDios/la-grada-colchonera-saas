@@ -1,0 +1,91 @@
+# Despliegue continuo en Google Cloud Run.
+# Cuando el CI termina en verde sobre main, se construye la imagen Docker, se sube a
+# Artifact Registry y se despliega en Cloud Run. GitHub se identifica ante Google con
+# Workload Identity Federation (token temporal): no hay ninguna clave guardada en GitHub.
+# La preparación de Google Cloud está en scripts/gcp/preparar-cloud-run.sh.
+name: Despliegue en Cloud Run
+
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write # necesario para obtener el token de GitHub que acepta Google
+
+concurrency:
+  group: cloud-run
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Desplegar en Cloud Run
+    # Solo si Google Cloud está configurado y el CI de un push a main ha ido bien
+    if: >-
+      vars.GCP_PROJECT_ID != '' && (
+        github.event_name == 'workflow_dispatch' ||
+        (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
+      )
+    runs-on: ubuntu-latest
+    environment:
+      name: cloud-run
+      url: ${{ steps.desplegar.outputs.url }}
+    env:
+      PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+      REGION: ${{ vars.GCP_REGION || 'europe-southwest1' }}
+      SERVICE: la-grada-colchonera
+      COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
+    steps:
+      - name: Descargar el código del commit probado
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.COMMIT }}
+
+      - name: Identificarse en Google Cloud (Workload Identity Federation)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SA }}
+
+      - name: Instalar gcloud
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Construir y subir la imagen a Artifact Registry
+        run: |
+          IMAGE="${REGION}-docker.pkg.dev/${PROJECT_ID}/grada/${SERVICE}:${COMMIT}"
+          echo "IMAGE=${IMAGE}" >> "$GITHUB_ENV"
+          gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+          docker build -t "${IMAGE}" .
+          docker push "${IMAGE}"
+
+      - name: Desplegar en Cloud Run
+        id: desplegar
+        run: |
+          gcloud run deploy "${SERVICE}" \
+            --project "${PROJECT_ID}" \
+            --region "${REGION}" \
+            --image "${IMAGE}" \
+            --service-account "grada-runtime@${PROJECT_ID}.iam.gserviceaccount.com" \
+            --allow-unauthenticated \
+            --port 8080 \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 2 \
+            --set-env-vars "NODE_ENV=production" \
+            --set-secrets "DATABASE_URL=database-url:latest,SESSION_SECRET=session-secret:latest,ADMIN_EMAIL=admin-email:latest,ADMIN_PASSWORD=admin-password:latest" \
+            --quiet
+          URL="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(status.url)')"
+          echo "url=${URL}" >> "$GITHUB_OUTPUT"
+          echo "Desplegado en ${URL}" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Comprobar que la aplicación responde
+        run: |
+          for i in $(seq 1 20); do
+            if curl -fsS "${{ steps.desplegar.outputs.url }}/api/health"; then exit 0; fi
+            sleep 3
+          done
+          exit 1
