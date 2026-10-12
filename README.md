@@ -13,7 +13,10 @@ El Sprint 1 cubre la estructura base de una aplicación SaaS organizada en capas
 | HTML, CSS y JavaScript sin framework | El propio backend sirve el frontend (mismo origen) sin herramientas de compilación. |
 | `node:test` | Framework de pruebas incluido en Node: sin dependencias extra y ejecutable con un solo comando. |
 
-_(Se completará con la base de datos, el despliegue y el resto de servicios según avance el proyecto.)_
+| Render (capa gratuita) | Despliegue continuo desde GitHub: cada cambio en `main` se publica solo, sin pasos manuales. |
+| GitHub Actions | Integración continua integrada en el propio repositorio. |
+
+_(Se completará con la base de datos y el resto de servicios según avance el proyecto.)_
 
 ## Estructura del proyecto
 
@@ -55,6 +58,12 @@ Ver [`.env.example`](.env.example). Solo se documentan los nombres; los valores 
 | Variable | Descripción |
 |---|---|
 | `PORT` | Puerto HTTP del servidor (por defecto 3000) |
+
+## Despliegue
+
+- **URL pública:** _pendiente de publicar_
+- Configuración en [`render.yaml`](render.yaml): Render construye con `npm ci`, arranca con `npm start` y comprueba la salud en `/api/health`.
+- Cada merge en `main` se despliega automáticamente. La capa gratuita suspende la app tras un rato de inactividad: la primera petición puede tardar unos segundos.
 
 ## Flujo de trabajo
 
