@@ -9,6 +9,8 @@ const { createPool } = require('./db/pool');
 const { migrate } = require('./db/migrate');
 const { createMemoryUserRepository } = require('./repositories/memoryUserRepository');
 const { createPostgresUserRepository } = require('./repositories/postgresUserRepository');
+const { createPasswordHasher } = require('./services/passwordHasher');
+const { createUserService } = require('./services/userService');
 
 /**
  * Prepara la capa de datos para la configuración dada.
@@ -46,11 +48,24 @@ async function createDataLayer(config, { pool: givenPool } = {}) {
   };
 }
 
-/** Crea la app lista para escuchar, con su capa de datos. */
+/** Crea la app lista para escuchar, con su capa de datos y el primer administrador. */
 async function bootstrap(config, options = {}) {
   const data = await createDataLayer(config, options);
-  const app = createApp({ config, userRepository: data.userRepository, sessionStore: data.sessionStore });
-  return { app, ...data };
+  const passwordHasher = options.passwordHasher || createPasswordHasher();
+
+  let admin = null;
+  if (config.admin) {
+    const userService = createUserService({ userRepository: data.userRepository, passwordHasher });
+    admin = await userService.ensureAdmin(config.admin);
+  }
+
+  const app = createApp({
+    config,
+    userRepository: data.userRepository,
+    sessionStore: data.sessionStore,
+    passwordHasher,
+  });
+  return { app, admin, ...data };
 }
 
 module.exports = { bootstrap, createDataLayer };
