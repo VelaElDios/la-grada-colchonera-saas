@@ -60,18 +60,84 @@ function formularioCredenciales({ titulo, boton, autocompletarPassword }) {
     </form>`;
 }
 
+/** Lee y valida en el cliente los datos del formulario (el servidor vuelve a validarlos). */
+function leerCredenciales(formulario, { registro = false } = {}) {
+  const { email, password } = Object.fromEntries(new FormData(formulario));
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    throw new Error('Introduce un email válido');
+  }
+  if (!password) {
+    throw new Error('Introduce la contraseña');
+  }
+  if (registro && password.length < 8) {
+    throw new Error('La contraseña debe tener al menos 8 caracteres');
+  }
+  return { email, password };
+}
+
+/** Conecta el envío de un formulario con una acción asíncrona, mostrando los errores al usuario. */
+function alEnviar(formulario, accion) {
+  formulario.addEventListener('submit', async (evento) => {
+    evento.preventDefault();
+    const boton = formulario.querySelector('button[type="submit"]');
+    boton.disabled = true;
+    mostrarMensaje('');
+    try {
+      await accion();
+    } catch (error) {
+      mostrarMensaje(error.message, 'error');
+    } finally {
+      boton.disabled = false;
+    }
+  });
+}
+
 function vistaEntrar() {
   app.innerHTML = formularioCredenciales({ titulo: 'Entrar', boton: 'Entrar', autocompletarPassword: 'current-password' })
     + '<p>¿Aún no tienes cuenta? <a href="#/registro">Regístrate</a></p>';
+
+  const formulario = document.getElementById('formulario');
+  alEnviar(formulario, async () => {
+    const { email, password } = leerCredenciales(formulario);
+    estado.usuario = await api.login(email, password);
+    ir('/perfil', { texto: `¡Hola, ${estado.usuario.email}! Ya estás en la grada.`, tipo: 'exito' });
+  });
 }
 
 function vistaRegistro() {
   app.innerHTML = formularioCredenciales({ titulo: 'Crear cuenta', boton: 'Registrarme', autocompletarPassword: 'new-password' })
     + '<p>La contraseña debe tener al menos 8 caracteres. ¿Ya tienes cuenta? <a href="#/entrar">Entra</a></p>';
+
+  const formulario = document.getElementById('formulario');
+  alEnviar(formulario, async () => {
+    const { email, password } = leerCredenciales(formulario, { registro: true });
+    const usuario = await api.register(email, password);
+    const texto = usuario.status === 'pending'
+      ? 'Cuenta creada. Revisa tu correo para confirmarla antes de entrar.'
+      : 'Cuenta creada. Ya puedes entrar con tu email y contraseña.';
+    ir('/entrar', { texto, tipo: 'exito' });
+  });
 }
 
+const NOMBRES_ROL = { user: 'Aficionado', admin: 'Administrador' };
+const NOMBRES_ESTADO = { pending: 'Pendiente de confirmar', active: 'Activa', deleted: 'Eliminada' };
+
 function vistaPerfil() {
-  app.innerHTML = '<h2>Mi cuenta</h2><p>Inicia sesión para ver los datos de tu cuenta.</p>';
+  const usuario = estado.usuario;
+  if (!usuario) {
+    app.innerHTML = '<h2>Mi cuenta</h2><p><a href="#/entrar">Entra</a> para ver los datos de tu cuenta.</p>';
+    return;
+  }
+  app.innerHTML = `
+    <h2>Mi cuenta</h2>
+    <dl class="datos">
+      <dt>Email</dt><dd id="perfil-email"></dd>
+      <dt>Rol</dt><dd>${NOMBRES_ROL[usuario.role] || usuario.role}</dd>
+      <dt>Estado</dt><dd>${NOMBRES_ESTADO[usuario.status] || usuario.status}</dd>
+      <dt>En la grada desde</dt><dd>${new Date(usuario.createdAt).toLocaleDateString('es-ES')}</dd>
+    </dl>`;
+  // El email lo escribe el usuario: se inserta como texto para evitar inyección de HTML
+  document.getElementById('perfil-email').textContent = usuario.email;
 }
 
 const vistas = {
@@ -85,7 +151,7 @@ const vistas = {
 
 function pintarNav() {
   const ruta = rutaActual();
-  const enlaces = ['/', '/entrar', '/registro'];
+  const enlaces = estado.usuario ? ['/', '/perfil'] : ['/', '/entrar', '/registro'];
   nav.innerHTML = enlaces
     .map((r) => `<a href="#${r}" class="${r === ruta ? 'activo' : ''}">${vistas[r].titulo}</a>`)
     .join('');
