@@ -160,12 +160,42 @@ body {
 }
 
 .tabla td:first-child {
-  overflow-wrap: anywhere;
+  overflow-wrap: break-word;
+}
+
+/* En pantallas estrechas cada usuario se muestra como una tarjeta */
+@media (max-width: 640px) {
+  .tabla thead { display: none; }
+  .tabla,
+  .tabla tbody,
+  .tabla tr,
+  .tabla td { display: block; width: 100%; }
+  .tabla tr {
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid #e5e5e5;
+    border-radius: 8px;
+  }
+  .tabla td {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.3rem 0;
+    border-bottom: none;
+  }
+  .tabla td::before {
+    content: attr(data-etiqueta);
+    flex: 0 0 4.5rem;
+    font-weight: 600;
+    color: var(--gris);
+  }
+  .tabla td:first-child { overflow-wrap: anywhere; }
+  .tabla td.acciones { padding-top: 0.6rem; }
+  .tabla td.acciones::before { content: none; }
 }
 
 .estado-active { color: #1d7a3a; }
 .estado-pending { color: #a86b00; }
-.estado-deleted { color: #888; text-decoration: line-through; }
+.estado-deleted { color: #888; font-style: italic; }
 
 .boton--pequeno {
   padding: 0.3rem 0.6rem;

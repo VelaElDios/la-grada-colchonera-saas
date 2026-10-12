@@ -193,14 +193,18 @@ async function pintarUsuarios() {
   cuerpo.replaceChildren(...usuarios.map((usuario) => {
     const fila = document.createElement('tr');
     const esYo = usuario.id === estado.usuario.id;
-    fila.append(
-      crear('td', esYo ? `${usuario.email} (tú)` : usuario.email),
-      crear('td', NOMBRES_ROL[usuario.role] || usuario.role),
-      crear('td', NOMBRES_ESTADO[usuario.status] || usuario.status, `estado-${usuario.status}`),
-      crear('td', new Date(usuario.createdAt).toLocaleDateString('es-ES')),
-    );
+    const celdas = [
+      ['Email', crear('td', esYo ? `${usuario.email} (tú)` : usuario.email)],
+      ['Rol', crear('td', NOMBRES_ROL[usuario.role] || usuario.role)],
+      ['Estado', crear('td', NOMBRES_ESTADO[usuario.status] || usuario.status, `estado-${usuario.status}`)],
+      ['Alta', crear('td', new Date(usuario.createdAt).toLocaleDateString('es-ES'))],
+    ];
+    // La etiqueta de cada celda se muestra en el móvil, donde cada fila se ve como una tarjeta
+    celdas.forEach(([etiqueta, celda]) => { celda.dataset.etiqueta = etiqueta; });
+    fila.append(...celdas.map(([, celda]) => celda));
 
     const acciones = crear('td', '', 'acciones');
+    acciones.dataset.etiqueta = 'Acciones';
     if (usuario.status !== 'deleted') {
       const nuevoRol = usuario.role === 'admin' ? 'user' : 'admin';
       const cambiar = crear('button', nuevoRol === 'admin' ? 'Hacer admin' : 'Quitar admin', 'boton boton--pequeno boton--secundario');
