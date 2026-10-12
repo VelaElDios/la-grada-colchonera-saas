@@ -1,0 +1,87 @@
+// Pruebas de la capa de acceso a datos. Las dos implementaciones (memoria y PostgreSQL)
+// deben cumplir el mismo contrato, así que se les pasan exactamente las mismas pruebas.
+const { describe, test, beforeEach, afterEach } = require('node:test');
+const assert = require('node:assert/strict');
+
+const { createMemoryUserRepository } = require('../src/repositories/memoryUserRepository');
+const { createPostgresUserRepository } = require('../src/repositories/postgresUserRepository');
+const { migrate } = require('../src/db/migrate');
+const { createTestPool } = require('./testDatabase');
+
+const IMPLEMENTATIONS = [
+  { name: 'memoria', setup: async () => ({ repo: createMemoryUserRepository(), teardown: async () => {} }) },
+  {
+    name: 'PostgreSQL',
+    setup: async () => {
+      const pool = await createTestPool();
+      await migrate(pool);
+      return { repo: createPostgresUserRepository(pool), teardown: () => pool.end() };
+    },
+  },
+];
+
+const nuevoUsuario = (email, extra = {}) => ({
+  email,
+  role: 'user',
+  status: 'active',
+  authProvider: 'local',
+  passwordHash: 'hash-de-prueba',
+  ...extra,
+});
+
+for (const { name, setup } of IMPLEMENTATIONS) {
+  describe(`Repositorio de usuarios (${name})`, () => {
+    let repo;
+    let teardown;
+    beforeEach(async () => { ({ repo, teardown } = await setup()); });
+    afterEach(async () => { await teardown(); });
+
+    test('create asigna id y createdAt y se puede buscar por id y por email', async () => {
+      const user = await repo.create(nuevoUsuario('fan@grada.es'));
+
+      assert.ok(user.id);
+      assert.ok(!Number.isNaN(Date.parse(user.createdAt)));
+      assert.equal(user.passwordHash, 'hash-de-prueba');
+      assert.deepEqual(await repo.findById(user.id), user);
+      assert.deepEqual(await repo.findByEmail('fan@grada.es'), user);
+    });
+
+    test('buscar algo que no existe devuelve null', async () => {
+      assert.equal(await repo.findById('no-existe'), null);
+      assert.equal(await repo.findById('00000000-0000-4000-8000-000000000000'), null);
+      assert.equal(await repo.findByEmail('nadie@grada.es'), null);
+    });
+
+    test('los datos devueltos son copias: modificarlos no altera lo guardado', async () => {
+      const user = await repo.create(nuevoUsuario('fan@grada.es'));
+      user.email = 'otro@grada.es';
+      assert.equal((await repo.findById(user.id)).email, 'fan@grada.es');
+    });
+
+    test('findAll devuelve todos los usuarios', async () => {
+      await repo.create(nuevoUsuario('koke@grada.es'));
+      await repo.create(nuevoUsuario('oblak@grada.es', { role: 'admin' }));
+      const emails = (await repo.findAll()).map((u) => u.email).sort();
+      assert.deepEqual(emails, ['koke@grada.es', 'oblak@grada.es']);
+    });
+
+    test('update modifica solo los campos indicados', async () => {
+      const user = await repo.create(nuevoUsuario('fan@grada.es', { status: 'pending' }));
+      const deletedAt = new Date().toISOString();
+
+      const updated = await repo.update(user.id, { status: 'deleted', deletedAt });
+
+      assert.equal(updated.status, 'deleted');
+      assert.equal(updated.deletedAt, deletedAt);
+      assert.equal(updated.email, 'fan@grada.es');
+      assert.equal(updated.role, 'user');
+      assert.equal(await repo.update('00000000-0000-4000-8000-000000000000', { status: 'active' }), null);
+    });
+
+    test('update puede cambiar el rol', async () => {
+      const user = await repo.create(nuevoUsuario('simeone@grada.es'));
+      assert.equal((await repo.update(user.id, { role: 'admin' })).role, 'admin');
+      assert.equal((await repo.findById(user.id)).role, 'admin');
+    });
+  });
+}
