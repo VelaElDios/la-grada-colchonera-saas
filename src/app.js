@@ -32,6 +32,16 @@ function createApp({
   if (config.isProduction) app.set('trust proxy', 1);
 
   app.use(express.json());
+  // Un JSON mal formado falla en este punto, antes de llegar a la capa API: se responde igualmente en JSON
+  // eslint-disable-next-line no-unused-vars
+  app.use((err, req, res, next) => {
+    if (err.type === 'entity.parse.failed') {
+      return res.status(400).json(req.path.startsWith('/api/prueba/')
+        ? { error: 'JSON no válido' }
+        : { error: { code: 'VALIDATION_ERROR', message: 'JSON no válido' } });
+    }
+    return next(err);
+  });
 
   // Sesión en el servidor: el navegador solo guarda una cookie firmada con el identificador.
   // Con base de datos, las sesiones se guardan en la tabla "session" y sobreviven a los reinicios.

@@ -2,6 +2,7 @@
 // Los secretos (SESSION_SECRET, DATABASE_URL, ADMIN_PASSWORD...) SOLO llegan por variables de
 // entorno: nunca se escriben en el código ni se suben al repositorio.
 const { randomBytes } = require('node:crypto');
+const { parseAllowedDomains } = require('./services/domainPolicy');
 
 // Sin ellas la aplicación no puede funcionar de forma segura en producción
 const REQUIRED_IN_PRODUCTION = ['SESSION_SECRET', 'DATABASE_URL'];
@@ -42,6 +43,9 @@ function loadConfig(env) {
     // Nivel de detalle del registro de actividad: debug, info, warn, error o silent.
     // Durante las pruebas automáticas (node --test) no se escribe nada salvo que se indique.
     logLevel: env.LOG_LEVEL || (env.NODE_TEST_CONTEXT ? 'silent' : 'info'),
+
+    // Dominios de correo permitidos (separados por comas). Solo por variable de entorno.
+    allowedDomains: parseAllowedDomains(env.ALLOWED_DOMAINS),
 
     // Primer administrador: se crea (o se promociona) al arrancar si se indica su email
     admin: env.ADMIN_EMAIL ? Object.freeze({ email: env.ADMIN_EMAIL, password: env.ADMIN_PASSWORD || null }) : null,
