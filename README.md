@@ -202,6 +202,7 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 | GET | `/api/users/:id/active` | Admin | Indica si un usuario está activo: confirmado y no eliminado (no si está conectado) |
 | PATCH | `/api/users/:id/role` | Admin | Cambia el rol (`{ "role": "admin" \| "user" }`) |
 | DELETE | `/api/users/:id` | Propio o admin | Elimina una cuenta (baja lógica). Nunca se elimina al último administrador |
+| POST | `/api/prueba/dominio` | Público | Indica si el dominio de un email está permitido (`{ "email": "..." }` → `{ "permitido": true \| false }`). Ver [Prueba técnica](#prueba-técnica-del-sprint-1-variante-3) |
 
 Los errores se devuelven como `{ "error": { "code": "...", "message": "..." } }`.
 Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; con sesión pero sin el rol necesario, `403 FORBIDDEN`.
@@ -291,6 +292,40 @@ gitGraph
 - `hito-N/Tx-descripcion`: una rama por tarea de DoneTonic, que se integra en la rama de su hito mediante un PR titulado `[Tx] ...`.
 - `main` y `hito-*/integracion` están protegidas: solo admiten cambios por PR y exigen que el check **Pruebas** del CI esté en verde.
 - Antes de abrir cada PR se ejecuta `npm test` en local. Después, el CI vuelve a ejecutar las pruebas en el PR y otra vez al llegar a `main`, y entonces se despliega en Cloud Run sin intervención manual.
+
+## Prueba técnica del Sprint 1 (variante 3)
+
+Ejercicio de la prueba técnica del Sprint 1, realizado sobre este mismo repositorio: **solo se admiten registros de ciertos dominios de correo**, y la lista se configura por variable de entorno, sin escribirla en el código.
+
+**Regla.** Un email está permitido si el dominio completo que hay tras la `@` (sin distinguir mayúsculas) está en la lista. Un subdominio no listado no está permitido: `ana@uclm.es` sí, `x@sub.uclm.es` no, y tampoco `x@miuclm.es`. Si el valor no es un texto o no contiene `@`, es un error de validación.
+
+**Dónde está, capa por capa.** Es el mismo reparto que el resto de la aplicación:
+
+| Capa | Fichero | Qué hace |
+|---|---|---|
+| Lógica | [`src/services/domainPolicy.js`](src/services/domainPolicy.js) | `isDomainAllowed` aplica la regla y `parseAllowedDomains` convierte el texto de la variable en una lista. Es una función pura: no accede a la base de datos ni a la configuración, la lista le llega como parámetro |
+| API | [`src/api/prueba.js`](src/api/prueba.js) | `POST /api/prueba/dominio`, sin sesión. Solo lee la petición, llama a la lógica y devuelve la respuesta |
+| Configuración | [`src/loadConfig.js`](src/loadConfig.js) | Lee `ALLOWED_DOMAINS` de las variables de entorno |
+
+**Contrato del endpoint.**
+
+- `{ "email": "ana@uclm.es" }` → `200 { "permitido": true }`
+- `{ "email": "x@sub.uclm.es" }` → `200 { "permitido": false }`
+- Valor sin `@`, email ausente o que no es texto, o JSON mal formado → `400 { "error": "mensaje" }`
+
+**Configuración.** `ALLOWED_DOMAINS` (dominios separados por comas) está en [`.env.example`](.env.example) solo como nombre. En producción el workflow de despliegue ([`deploy-cloud-run.yml`](.github/workflows/deploy-cloud-run.yml)) la define con el valor `uclm.es,alu.uclm.es`, así que cada despliegue la lleva consigo. Si la variable no existe, la lista queda vacía y ningún dominio se admite.
+
+**Pruebas.** [`tests/domainPolicy.test.js`](tests/domainPolicy.test.js) tiene 13 pruebas con la etiqueta `variante3`, de las cuales 8 comprueban rechazos o errores: dominio no listado, subdominio, sufijo parecido, lista vacía, valor sin `@`, tipo incorrecto, JSON roto y lectura de la variable. Se ejecutan con `npm test`.
+
+**Cambio adicional.** Un JSON mal formado fallaba antes de llegar a la capa API y devolvía la página de error por defecto de Express. Ahora responde `400` en JSON en toda la API (en este endpoint, con el formato `{ "error": "..." }` que pide el contrato).
+
+**Flujo seguido.** Rama `PruebaTecnicaSprint1` desde `main` → pruebas en local → [pull request #34](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/34) con el CI en verde → integración en `main` desde GitHub, sin push directo → despliegue automático en Cloud Run.
+
+**Comprobación en producción.** Desde la consola del navegador, una vez desplegado:
+
+| Dominio permitido (`ana@uclm.es`) | Subdominio no listado (`x@sub.uclm.es`) |
+|---|---|
+| ![Respuesta permitido: true en la app desplegada](docs/capturas/prueba-tecnica/01-dominio-permitido.png) | ![Respuesta permitido: false en la app desplegada](docs/capturas/prueba-tecnica/02-subdominio-rechazado.png) |
 
 ## Gestión del proyecto
 
