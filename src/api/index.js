@@ -3,6 +3,7 @@ const express = require('express');
 
 const { createAuthRouter } = require('./auth');
 const { createUsersRouter } = require('./users');
+const { createPruebaRouter } = require('./prueba');
 const { currentUser, requireAuth } = require('./currentUser');
 const { errorHandler, notFoundHandler } = require('./errorHandler');
 const { requestLogger } = require('./requestLogger');
@@ -19,6 +20,8 @@ function createApiRouter({ userService, config, logger }) {
   });
 
   router.use('/auth', createAuthRouter({ userService, sessionCookieName: config.sessionCookieName }));
+  // Público (sin sesión): comprueba si el dominio de un email está permitido
+  router.use('/prueba', createPruebaRouter({ allowedDomains: config.allowedDomains || [] }));
   // Rutas protegidas: solo con sesión iniciada
   router.use('/users', requireAuth, createUsersRouter({ userService }));
 

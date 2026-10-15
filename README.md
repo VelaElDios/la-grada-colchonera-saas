@@ -186,6 +186,7 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 | `DATABASE_URL` | Sí | Cadena de conexión de PostgreSQL (Neon). Obligatoria en producción; en local, si falta, los datos se guardan en memoria |
 | `ADMIN_EMAIL` | No | Email del primer administrador (se crea o se promociona al arrancar) |
 | `ADMIN_PASSWORD` | Sí | Contraseña del primer administrador (mínimo 8 caracteres). Solo se usa si la cuenta no existe |
+| `ALLOWED_DOMAINS` | No | Dominios de correo permitidos, separados por comas (en producción: `uclm.es,alu.uclm.es`). Lo usa `POST /api/prueba/dominio` |
 | `LOG_LEVEL` | No | Nivel del registro de actividad: `debug`, `info` (por defecto), `warn`, `error` o `silent` |
 | `REQUIRE_EMAIL_CONFIRMATION` | No | `true` para que las cuentas nuevas queden pendientes hasta confirmar el correo. Por defecto `false`, porque el envío de correos es del Hito 4 |
 
