@@ -93,3 +93,12 @@ test('la interfaz ofrece el acceso con Google solo si el servidor lo indica', ()
   assert.match(leer('ui', 'vistas', 'registro.js'), /crearBloqueGoogle/);
   assert.match(leer('ui.js'), /google-cuenta-creada/);
 });
+
+test('la política de privacidad existe, se sirve y está enlazada desde el pie', async () => {
+  const res = await fetch(`${baseUrl}/privacidad.html`);
+  assert.equal(res.status, 200);
+  const html = await res.text();
+  assert.match(html, /Política de privacidad/);
+  assert.match(html, /RGPD/);
+  assert.match(fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8'), /href="\/privacidad\.html"/);
+});
