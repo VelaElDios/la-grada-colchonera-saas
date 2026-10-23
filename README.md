@@ -57,7 +57,15 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 | **3. Persistencia, seguridad y administración** | PostgreSQL (Neon) con migraciones, sesiones guardadas en la base de datos, secretos solo en variables de entorno, roles usuario/administrador con primer administrador, panel de administración, baja de la propia cuenta y logs estructurados. | P11–P14 · T15–T20 | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · PRs #18–#24 |
 | **Cierre del sprint** | README completo, capturas, documentación de la gestión, revisión de la entrega frente al enunciado, despliegue en Google Cloud Run y carpeta de la memoria. | P18–P19 · T27–T32 | [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) · PRs de `hito-4/*` |
 
-El profesor ha limitado esta primera entrega a los Hitos 1–3. Los PBIs del Hito 4 (P15 OAuth, P16 confirmación por correo y P17 manejo de errores avanzado) quedan para la siguiente entrega. La base ya está preparada: el modelo de usuario tiene el estado `pending` y el campo `authProvider` (`local` o `google`).
+El profesor ha limitado esta primera entrega a los Hitos 1–3. Los PBIs del Hito 4 (P15 OAuth, P16 confirmación por correo y P17 manejo de errores avanzado) quedan para la siguiente entrega. La base ya estaba preparada: el modelo de usuario tiene el estado `pending` y el campo `authProvider` (`local` o `google`).
+
+### Hito 4 (segunda entrega)
+
+| PBI | Qué hace | Dónde |
+|---|---|---|
+| **P16 · Confirmación por correo** (T23, T24) | Al registrarse con email y contraseña la cuenta queda `pending` y se envía un correo con un enlace firmado (HMAC, caduca a las 24 h). `GET /api/auth/confirm` la activa. Si el correo falla la cuenta se crea igualmente y se puede pedir otro (`POST /api/auth/resend-confirmation`, que responde igual exista o no la cuenta). El login de una cuenta pendiente devuelve `403 ACCOUNT_PENDING` y la interfaz ofrece reenviar el correo. | `src/integrations/mailer.js`, `src/services/tokenSigner.js`, `src/services/accountConfirmationService.js` |
+| **P15 · Inicio de sesión con Google** (T22) | OAuth 2.0 «authorization code»: `/api/auth/google` manda al usuario a Google con un `state` aleatorio guardado en su sesión; `/api/auth/google/callback` comprueba el `state` (anti-CSRF, de un solo uso), cambia el código por el email **en el servidor** (el `client_secret` nunca llega al navegador) y abre sesión. Si no existía la cuenta se crea ya activa (`authProvider: google`); una cuenta local pendiente queda confirmada; una eliminada no entra. Sin las variables de Google, el botón no aparece. | `src/integrations/googleOAuth.js`, `userService.loginWithOAuth`, `public/js/ui/google.js` |
+| **P17 · Manejo de errores** | Toda la interfaz traduce los errores a avisos legibles y los registra en la consola; hay estados de carga, vacío y error con reintento, timeout de 15 s en las peticiones, captura global de promesas rechazadas, y redirecciones de OAuth/confirmación que vuelven a la web con un aviso en lugar de mostrar JSON. | `public/js/ui/componentes.js`, `public/js/ui.js`, `src/api/errorHandler.js` |
 
 ## Arquitectura
 
@@ -202,7 +210,11 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 | `ADMIN_PASSWORD` | Sí | Contraseña del primer administrador (mínimo 8 caracteres). Solo se usa si la cuenta no existe |
 | `ALLOWED_DOMAINS` | No | Dominios de correo permitidos, separados por comas (en producción: `uclm.es,alu.uclm.es`). Lo usa `POST /api/prueba/dominio` |
 | `LOG_LEVEL` | No | Nivel del registro de actividad: `debug`, `info` (por defecto), `warn`, `error` o `silent` |
-| `REQUIRE_EMAIL_CONFIRMATION` | No | `true` para que las cuentas nuevas queden pendientes hasta confirmar el correo. Por defecto `false`, porque el envío de correos es del Hito 4 |
+| `REQUIRE_EMAIL_CONFIRMATION` | No | Por defecto `true`: las cuentas nuevas quedan pendientes hasta confirmar el correo. Solo se desactiva a propósito con `false` |
+| `PUBLIC_URL` | No | URL pública de la app, para los enlaces de los correos y la vuelta de Google. Si falta se usa la de cada petición |
+| `SMTP_URL` | No | Correo saliente: `smtps://usuario:contraseña@servidor:465`. Sin ella, los correos no se envían y su enlace se escribe en el registro (útil en local) |
+| `MAIL_FROM` | Con `SMTP_URL` | Remitente de los correos |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | No (las dos o ninguna) | Cliente OAuth de Google. URI de redirección autorizada: `<URL de la app>/api/auth/google/callback` |
 
 ## API
 
@@ -213,6 +225,11 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 | POST | `/api/auth/login` | Público | Inicia sesión y deja la cookie `grada.sid` |
 | POST | `/api/auth/logout` | Público | Cierra la sesión actual |
 | GET | `/api/auth/me` | Sesión | Devuelve el usuario con sesión iniciada |
+| GET | `/api/auth/confirm?token=…` | Público | Confirma la cuenta (enlace del correo) y redirige a la web con un aviso |
+| POST | `/api/auth/resend-confirmation` | Público | Reenvía el correo de confirmación (`{ "email": "..." }`) |
+| GET | `/api/auth/providers` | Público | Indica qué proveedores externos hay disponibles (`{ "google": true \| false }`) |
+| GET | `/api/auth/google` | Público | Inicia el acceso con Google (redirige a Google) |
+| GET | `/api/auth/google/callback` | Público | Vuelta de Google: abre sesión y redirige a la web |
 | GET | `/api/users` | Admin | Listado de usuarios (email, rol y estado) |
 | GET | `/api/users/:id/active` | Admin | Indica si un usuario está activo: confirmado y no eliminado (no si está conectado) |
 | PATCH | `/api/users/:id/role` | Admin | Cambia el rol (`{ "role": "admin" \| "user" }`) |

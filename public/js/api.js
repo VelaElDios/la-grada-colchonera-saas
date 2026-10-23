@@ -66,6 +66,7 @@ export const api = {
   login: (email, password) => peticion('POST', '/auth/login', { email, password }),
   logout: () => peticion('POST', '/auth/logout'),
   me: () => peticion('GET', '/auth/me'),
+  getProviders: () => peticion('GET', '/auth/providers'),
   resendConfirmation: (email) => peticion('POST', '/auth/resend-confirmation', { email }),
 
   // Usuarios

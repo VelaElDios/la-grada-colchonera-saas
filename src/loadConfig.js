@@ -26,6 +26,9 @@ function loadConfig(env) {
   if (env.SMTP_URL && !env.MAIL_FROM) {
     throw new Error('Con SMTP_URL hay que indicar también MAIL_FROM (el remitente de los correos)');
   }
+  if (Boolean(env.GOOGLE_CLIENT_ID) !== Boolean(env.GOOGLE_CLIENT_SECRET)) {
+    throw new Error('Para entrar con Google hacen falta GOOGLE_CLIENT_ID y GOOGLE_CLIENT_SECRET (las dos)');
+  }
   if (env.PUBLIC_URL && !/^https?:\/\/[^/]+/.test(env.PUBLIC_URL)) {
     throw new Error('PUBLIC_URL debe empezar por http:// o https://');
   }
@@ -49,6 +52,13 @@ function loadConfig(env) {
     // URL pública de la aplicación, para los enlaces de los correos y la vuelta de OAuth.
     // Si no se indica, se usa la dirección con la que llega cada petición.
     publicUrl: env.PUBLIC_URL ? env.PUBLIC_URL.replace(/\/+$/, '') : null,
+
+    // Inicio de sesión con proveedores externos (OAuth). Sin sus variables, el botón no aparece.
+    oauth: Object.freeze({
+      google: env.GOOGLE_CLIENT_ID
+        ? Object.freeze({ clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET })
+        : null,
+    }),
 
     // Correo saliente (ver src/integrations/mailer.js). Sin SMTP_URL, los correos se escriben en el registro.
     mail: Object.freeze({

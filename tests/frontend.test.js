@@ -85,3 +85,11 @@ test('la interfaz gestiona la confirmación por correo (aviso del enlace y reenv
   assert.match(leer('ui', 'vistas', 'entrar.js'), /ACCOUNT_PENDING/);
   assert.match(leer('api.js'), /resendConfirmation/);
 });
+
+test('la interfaz ofrece el acceso con Google solo si el servidor lo indica', () => {
+  const leer = (...partes) => fs.readFileSync(path.join(PUBLIC, 'js', ...partes), 'utf8');
+  assert.match(leer('ui', 'google.js'), /getProviders/);
+  assert.match(leer('ui', 'vistas', 'entrar.js'), /crearBloqueGoogle/);
+  assert.match(leer('ui', 'vistas', 'registro.js'), /crearBloqueGoogle/);
+  assert.match(leer('ui.js'), /google-cuenta-creada/);
+});

@@ -8,7 +8,7 @@ const { currentUser, requireAuth } = require('./currentUser');
 const { errorHandler, notFoundHandler } = require('./errorHandler');
 const { requestLogger } = require('./requestLogger');
 
-function createApiRouter({ userService, accountConfirmation, config, logger }) {
+function createApiRouter({ userService, accountConfirmation, oauthClients, config, logger }) {
   const router = express.Router();
 
   router.use(requestLogger({ logger }));
@@ -22,6 +22,7 @@ function createApiRouter({ userService, accountConfirmation, config, logger }) {
   router.use('/auth', createAuthRouter({
     userService,
     accountConfirmation,
+    oauthClients,
     sessionCookieName: config.sessionCookieName,
     publicUrl: config.publicUrl,
   }));

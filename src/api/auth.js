@@ -1,5 +1,6 @@
 // Rutas HTTP de autenticación: registro, confirmación del correo, inicio y cierre de sesión,
 // y usuario actual.
+const crypto = require('node:crypto');
 const express = require('express');
 const { requireAuth } = require('./currentUser');
 const { STATUS } = require('../models/user');
@@ -21,7 +22,7 @@ function publicBaseUrl(req, publicUrl) {
   return publicUrl || `${req.protocol}://${req.get('host')}`;
 }
 
-function createAuthRouter({ userService, accountConfirmation, sessionCookieName, publicUrl }) {
+function createAuthRouter({ userService, accountConfirmation, oauthClients = {}, sessionCookieName, publicUrl }) {
   const router = express.Router();
 
   router.post('/register', async (req, res) => {
@@ -103,6 +104,62 @@ function createAuthRouter({ userService, accountConfirmation, sessionCookieName,
     req.session.userId = user.id;
     req.log.info('auth.login', 'Inicio de sesión', { userId: user.id, role: user.role });
     res.json(user);
+  });
+
+  // --- Inicio de sesión con un proveedor externo (Google) -------------------------------------
+
+  // Qué proveedores hay configurados: la interfaz solo muestra los botones que funcionan
+  router.get('/providers', (req, res) => {
+    res.json({ google: Boolean(oauthClients.google) });
+  });
+
+  // Paso 1: se manda al usuario a Google con un "state" aleatorio guardado en su sesión
+  router.get('/google', (req, res) => {
+    const client = oauthClients.google;
+    if (!client) return res.redirect(303, '/?aviso=google-no-disponible#/entrar');
+    const state = crypto.randomBytes(24).toString('hex');
+    req.session.oauthState = state;
+    const redirectUri = `${publicBaseUrl(req, publicUrl)}/api/auth/google/callback`;
+    return req.session.save(() => res.redirect(303, client.getAuthorizationUrl({ redirectUri, state })));
+  });
+
+  // Paso 2: Google vuelve aquí con un código. Se comprueba el "state" (anti-CSRF), se cambia el
+  // código por el email verificado y se inicia sesión. Cualquier fallo vuelve a la interfaz con un aviso.
+  router.get('/google/callback', async (req, res) => {
+    const client = oauthClients.google;
+    const volver = (aviso) => res.redirect(303, `/?aviso=${aviso}#/entrar`);
+    if (!client) return volver('google-no-disponible');
+
+    const expected = req.session?.oauthState;
+    if (req.session) delete req.session.oauthState;
+    if (req.query.error) {
+      req.log.info('auth.oauth_denied', 'El usuario ha cancelado el acceso con Google', { reason: String(req.query.error) });
+      return volver('google-cancelado');
+    }
+    const received = typeof req.query.state === 'string' ? req.query.state : '';
+    const validState = Boolean(expected) && received.length === expected.length
+      && crypto.timingSafeEqual(Buffer.from(received), Buffer.from(expected));
+    if (!validState || typeof req.query.code !== 'string') {
+      req.log.warn('auth.oauth_failed', 'Respuesta de Google con state no válido', { ip: req.ip });
+      return volver('google-error');
+    }
+
+    try {
+      const redirectUri = `${publicBaseUrl(req, publicUrl)}/api/auth/google/callback`;
+      const profile = await client.getProfile({ code: req.query.code, redirectUri });
+      const { user, created } = await userService.loginWithOAuth({
+        provider: client.provider,
+        email: profile.email,
+        emailVerified: profile.emailVerified,
+      });
+      await regenerate(req.session);
+      req.session.userId = user.id;
+      req.log.info('auth.login', 'Inicio de sesión con Google', { userId: user.id, role: user.role, created });
+      return res.redirect(303, `/?aviso=${created ? 'google-cuenta-creada' : 'google-ok'}#/jugar`);
+    } catch (error) {
+      req.log.warn('auth.oauth_failed', 'No se ha podido iniciar sesión con Google', { reason: error.code || error.message });
+      return volver(error instanceof AppError ? 'google-rechazado' : 'google-error');
+    }
   });
 
   // Cierra la sesión invalidándola en el servidor, no solo borrando la cookie del navegador
