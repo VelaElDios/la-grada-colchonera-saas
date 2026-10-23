@@ -1,4 +1,4 @@
-# Revisión de la entrega (Sprint 1, Hitos 1–3)
+# Revisión de la entrega (Hitos 1–4)
 
 Comprobación, frase a frase, de la especificación del proyecto (*Procesos de Ingeniería del Software, curso 2026-2027*). Cada fila indica cómo se cumple el requisito y dónde está la prueba.
 
@@ -6,10 +6,10 @@ Comprobación, frase a frase, de la especificación del proyecto (*Procesos de I
 |---|---|
 | **Repositorio** | https://github.com/VelaElDios/la-grada-colchonera-saas |
 | **Aplicación desplegada** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (Google Cloud Run) |
-| **Alcance** | Hitos 1, 2 y 3. El profesor ha limitado esta primera entrega a esos tres hitos; el Hito 4 queda para la siguiente |
-| **Estado** | Todos los requisitos de los Hitos 1–3 están cumplidos, integrados en `main` y desplegados |
+| **Alcance** | Hitos 1, 2, 3 y 4. La primera entrega se limitó a los tres primeros; el Hito 4 se ha completado en la segunda |
+| **Estado** | Todos los requisitos de los Hitos 1–4 están cumplidos, integrados en `main`, desplegados y comprobados en producción |
 
-**Leyenda:** ✅ cumplido · ⏳ pertenece al Hito 4 (siguiente entrega)
+**Leyenda:** ✅ cumplido
 
 ## Cómo comprobarlo en cinco minutos
 
@@ -43,9 +43,9 @@ Comprobación, frase a frase, de la especificación del proyecto (*Procesos de I
 | Requisito | | Cómo se cumple | Evidencia |
 |---|---|---|---|
 | Registro de usuario local | ✅ | `POST /api/auth/register` valida el email y la contraseña (mínimo 8) y rechaza los emails repetidos (`409`) | [`src/api/auth.js`](../src/api/auth.js), captura 02 |
-| … con confirmación por correo (la cuenta queda pendiente) | ⏳ | Hito 4. El modelo ya tiene el estado `pending` y la lógica impide entrar a una cuenta pendiente (hay una prueba de ello). Se activa con `REQUIRE_EMAIL_CONFIRMATION=true` cuando exista el envío de correos | [`src/models/user.js`](../src/models/user.js), [`tests/userService.test.js`](../tests/userService.test.js) |
+| … con confirmación por correo (la cuenta queda pendiente) | ✅ | Al registrarse la cuenta queda `pending` y se envía un correo con un enlace firmado (HMAC, 24 h). `GET /api/auth/confirm` la activa; una cuenta pendiente no puede entrar (`403 ACCOUNT_PENDING`) y puede pedir otro correo. `REQUIRE_EMAIL_CONFIRMATION` está activo por defecto | [`src/services/accountConfirmationService.js`](../src/services/accountConfirmationService.js), [`src/integrations/mailer.js`](../src/integrations/mailer.js), [`tests/accountConfirmation.test.js`](../tests/accountConfirmation.test.js) |
 | Inicio de sesión local (email + contraseña) | ✅ | `POST /api/auth/login`. El mensaje es el mismo si el email no existe o si la contraseña es incorrecta, para no revelar qué cuentas existen | [`src/services/userService.js`](../src/services/userService.js), captura 03 |
-| Inicio de sesión con un proveedor externo (OAuth) | ⏳ | Hito 4. El modelo ya distingue `authProvider: local \| google` | [`src/models/user.js`](../src/models/user.js) |
+| Inicio de sesión con un proveedor externo (OAuth) | ✅ | Google OAuth 2.0 (código de autorización) con `state` anti-CSRF; el intercambio del código se hace en el servidor y la cuenta se crea con `authProvider: google`. La app de Google está publicada, con su política de privacidad | [`src/integrations/googleOAuth.js`](../src/integrations/googleOAuth.js), [`tests/googleOAuth.test.js`](../tests/googleOAuth.test.js), [`public/privacidad.html`](../public/privacidad.html) |
 | Cierre de sesión invalidando la sesión | ✅ | `POST /api/auth/logout` destruye la sesión **en el servidor** (en la tabla `session`) y borra la cookie; la cookie antigua deja de valer | [`tests/api.auth.test.js`](../tests/api.auth.test.js) |
 | La sesión se mantiene entre recargas | ✅ | Cookie `httpOnly` con la sesión guardada en PostgreSQL. Al cargar, la interfaz llama a `GET /api/auth/me` | [`src/app.js`](../src/app.js), [`public/js/ui.js`](../public/js/ui.js) (`iniciar`) |
 
@@ -80,7 +80,7 @@ Comprobación, frase a frase, de la especificación del proyecto (*Procesos de I
 | Al menos 5 pruebas unitarias de la capa de lógica sobre gestión de usuarios | ✅ | `tests/userService.test.js`: registro con email repetido, cuenta pendiente que intenta entrar, usuario normal que intenta eliminar a otro, último administrador… | [`tests/userService.test.js`](../tests/userService.test.js) |
 | Al menos una comprueba un caso de error | ✅ | Muchas: `ConflictError`, `ForbiddenError`, `ValidationError`, `NotFoundError`… | [`tests/userService.test.js`](../tests/userService.test.js) |
 | Pruebas automatizadas, con un framework y un único comando documentado | ✅ | `node:test`; se ejecutan con `npm test` (80 pruebas) | [README › Pruebas](../README.md#pruebas) |
-| Manejo explícito de errores con feedback claro | ✅ (base) | Errores de negocio tipados que la API traduce a un formato común `{ error: { code, message } }`; la interfaz muestra cada mensaje. El pulido (P17) es del Hito 4 | [`src/api/errorHandler.js`](../src/api/errorHandler.js), capturas 02 y 03 |
+| Manejo explícito de errores con feedback claro | ✅ (base) | Errores de negocio tipados que la API traduce a un formato común `{ error: { code, message } }`; la interfaz muestra cada mensaje. Su pulido (P17) está hecho en el Hito 4: avisos legibles, estados de carga y error, timeout y captura global de errores | [`src/api/errorHandler.js`](../src/api/errorHandler.js), capturas 02 y 03 |
 | Registro (log) de la actividad relevante | ✅ | Una línea JSON por evento (peticiones, logins, intentos fallidos, bajas, cambios de rol…), visible en Cloud Logging. Las contraseñas y los secretos se ocultan | [README › Logs](../README.md#registro-de-actividad-logs) |
 | Historial de commits incremental | ✅ | Un commit por paso, con la tarea en el título (`[Tx] …`), en ramas y PRs separados | [commits](https://github.com/VelaElDios/la-grada-colchonera-saas/commits/main) |
 
@@ -115,8 +115,10 @@ Comprobación, frase a frase, de la especificación del proyecto (*Procesos de I
 | Backlog (19 PBIs), sprint, tareas y su trazabilidad con ramas y PRs | [`docs/gestion/README.md`](gestion/README.md) |
 | Memoria del proyecto (LuaLaTeX) | [`memoria/`](../memoria/README.md) |
 
-## Pendiente para la siguiente entrega (Hito 4)
+## Hito 4 (completado)
 
-- **P15:** inicio de sesión con un proveedor externo (OAuth, Google).
-- **P16:** confirmación de la cuenta por correo electrónico mediante un servicio de correo transaccional. Cuando esté, `REQUIRE_EMAIL_CONFIRMATION` pasará a `true`.
+- **P15:** inicio de sesión con Google (OAuth 2.0).
+- **P16:** confirmación de la cuenta por correo electrónico (SMTP).
 - **P17:** manejo de errores y feedback al usuario, revisado de principio a fin.
+
+Comprobado en producción: registro con correo, error de cuenta pendiente con reenvío, enlace manipulado rechazado, acceso con Google con cuentas ajenas al proyecto y panel de administración con todos los usuarios.

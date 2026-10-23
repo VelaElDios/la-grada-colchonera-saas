@@ -15,7 +15,7 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 |---|---|
 | **Repositorio** | https://github.com/VelaElDios/la-grada-colchonera-saas |
 | **Aplicación desplegada** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (Google Cloud Run) |
-| **Alcance** | Hitos 1, 2 y 3 del enunciado. El Hito 4 (OAuth y confirmación por correo) queda para la siguiente entrega |
+| **Alcance** | Hitos 1, 2, 3 y 4 del enunciado: registro y acceso locales, roles y administración, confirmación por correo e inicio de sesión con Google |
 | **Acceso de administrador** | Ver [Acceso como administrador para la revisión](#acceso-como-administrador-para-la-revisión). Las credenciales se envían junto con la entrega |
 | **Revisión requisito a requisito** | [`docs/revision-entrega.md`](docs/revision-entrega.md) |
 
@@ -57,7 +57,7 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 | **3. Persistencia, seguridad y administración** | PostgreSQL (Neon) con migraciones, sesiones guardadas en la base de datos, secretos solo en variables de entorno, roles usuario/administrador con primer administrador, panel de administración, baja de la propia cuenta y logs estructurados. | P11–P14 · T15–T20 | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · PRs #18–#24 |
 | **Cierre del sprint** | README completo, capturas, documentación de la gestión, revisión de la entrega frente al enunciado, despliegue en Google Cloud Run y carpeta de la memoria. | P18–P19 · T27–T32 | [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) · PRs de `hito-4/*` |
 
-El profesor ha limitado esta primera entrega a los Hitos 1–3. Los PBIs del Hito 4 (P15 OAuth, P16 confirmación por correo y P17 manejo de errores avanzado) quedan para la siguiente entrega. La base ya estaba preparada: el modelo de usuario tiene el estado `pending` y el campo `authProvider` (`local` o `google`).
+La primera entrega se limitó a los Hitos 1–3. El Hito 4 (P15 OAuth, P16 confirmación por correo y P17 manejo de errores avanzado) se ha completado después, apoyándose en la base que ya existía: el modelo de usuario con el estado `pending` y el campo `authProvider` (`local` o `google`). Está desplegado y comprobado en producción: registro con correo y confirmación, reenvío, enlace manipulado rechazado, acceso con Google con cuentas ajenas al proyecto y panel de administración con todos los usuarios. La aplicación de Google está publicada (en producción) y su política de privacidad está en [`/privacidad.html`](public/privacidad.html).
 
 ### Hito 4 (segunda entrega)
 
@@ -254,7 +254,7 @@ Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; c
 2. Pulsar **Entrar** e introducir el email y la contraseña del administrador. **No están en el repositorio:** se envían junto con la entrega. Son los valores de los secretos `admin-email` y `admin-password` de Secret Manager.
 3. En el menú aparece **Administración**: listado de usuarios con email, rol, estado y fecha de alta, y botones para cambiar el rol o eliminar una cuenta.
 
-Para probar también los permisos de un usuario normal, basta con registrar una cuenta nueva desde **Registrarse**. Como el envío de correos es del Hito 4, la cuenta queda activa al momento.
+Para probar también los permisos de un usuario normal, basta con registrar una cuenta nueva desde **Registrarse**. La cuenta queda pendiente hasta que se pulsa el enlace del correo de confirmación (con Google, queda activa al momento).
 
 ## Registro de actividad (logs)
 
