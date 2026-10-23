@@ -1,0 +1,72 @@
+/* Tokens de diseño: colores, tipografía, espaciado (escala de 4 px), radios y sombras. */
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/plus-jakarta-sans-latin-wght-normal.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD;
+}
+@font-face {
+  font-family: "Plus Jakarta Sans";
+  font-style: normal;
+  font-weight: 200 800;
+  font-display: swap;
+  src: url("/fonts/plus-jakarta-sans-latin-ext-wght-normal.woff2") format("woff2");
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+:root {
+  /* Marca rojiblanca sobre azul noche */
+  --rojo: #d4152f;
+  --rojo-hover: #e8283f;
+  --rojo-texto: #ff7b8b;      /* rojo legible sobre fondo oscuro (AA) */
+  --azul-900: #070b22;
+  --azul-800: #0b1230;        /* fondo */
+  --azul-700: #111a44;        /* superficie */
+  --azul-600: #19235a;        /* superficie elevada */
+  --azul-500: #27348a;
+  --blanco: #f5f7ff;
+  --gris-300: #b4bde0;        /* texto secundario (AA sobre azul-800) */
+  --gris-500: #7d88b8;
+  --verde: #4ade80;
+  --ambar: #fbbf24;
+  --borde: rgb(255 255 255 / 0.12);
+  --borde-fuerte: rgb(255 255 255 / 0.24);
+  --foco: #7aa2ff;
+
+  /* Tipografía */
+  --fuente: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --t-xs: 0.8125rem;
+  --t-sm: 0.9375rem;
+  --t-base: 1rem;
+  --t-lg: 1.125rem;
+  --t-xl: 1.375rem;
+  --t-2xl: clamp(1.625rem, 1.2rem + 1.6vw, 2.25rem);
+  --t-3xl: clamp(2.25rem, 1.4rem + 4vw, 4rem);
+
+  /* Espaciado */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.75rem;
+  --s-4: 1rem;
+  --s-5: 1.5rem;
+  --s-6: 2rem;
+  --s-7: 3rem;
+  --s-8: 4rem;
+
+  --r-sm: 8px;
+  --r-md: 12px;
+  --r-lg: 20px;
+  --r-pill: 999px;
+
+  --sombra-1: 0 1px 2px rgb(0 0 0 / 0.4), 0 4px 12px rgb(0 0 0 / 0.25);
+  --sombra-2: 0 12px 40px rgb(0 0 0 / 0.5);
+  --anillo: 0 0 0 3px rgb(122 162 255 / 0.55);
+
+  --ancho-contenido: 1080px;
+  --altura-cabecera: 64px;
+  --t-rapida: 140ms;
+  --t-media: 240ms;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
