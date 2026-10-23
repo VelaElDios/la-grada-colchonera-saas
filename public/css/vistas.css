@@ -72,3 +72,12 @@
 .social__separador { display: flex; align-items: center; gap: var(--s-3); color: var(--gris-300); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.1em; }
 .social__separador::before, .social__separador::after { content: ""; flex: 1; height: 1px; background: var(--borde); }
 .btn svg { flex: none; }
+
+/* ---------- Páginas legales ---------- */
+.legal { max-width: 70ch; margin: 0 auto; display: grid; gap: var(--s-4); }
+.legal h2 { font-size: var(--t-xl); margin-top: var(--s-5); }
+.legal p, .legal li { color: var(--gris-300); }
+.legal strong { color: var(--blanco); }
+.legal code { padding: 1px 6px; border-radius: 6px; background: var(--azul-600); color: var(--blanco); font-size: 0.9em; }
+.legal__lista { display: grid; gap: var(--s-3); padding-left: var(--s-5); list-style: disc; }
+.pie a { color: var(--gris-300); }
