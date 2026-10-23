@@ -76,7 +76,7 @@ jobs:
             --min-instances 0 \
             --max-instances 2 \
             --set-env-vars "^@^NODE_ENV=production@ALLOWED_DOMAINS=uclm.es,alu.uclm.es" \
-            --set-secrets "DATABASE_URL=database-url:latest,SESSION_SECRET=session-secret:latest,ADMIN_EMAIL=admin-email:latest,ADMIN_PASSWORD=admin-password:latest" \
+            --set-secrets "DATABASE_URL=database-url:latest,SESSION_SECRET=session-secret:latest,ADMIN_EMAIL=admin-email:latest,ADMIN_PASSWORD=admin-password:latest,SMTP_URL=smtp-url:latest,MAIL_FROM=mail-from:latest,GOOGLE_CLIENT_ID=google-client-id:latest,GOOGLE_CLIENT_SECRET=google-client-secret:latest" \
             --quiet
           URL="$(gcloud run services describe "${SERVICE}" --project "${PROJECT_ID}" --region "${REGION}" --format='value(status.url)')"
           echo "url=${URL}" >> "$GITHUB_OUTPUT"
