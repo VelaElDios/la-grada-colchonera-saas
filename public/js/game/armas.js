@@ -5,7 +5,10 @@ import { normalizar } from './util.js';
 
 const ALCANCE_BALON = 520;
 
-/** Los `n` enemigos más cercanos al jugador dentro de `alcance`. */
+/** Tiempo hasta el siguiente disparo: tiene en cuenta mejoras de recarga y la Furia Roja. */
+const recarga = (j, base) => base * j.mult.cd * (j.furia > 0 ? 0.5 : 1);
+
+/** Los `n` rivales más cercanos al jugador dentro de `alcance`. */
 function masCercanos(mundo, n, alcance) {
   const j = mundo.jugador;
   const elegidos = []; // { e, d2 } ordenados por distancia
@@ -23,6 +26,13 @@ function masCercanos(mundo, n, alcance) {
     }
   }
   return elegidos.map((x) => x.e);
+}
+
+function nuevoProyectil(mundo, props) {
+  const j = mundo.jugador;
+  mundo.proyectiles.push({
+    x: j.x, y: j.y, vx: 0, vy: 0, r: 6, dano: 1, perfora: 1, vida: 1.4, rot: 0, empuje: 120, golpeados: new Set(), ...props,
+  });
 }
 
 function dispararBalones(mundo, nivel) {
@@ -46,9 +56,39 @@ function dispararBalones(mundo, nivel) {
     } else {
       [dx, dy] = [j.dirX, j.dirY];
     }
-    mundo.proyectiles.push({
-      x: j.x, y: j.y, vx: dx * 380, vy: dy * 380, r: 6, dano, perfora, vida: 1.4, rot: 0, golpeados: new Set(),
-    });
+    nuevoProyectil(mundo, { vx: dx * 380, vy: dy * 380, dano, perfora });
+  }
+  mundo.eventos.push({ tipo: 'chute' });
+}
+
+function dispararCanonazo(mundo, nivel) {
+  const j = mundo.jugador;
+  const { dano, perfora, r } = ARMAS.canonazo.niveles[nivel - 1];
+  const [objetivo] = masCercanos(mundo, 1, 650);
+  const [dx, dy] = objetivo ? normalizar(objetivo.x - j.x, objetivo.y - j.y) : [j.dirX, j.dirY];
+  nuevoProyectil(mundo, { vx: dx * 520, vy: dy * 520, r, dano, perfora, vida: 1.6, empuje: 380, grande: true });
+  mundo.sacudida = Math.max(mundo.sacudida, 0.08);
+  mundo.eventos.push({ tipo: 'cantico' });
+}
+
+function saqueDeEsquina(mundo, nivel) {
+  const { n, dano, perfora } = ARMAS.corner.niveles[nivel - 1];
+  const giro = mundo.rng.rango(0, Math.PI * 2);
+  for (let k = 0; k < n; k += 1) {
+    const a = giro + (k / n) * Math.PI * 2;
+    nuevoProyectil(mundo, { vx: Math.cos(a) * 270, vy: Math.sin(a) * 270, dano, perfora, vida: 1.25 });
+  }
+  mundo.eventos.push({ tipo: 'chute' });
+}
+
+function balonConEfecto(mundo, nivel) {
+  const j = mundo.jugador;
+  const { n, dano } = ARMAS.efecto.niveles[nivel - 1];
+  const objetivos = masCercanos(mundo, n, 600);
+  for (let k = 0; k < n; k += 1) {
+    const objetivo = objetivos.length ? objetivos[k % objetivos.length] : null;
+    const a = Math.atan2(j.dirY, j.dirX) + (k - (n - 1) / 2) * 0.7; // salen abiertos y luego giran
+    nuevoProyectil(mundo, { vx: Math.cos(a) * 300, vy: Math.sin(a) * 300, dano, perfora: 2, vida: 2.4, teledirigido: true, objetivo });
   }
   mundo.eventos.push({ tipo: 'chute' });
 }
@@ -79,7 +119,7 @@ function golpearConBufanda(mundo, nivel) {
       if (d > Math.PI) d = Math.PI * 2 - d;
       return d <= ancho || dist < e.r + 18;
     });
-    if (dentro) danar(mundo, e, dano, normalizar(dx, dy), 90);
+    if (dentro) danar(mundo, e, dano, normalizar(dx, dy), 90, 'cuerpo');
   }
   direcciones.forEach((a) => mundo.tajos.push({ x: j.x, y: j.y, ang: a, largo, ancho, vida: 0.2, total: 0.2 }));
   mundo.eventos.push({ tipo: 'latigazo' });
@@ -88,7 +128,7 @@ function golpearConBufanda(mundo, nivel) {
 function girarBanderines(mundo, nivel, dt) {
   const j = mundo.jugador;
   const { n, radio, dano, vel } = ARMAS.banderines.niveles[nivel - 1];
-  j.angBanderines = (j.angBanderines + vel * dt) % (Math.PI * 2);
+  j.angBanderines = (j.angBanderines + vel * dt * (j.furia > 0 ? 1.5 : 1)) % (Math.PI * 2);
   j.banderines.length = 0;
   for (let i = 0; i < n; i += 1) {
     const a = j.angBanderines + (i * Math.PI * 2) / n;
@@ -99,7 +139,7 @@ function girarBanderines(mundo, nivel, dt) {
       if (e.muerto || e.cdBanderin > 0) return;
       if ((e.x - bx) ** 2 + (e.y - by) ** 2 > (e.r + 11) ** 2) return;
       e.cdBanderin = 0.45;
-      danar(mundo, e, dano, normalizar(e.x - j.x, e.y - j.y), 170);
+      danar(mundo, e, dano, normalizar(e.x - j.x, e.y - j.y), 170, 'cuerpo');
     });
   }
 }
@@ -112,41 +152,91 @@ function cantar(mundo, nivel) {
     if (e.muerto) continue;
     const dx = e.x - j.x;
     const dy = e.y - j.y;
-    if (Math.hypot(dx, dy) <= radio + e.r) danar(mundo, e, dano, normalizar(dx, dy), empuje);
+    if (Math.hypot(dx, dy) <= radio + e.r) danar(mundo, e, dano, normalizar(dx, dy), empuje, 'cuerpo');
   }
   mundo.ondas.push({ x: j.x, y: j.y, radio, vida: 0.45, total: 0.45 });
   mundo.sacudida = Math.max(mundo.sacudida, 0.12);
   mundo.eventos.push({ tipo: 'cantico' });
 }
 
+function pitar(mundo, nivel) {
+  const j = mundo.jugador;
+  const { radio, dano, lento } = ARMAS.silbato.niveles[nivel - 1];
+  for (let i = 0; i < mundo.enemigos.length; i += 1) {
+    const e = mundo.enemigos[i];
+    if (e.muerto) continue;
+    if (Math.hypot(e.x - j.x, e.y - j.y) > radio + e.r) continue;
+    e.lento = Math.max(e.lento, e.jefe ? lento / 2 : lento);
+    danar(mundo, e, dano, null, 0, 'cuerpo');
+  }
+  mundo.ondas.push({ x: j.x, y: j.y, radio, vida: 0.5, total: 0.5, silbato: true });
+  mundo.eventos.push({ tipo: 'latigazo' });
+}
+
+function sacarTarjeta(mundo, nivel) {
+  const j = mundo.jugador;
+  const { n, dano, pct } = ARMAS.tarjeta.niveles[nivel - 1];
+  // Los rivales con más vida dentro de la zona de juego
+  const candidatos = [];
+  for (let i = 0; i < mundo.enemigos.length; i += 1) {
+    const e = mundo.enemigos[i];
+    if (!e.muerto && Math.hypot(e.x - j.x, e.y - j.y) < 460) candidatos.push(e);
+  }
+  candidatos.sort((a, b) => b.vida - a.vida);
+  candidatos.slice(0, n).forEach((e) => {
+    const porcentaje = e.jefe ? pct / 5 : pct;
+    mundo.tarjetas.push({ x: e.x, y: e.y - e.r - 10, vida: 0.7, total: 0.7 });
+    danar(mundo, e, dano + porcentaje * e.vidaMax, normalizar(e.x - j.x, e.y - j.y), 120, 'cuerpo');
+  });
+  if (candidatos.length) mundo.eventos.push({ tipo: 'golpe' });
+}
+
+function revisarConVar(mundo, nivel) {
+  const j = mundo.jugador;
+  const { n, dano, radio } = ARMAS.var.niveles[nivel - 1];
+  const visibles = [];
+  for (let i = 0; i < mundo.enemigos.length; i += 1) {
+    const e = mundo.enemigos[i];
+    if (!e.muerto && Math.hypot(e.x - j.x, e.y - j.y) < 520) visibles.push(e);
+  }
+  if (!visibles.length) return;
+  mundo.rng.barajar(visibles).slice(0, n).forEach((objetivo) => {
+    mundo.rayos.push({ x: objetivo.x, y: objetivo.y, radio, vida: 0.35, total: 0.35 });
+    for (let i = 0; i < mundo.enemigos.length; i += 1) {
+      const e = mundo.enemigos[i];
+      if (e.muerto) continue;
+      if (Math.hypot(e.x - objetivo.x, e.y - objetivo.y) <= radio + e.r) danar(mundo, e, dano, null, 0, 'cuerpo');
+    }
+  });
+  mundo.sacudida = Math.max(mundo.sacudida, 0.1);
+  mundo.eventos.push({ tipo: 'cantico' });
+}
+
+/** Armas que se disparan cada cierto tiempo (todas menos los banderines, que giran siempre). */
+const DISPARADAS = {
+  balon: dispararBalones,
+  canonazo: dispararCanonazo,
+  corner: saqueDeEsquina,
+  efecto: balonConEfecto,
+  bufanda: golpearConBufanda,
+  canticos: cantar,
+  silbato: pitar,
+  tarjeta: sacarTarjeta,
+  var: revisarConVar,
+};
+
 /** Avanza los temporizadores de todas las armas del jugador y las dispara cuando toca. */
 export function actualizarArmas(mundo, dt) {
-  const { armas } = mundo.jugador;
-
-  if (armas.balon.nivel > 0) {
-    armas.balon.cd -= dt;
-    if (armas.balon.cd <= 0) {
-      dispararBalones(mundo, armas.balon.nivel);
-      armas.balon.cd += ARMAS.balon.niveles[armas.balon.nivel - 1].cd;
+  const j = mundo.jugador;
+  for (const [clave, disparar] of Object.entries(DISPARADAS)) {
+    const arma = j.armas[clave];
+    if (arma.nivel <= 0) continue;
+    arma.cd -= dt;
+    if (arma.cd <= 0) {
+      disparar(mundo, arma.nivel);
+      arma.cd += recarga(j, ARMAS[clave].niveles[arma.nivel - 1].cd);
     }
   }
-  if (armas.bufanda.nivel > 0) {
-    armas.bufanda.cd -= dt;
-    if (armas.bufanda.cd <= 0) {
-      golpearConBufanda(mundo, armas.bufanda.nivel);
-      armas.bufanda.cd += ARMAS.bufanda.niveles[armas.bufanda.nivel - 1].cd;
-    }
-  }
-  if (armas.banderines.nivel > 0) {
-    girarBanderines(mundo, armas.banderines.nivel, dt);
-  } else {
-    mundo.jugador.banderines.length = 0;
-  }
-  if (armas.canticos.nivel > 0) {
-    armas.canticos.cd -= dt;
-    if (armas.canticos.cd <= 0) {
-      cantar(mundo, armas.canticos.nivel);
-      armas.canticos.cd += ARMAS.canticos.niveles[armas.canticos.nivel - 1].cd;
-    }
-  }
+  if (j.armas.banderines.nivel > 0) girarBanderines(mundo, j.armas.banderines.nivel, dt);
+  else j.banderines.length = 0;
 }

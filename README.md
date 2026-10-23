@@ -88,9 +88,13 @@ Pruebas hechas en la aplicación desplegada el 23/10/2026. El enlace del correo 
 
 ### Juego
 
-| Partida en curso | Elegir una mejora al subir de nivel |
+| Elegir personaje y entrenador | Partida en curso |
 |---|---|
-| ![Partida con rivales, vida, oleada y nivel](docs/capturas/juego/01-partida.png) | ![Menú para elegir una de tres mejoras](docs/capturas/juego/02-mejoras.png) |
+| ![Selección de personaje y entrenador](docs/capturas/juego/03-seleccion.png) | ![Partida en pixel art con rivales, vida, oleada, nivel y ulti](docs/capturas/juego/01-partida.png) |
+
+| Elegir una mejora al subir de nivel | Jefe: Guardiola |
+|---|---|
+| ![Menú para elegir una de tres mejoras](docs/capturas/juego/02-mejoras.png) | ![Pelea contra el jefe Guardiola con su barra de vida](docs/capturas/juego/04-jefe.png) |
 
 ## Qué incluye cada hito
 
@@ -199,12 +203,16 @@ render.yaml            Despliegue en Render (Blueprint)
 
 ## El juego
 
-La grada es un *survivor*: oleadas de rivales cada 30 segundos, experiencia, mejoras al subir de nivel y un jefe cada cinco oleadas. Solo pueden jugar usuarios con sesión; la mejor marca se guarda en el navegador (todavía no hay ranking en el servidor).
+La grada es un *survivor* con estética de píxeles «chibi» (cabeza grande, camiseta y botas): oleadas de rivales cada 30 segundos, experiencia, mejoras al subir de nivel y un jefe cada cinco oleadas. Es **infinito** (siempre hay mejoras que elegir) y los rivales ganan vida, daño y velocidad sin parar: a la media hora es muy difícil sobrevivir y a los 40 minutos casi imposible. Solo pueden jugar usuarios con sesión; la mejor marca se guarda en el navegador (todavía no hay ranking en el servidor).
 
+- **Antes de jugar se elige jugador y entrenador.** Jugadores del Atleti: **Oblak** (portero), **Godín** (defensa), **Koke** (mediocentro) y **Griezmann** (delantero). Sus estadísticas dependen solo de la posición (por ahora todos los de una misma posición son iguales): el portero solo ataca cuerpo a cuerpo y es el más resistente; el defensa pega más de cerca; el mediocentro es equilibrado; el delantero tiene el mejor disparo pero poca vida.
+- **Entrenadores**: **Cholo Simeone** (+10 % de daño, +5 % de vida; ulti «¡Partido a partido!»: onda gigante y +30 % de daño durante 6 s) y **Luis Aragonés** (+5 % de velocidad, +12 % de experiencia; ulti «Furia Roja»: armas el doble de rápidas y más velocidad durante 7 s). La ulti se carga con las bajas, se lanza con `Espacio`/`E` o el botón **ULTI**, hace daño fijo (brilla al principio, se queda corta al final) y cada vez tarda más en cargarse.
+- **Rivales**: 16 equipos famosos con jugadores genéricos (Real Madrid, Barcelona, Bayern, Liverpool, City, United, Chelsea, Arsenal, Juventus, Milan, Inter, PSG, Dortmund, Ajax, Benfica y Nápoles), que se van desbloqueando por oleadas.
+- **Jefes** (uno cada 5 oleadas, en este orden y vuelta a empezar más fuertes): **Pep Guardiola** (invoca un cerco de rivales), **José Mourinho** (onda de choque avisada), **Cristiano Ronaldo** (abanico de tiros) y **Leo Messi** (embestidas rápidas).
+- **Armas** (se disparan solas, 5 niveles): de disparo (no las puede usar el portero) balón, cañonazo de falta, saque de esquina y balón con efecto; de cuerpo a cuerpo bufanda, banderines, cántico, silbato (ralentiza), tarjeta roja (daño según la vida del rival) y VAR (rayos). **Pasivas**: botas, imán, pasión, táctica, cantera, masaje, espinilleras y pulmones. Cuando ya casi todo está al máximo salen **mejoras extra sin límite**.
 - **Controles**: WASD o flechas; en móvil, joystick flotante al arrastrar. `Esc`/`P` pausa; la partida se pausa sola al cambiar de pestaña.
-- **Armas** (se disparan solas, 5 niveles): balón, bufanda, banderines y cánticos. **Pasivas**: botas, imán, pasión, táctica, cantera y masaje.
-- **Arquitectura**: `game/mundo.js` es una simulación pura (paso fijo 1/60 s, generador con semilla, sin DOM) que se prueba en `tests/game.test.js`; `render.js` dibuja el estado en un canvas 2D; `hud.js`, `audio.js` (Web Audio sintetizado) y `entrada.js` son independientes entre sí; `juego.js` los conecta.
-- Respeta `prefers-reduced-motion` (sin sacudidas ni partículas).
+- **Arquitectura**: `game/mundo.js` es una simulación pura (paso fijo 1/60 s, generador con semilla, sin DOM) que se prueba en `tests/game.test.js` y `tests/juego-personajes.test.js`; todo el equilibrio está en `config.js`; `oleadas.js`, `jefes.js`, `ulti.js`, `armas.js` y `mejoras.js` son módulos de la simulación; `sprites.js` dibuja los muñecos con código (sin imágenes) y `render.js` los pinta sobre un césped de píxeles en un canvas 2D; `hud.js`, `audio.js` (Web Audio sintetizado) y `entrada.js` son independientes entre sí; `juego.js` los conecta.
+- Respeta `prefers-reduced-motion` (sin sacudidas ni partículas). Proyecto de aficionado: los dibujos son originales y no se usan escudos ni imágenes oficiales.
 - Capturas en [Capturas del juego](#capturas).
 
 ## Ejecutar en local
@@ -235,7 +243,7 @@ No hace falta tener PostgreSQL: en local, las pruebas de base de datos usan `pg-
 TEST_DATABASE_URL=postgresql://usuario:clave@localhost:5432/grada_test npm test
 ```
 
-Son 138 pruebas automatizadas (23 suites):
+Son 151 pruebas automatizadas (23 suites):
 
 - **Lógica (pruebas unitarias):** registro, email repetido, cuenta pendiente que intenta entrar, usuario normal que intenta eliminar a otro, roles, bajas y último administrador. Muchas comprueban casos de error, no solo el camino feliz.
 - **Repositorios:** el mismo contrato para memoria y para PostgreSQL.
@@ -244,7 +252,7 @@ Son 138 pruebas automatizadas (23 suites):
 - **Logs:** se comprueba también que nunca aparecen contraseñas.
 - **Confirmación por correo:** el token firmado (válido, manipulado y caducado), el correo con su enlace, el reenvío sin revelar si la cuenta existe y el aviso de cuenta pendiente.
 - **Google OAuth:** el `state` (falso, ausente y reutilizado), la cuenta nueva, la pendiente que se confirma, la eliminada y el email sin verificar, todo con un `fetch` falso, sin llamar a Google.
-- **Interfaz y juego:** que solo `api.js` use `fetch`, que la interfaz no inserte texto de usuario como HTML, que los módulos se puedan importar y la simulación del juego (paso fijo, semilla y reglas de armas y niveles).
+- **Interfaz y juego:** que solo `api.js` use `fetch`, que la interfaz no inserte texto de usuario como HTML, que los módulos se puedan importar y la simulación del juego (paso fijo, semilla, armas, personajes, entrenadores, jefes, ulti y dificultad infinita).
 - **Migraciones y arranque.**
 - **Recorrido completo con PostgreSQL:** registro, inicio de sesión y sesión guardada en la base de datos.
 
