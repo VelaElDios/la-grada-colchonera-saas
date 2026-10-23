@@ -66,7 +66,7 @@ La aplicación está dividida en capas que solo se comunican con la capa vecina.
 ```mermaid
 flowchart LR
     subgraph Navegador
-        UI["Interfaz<br/>public/js/ui.js"] --> CLI["Cliente de la API<br/>public/js/api.js"]
+        UI["Interfaz<br/>public/js/ui.js + ui/"] --> CLI["Cliente de la API<br/>public/js/api.js"]
     end
     CLI -- "HTTP + JSON<br/>cookie de sesión" --> API
     subgraph "Servidor Node.js + Express"
@@ -79,7 +79,7 @@ flowchart LR
     API -- "logs JSON" --> LOGS["stdout<br/>Cloud Logging"]
 ```
 
-- **Presentación** (`public/`): HTML, CSS y JavaScript sin framework. `ui.js` solo pinta vistas; todas las peticiones pasan por `api.js`.
+- **Presentación** (`public/`): HTML, CSS y JavaScript sin framework. la interfaz (`ui.js` y `ui/`) solo pinta vistas; todas las peticiones pasan por `api.js`.
 - **API** (`src/api/`): traduce HTTP a llamadas a la lógica. Aquí están los middlewares de sesión (`requireAuth`), roles (`requireRole`), registro de peticiones y el manejador de errores común.
 - **Lógica** (`src/services/`): reglas de negocio (registro, autenticación, roles, bajas, último administrador). Recibe sus dependencias por parámetro.
 - **Datos** (`src/repositories/`): dos implementaciones del mismo contrato, en memoria y en PostgreSQL. Las mismas pruebas se pasan a las dos.
@@ -91,7 +91,7 @@ Cada tecnología lleva una frase que justifica por qué se ha elegido.
 | Tecnología | Para qué | Justificación |
 |---|---|---|
 | Node.js 22 + Express 5 | Servidor y API REST | Un único lenguaje (JavaScript) en cliente y servidor y un framework mínimo en el que las capas se ven como módulos simples. Express 5 pasa los errores asíncronos al manejador común. |
-| HTML, CSS y JavaScript sin framework | Frontend | El propio backend sirve el frontend (mismo origen, sin CORS), no hace falta compilar nada y la frontera entre interfaz (`ui.js`) y cliente (`api.js`) se ve en dos ficheros. |
+| HTML, CSS y JavaScript sin framework | Frontend | El propio backend sirve el frontend (mismo origen, sin CORS), no hace falta compilar nada y la frontera entre interfaz (`ui.js` y `ui/`) y cliente (`api.js`) se ve en dos ficheros. |
 | PostgreSQL en Neon (capa gratuita) | Base de datos | Base de datos relacional real, gestionada y gratuita. Las tablas se crean con migraciones SQL versionadas. |
 | `pg`, `connect-pg-simple` | Acceso a PostgreSQL y sesiones | Consultas parametrizadas (sin inyección SQL) y sesiones guardadas en la base de datos, que sobreviven a reinicios y despliegues. |
 | `express-session`, `bcryptjs` | Autenticación | Sesión en el servidor con cookie `httpOnly`; contraseñas guardadas solo como hash bcrypt. |
@@ -117,9 +117,14 @@ src/
   models/              Modelo de usuario (roles, estados)
   db/                  Conexión, migraciones SQL y script de migración
 public/
-  index.html, css/     Capa de presentación (GUI)
-  js/ui.js             Interfaz: vistas y navegación
-  js/api.js            Cliente de comunicación con la API
+  index.html           Página única (SPA con rutas por hash)
+  css/                 Sistema de diseño: tokens, base, componentes, vistas y juego
+  fonts/               Plus Jakarta Sans autoalojada (licencia OFL)
+  js/ui.js             Punto de entrada: enrutador, control de acceso, foco y errores
+  js/ui/               Módulos de interfaz: cabecera, formularios, avisos, diálogos, componentes
+  js/ui/vistas/        Una vista por módulo (inicio, entrar, registro, perfil, admin, jugar, 404)
+  js/api.js            Cliente de comunicación con la API (único sitio con fetch)
+  js/game/             Juego «survivor» rojiblanco: simulación pura, dibujo en canvas, HUD, audio y entrada
 tests/                 Pruebas automatizadas (unitarias, de API y de base de datos)
 docs/                  Capturas, gestión del proyecto y revisión de la entrega
 memoria/               Memoria del proyecto en LuaLaTeX
@@ -128,6 +133,15 @@ scripts/gcp/           Preparación de Google Cloud (una sola vez)
 render.yaml            Despliegue en Render (Blueprint)
 .github/workflows/     Integración continua y despliegue en Cloud Run
 ```
+
+## El juego
+
+La grada es un *survivor*: oleadas de rivales cada 30 segundos, experiencia, mejoras al subir de nivel y un jefe cada cinco oleadas. Solo pueden jugar usuarios con sesión; la mejor marca se guarda en el navegador (todavía no hay ranking en el servidor).
+
+- **Controles**: WASD o flechas; en móvil, joystick flotante al arrastrar. `Esc`/`P` pausa; la partida se pausa sola al cambiar de pestaña.
+- **Armas** (se disparan solas, 5 niveles): balón, bufanda, banderines y cánticos. **Pasivas**: botas, imán, pasión, táctica, cantera y masaje.
+- **Arquitectura**: `game/mundo.js` es una simulación pura (paso fijo 1/60 s, generador con semilla, sin DOM) que se prueba en `tests/game.test.js`; `render.js` dibuja el estado en un canvas 2D; `hud.js`, `audio.js` (Web Audio sintetizado) y `entrada.js` son independientes entre sí; `juego.js` los conecta.
+- Respeta `prefers-reduced-motion` (sin sacudidas ni partículas).
 
 ## Ejecutar en local
 

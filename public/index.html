@@ -2,26 +2,28 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>La Grada Colchonera</title>
-  <link rel="stylesheet" href="/css/styles.css">
+  <meta name="description" content="Survivor rojiblanco en el navegador: aguanta las oleadas de rivales, sube de nivel y defiende la grada.">
+  <meta name="theme-color" content="#0b1230">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M4 3h24v15c0 6-5 10-12 12C9 28 4 24 4 18z' fill='%23c8102e'/%3E%3Cpath d='M10 3h4v26h-4zM18 3h4v26h-4z' fill='%23fff'/%3E%3C/svg%3E">
+  <link rel="preload" href="/fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/base.css">
+  <link rel="stylesheet" href="/css/componentes.css">
+  <link rel="stylesheet" href="/css/vistas.css">
+  <link rel="stylesheet" href="/css/juego.css">
 </head>
 <body>
-  <header class="cabecera">
-    <a class="logo" href="#/">La Grada Colchonera</a>
-    <nav id="nav" class="nav" aria-label="Navegación principal"></nav>
-  </header>
-
-  <main class="contenido">
-    <p id="mensaje" class="mensaje" role="status" hidden></p>
-    <section id="app"></section>
+  <a class="salto" href="#contenido">Saltar al contenido</a>
+  <header class="cabecera" id="cabecera"></header>
+  <main class="contenido" id="contenido" tabindex="-1">
+    <div id="app" class="app">
+      <noscript><p class="alerta alerta--error">La Grada Colchonera necesita JavaScript para funcionar.</p></noscript>
+    </div>
   </main>
-
   <footer class="pie">Proyecto de aficionado sin relación oficial con el Club Atlético de Madrid.</footer>
-
-  <!-- Cliente de comunicación con la API (separado de la interfaz) -->
-  <script src="/js/api.js"></script>
-  <!-- Capa de presentación -->
-  <script src="/js/ui.js"></script>
+  <script type="module" src="/js/ui.js"></script>
 </body>
 </html>
