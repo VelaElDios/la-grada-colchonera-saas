@@ -4,6 +4,7 @@ import { ponerUsuario } from '../estado.js';
 import { avisar } from '../avisos.js';
 import { crearFormularioAuth } from '../formulario.js';
 import { mensajeDeError } from '../componentes.js';
+import { crearBloqueGoogle } from '../google.js';
 
 export function montar(raiz, { navegar, destino }) {
   let ultimoEmail = '';
@@ -51,6 +52,7 @@ export function montar(raiz, { navegar, destino }) {
     h('p', { class: 'auth__texto' }, 'Vuelve a la grada con tu email y contraseña.'),
     formulario.nodo,
     reenvio,
+    crearBloqueGoogle('Entrar con Google'),
     h('p', { class: 'auth__pie' }, '¿Aún no tienes cuenta? ', h('a', { href: '#/registro' }, 'Créala gratis')),
   ));
   return undefined;

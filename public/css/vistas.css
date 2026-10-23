@@ -66,3 +66,9 @@
 
 /* Reenvío del correo de confirmación (cuenta pendiente) */
 .aviso-reenvio { display: grid; gap: var(--s-3); padding: var(--s-4); border: 1px dashed var(--rojo-texto); border-radius: var(--r-md); font-size: var(--t-sm); color: var(--gris-300); }
+
+/* Separador y botón de acceso con Google */
+.social { display: grid; gap: var(--s-4); }
+.social__separador { display: flex; align-items: center; gap: var(--s-3); color: var(--gris-300); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.1em; }
+.social__separador::before, .social__separador::after { content: ""; flex: 1; height: 1px; background: var(--borde); }
+.btn svg { flex: none; }

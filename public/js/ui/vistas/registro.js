@@ -2,6 +2,7 @@ import { h } from '../dom.js';
 import { api } from '../../api.js';
 import { avisar } from '../avisos.js';
 import { crearFormularioAuth } from '../formulario.js';
+import { crearBloqueGoogle } from '../google.js';
 
 export function montar(raiz, { navegar }) {
   const formulario = crearFormularioAuth({
@@ -24,6 +25,7 @@ export function montar(raiz, { navegar }) {
     h('h1', { class: 'auth__titulo', tabIndex: -1 }, 'Crear cuenta'),
     h('p', { class: 'auth__texto' }, 'Con tu cuenta podrás jugar y guardar tu mejor marca.'),
     formulario.nodo,
+    crearBloqueGoogle('Registrarme con Google'),
     h('p', { class: 'auth__pie' }, '¿Ya tienes cuenta? ', h('a', { href: '#/entrar' }, 'Entra')),
   ));
   return undefined;

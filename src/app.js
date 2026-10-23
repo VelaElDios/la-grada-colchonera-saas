@@ -11,6 +11,7 @@ const { createUserService } = require('./services/userService');
 const { createAccountConfirmationService } = require('./services/accountConfirmationService');
 const { createTokenSigner } = require('./services/tokenSigner');
 const { createMailer } = require('./integrations/mailer');
+const { createOAuthClients } = require('./integrations/googleOAuth');
 const { createApiRouter } = require('./api');
 const { createLogger } = require('./logger');
 
@@ -23,6 +24,7 @@ function createApp({
   sessionStore, // dónde se guardan las sesiones (sin indicarlo: en memoria)
   logger = createLogger({ level: config.logLevel || 'info' }),
   mailer = createMailer(config.mail, { logger }), // servicio de correo (SMTP o registro)
+  oauthClients = createOAuthClients(config.oauth), // proveedores de inicio de sesión externos (Google)
 } = {}) {
   const userService = createUserService({
     userRepository,
@@ -69,7 +71,7 @@ function createApp({
   }));
 
   // Capa API: toda la comunicación cliente-servidor pasa por /api
-  app.use('/api', createApiRouter({ userService, accountConfirmation, config, logger }));
+  app.use('/api', createApiRouter({ userService, accountConfirmation, oauthClients, config, logger }));
 
   // El backend sirve el frontend (mismo origen)
   app.use(express.static(path.join(__dirname, '..', 'public')));
