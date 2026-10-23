@@ -5,17 +5,18 @@
 [![Desplegado en Cloud Run](https://img.shields.io/badge/demo-Google%20Cloud%20Run-4285F4)](https://la-grada-colchonera-1081564062572.europe-southwest1.run.app)
 
 Red social para la afición rojiblanca. Proyecto individual de **Procesos de Ingeniería del Software (curso 2026-2027)**, planteado como un TFG.
-El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: gestión de usuarios con registro, inicio de sesión, roles, base de datos real, despliegue continuo y gestión ágil del trabajo.
+El proyecto es una aplicación SaaS organizada en capas: gestión de usuarios con registro y confirmación por correo, inicio de sesión local y con Google, roles, base de datos real, despliegue continuo y gestión ágil del trabajo (Hitos 1 a 4). Sobre esa base hay un juego tipo *survivor* rojiblanco que solo pueden jugar los usuarios con sesión.
 
 > Proyecto de aficionado sin relación oficial con el Club Atlético de Madrid.
 
-## Entrega del Sprint 1
+## Entrega
 
 | | |
 |---|---|
 | **Repositorio** | https://github.com/VelaElDios/la-grada-colchonera-saas |
 | **Aplicación desplegada** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (Google Cloud Run) |
 | **Alcance** | Hitos 1, 2, 3 y 4 del enunciado: registro y acceso locales, roles y administración, confirmación por correo e inicio de sesión con Google |
+| **Política de privacidad** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app/privacidad.html (necesaria para publicar la aplicación de Google) |
 | **Acceso de administrador** | Ver [Acceso como administrador para la revisión](#acceso-como-administrador-para-la-revisión). Las credenciales se envían junto con la entrega |
 | **Revisión requisito a requisito** | [`docs/revision-entrega.md`](docs/revision-entrega.md) |
 
@@ -24,7 +25,7 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 | Qué | Dónde |
 |---|---|
 | Aplicación desplegada | Google Cloud Run (principal): https://la-grada-colchonera-1081564062572.europe-southwest1.run.app · Render (alternativo): https://la-grada-colchonera.onrender.com |
-| Entregas por hito (releases) | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) |
+| Entregas por hito (releases) | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · [hito-4](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-4) · [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) |
 | Pull requests (uno por tarea y uno por cierre de hito) | [VelaElDios/la-grada-colchonera-saas/pulls](https://github.com/VelaElDios/la-grada-colchonera-saas/pulls?q=is%3Apr+is%3Aclosed+sort%3Acreated-asc) |
 | Integración continua (GitHub Actions) | [Ejecuciones del workflow *CI*](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml) |
 | Gestión del proyecto (DoneTonic: PBIs, tareas, sprint y gráficas) | [`docs/gestion/README.md`](docs/gestion/README.md) |
@@ -32,6 +33,10 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 | Memoria del proyecto (LuaLaTeX) | [`memoria/`](memoria/README.md) |
 
 ## Capturas
+
+Las capturas están agrupadas por lo que muestran. Las de **producción** son de la aplicación desplegada en Cloud Run; las demás están hechas con la aplicación en local (con datos de ejemplo) para mostrar estados que en producción necesitarían cuentas reales, como un correo que no llega o una cuenta pendiente.
+
+### Hitos 1–3: cuentas, roles y administración
 
 | Inicio | Registro con validación |
 |---|---|
@@ -48,6 +53,45 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 
 </details>
 
+### Hito 4: confirmación por correo, Google y errores
+
+| Entrar, con el botón de Google | Registro: correo de confirmación enviado |
+|---|---|
+| ![Pantalla de entrar con el botón Entrar con Google](docs/capturas/hito4/01-entrar-google.png) | ![Aviso de que se ha enviado el correo de confirmación](docs/capturas/hito4/02-registro-correo-enviado.png) |
+| **Cuenta pendiente: error y botón para reenviar el correo** | **Correo reenviado** |
+| ![Error de cuenta pendiente con el botón Reenviar el correo de confirmación](docs/capturas/hito4/03-cuenta-pendiente-reenvio.png) | ![Aviso de reenvío del correo](docs/capturas/hito4/04-reenvio-hecho.png) |
+| **Enlace de confirmación manipulado** | **Cuenta confirmada con el enlace correcto** |
+| ![Aviso rojo: el enlace de confirmación no es válido o ha caducado](docs/capturas/hito4/05-enlace-invalido.png) | ![Aviso verde: cuenta confirmada](docs/capturas/hito4/06-cuenta-confirmada.png) |
+| **Primer acceso tras confirmar** | **Cuenta creada con Google** |
+| ![Menú del juego tras entrar con la cuenta confirmada](docs/capturas/hito4/07-primer-acceso.png) | ![Aviso de cuenta creada con Google y menú del juego](docs/capturas/hito4/08-google-cuenta-creada.png) |
+| **Panel de administración con cuentas locales, de Google, pendientes y eliminadas** | **Política de privacidad** |
+| ![Panel de administración con todos los estados de cuenta](docs/capturas/hito4/09-panel-admin.png) | ![Página de política de privacidad](docs/capturas/hito4/10-privacidad.png) |
+
+### Hito 4 comprobado en producción
+
+Pruebas hechas en la aplicación desplegada el 23/10/2026. El enlace del correo se ha tapado en la captura porque lleva un token de un solo uso.
+
+| Correo de confirmación recibido (SMTP de Gmail) | Cuenta confirmada: primer acceso |
+|---|---|
+| ![Correo de confirmación recibido en Gmail](docs/capturas/produccion/01-correo-confirmacion.png) | ![Menú del juego tras confirmar la cuenta de prueba](docs/capturas/produccion/03-confirmada-primer-acceso.png) |
+| **Enlace manipulado en producción** | **Acceso con Google: cuenta propia** |
+| ![Aviso de enlace de confirmación no válido en la aplicación desplegada](docs/capturas/produccion/05-enlace-manipulado.png) | ![Mi cuenta tras entrar con Google: rol Aficionado, estado Activa](docs/capturas/produccion/02-google-mi-cuenta.png) |
+| **Acceso con Google: cuenta ajena al proyecto** | **Aplicación de Google publicada («En producción»)** |
+| ![Entrada directa al juego con otra cuenta de Google](docs/capturas/produccion/04-google-otra-cuenta.png) | ![Google Auth Platform: estado de publicación En producción, usuarios externos](docs/capturas/produccion/07-google-publicada.png) |
+
+<details>
+<summary>Despliegue continuo en verde tras fusionar los PRs del Hito 4</summary>
+
+![GitHub Actions: CI y despliegue en Cloud Run en verde](docs/capturas/produccion/06-actions-verde.png)
+
+</details>
+
+### Juego
+
+| Partida en curso | Elegir una mejora al subir de nivel |
+|---|---|
+| ![Partida con rivales, vida, oleada y nivel](docs/capturas/juego/01-partida.png) | ![Menú para elegir una de tres mejoras](docs/capturas/juego/02-mejoras.png) |
+
 ## Qué incluye cada hito
 
 | Hito | Contenido | PBIs (DoneTonic) | Entrega |
@@ -55,17 +99,20 @@ El **Sprint 1** construye la base de una aplicación SaaS organizada en capas: g
 | **1. Esqueleto y backend** | Repositorio con GitHub Flow, CI con GitHub Actions, despliegue continuo en Render (al cerrar el sprint, también en Google Cloud Run), lógica de gestión de usuarios en memoria, pruebas unitarias y API REST. | P1–P6 · T1–T8 | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · PRs #1–#10 |
 | **2. Autenticación y separación de capas** | Frontend separado en interfaz (`ui.js`) y cliente de la API (`api.js`), registro e inicio de sesión locales con las contraseñas guardadas como hash bcrypt (nunca en claro ni cifradas de forma reversible), sesión que se mantiene al recargar, cierre de sesión en el servidor y rutas protegidas. | P7–P10 · T9–T14 | [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · PRs #11–#17 |
 | **3. Persistencia, seguridad y administración** | PostgreSQL (Neon) con migraciones, sesiones guardadas en la base de datos, secretos solo en variables de entorno, roles usuario/administrador con primer administrador, panel de administración, baja de la propia cuenta y logs estructurados. | P11–P14 · T15–T20 | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · PRs #18–#24 |
+| **4. Confirmación por correo, Google y errores** | Confirmación de la cuenta por correo con enlace firmado y reenvío, inicio de sesión con Google (OAuth 2.0), manejo de errores y avisos revisado de principio a fin, política de privacidad y aplicación de Google publicada. | P15–P17 · T22–T26 | PRs #37–#41 · ver [Hito 4 en detalle](#hito-4) |
 | **Cierre del sprint** | README completo, capturas, documentación de la gestión, revisión de la entrega frente al enunciado, despliegue en Google Cloud Run y carpeta de la memoria. | P18–P19 · T27–T32 | [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) · PRs de `hito-4/*` |
 
-La primera entrega se limitó a los Hitos 1–3. El Hito 4 (P15 OAuth, P16 confirmación por correo y P17 manejo de errores avanzado) se ha completado después, apoyándose en la base que ya existía: el modelo de usuario con el estado `pending` y el campo `authProvider` (`local` o `google`). Está desplegado y comprobado en producción: registro con correo y confirmación, reenvío, enlace manipulado rechazado, acceso con Google con cuentas ajenas al proyecto y panel de administración con todos los usuarios. La aplicación de Google está publicada (en producción) y su política de privacidad está en [`/privacidad.html`](public/privacidad.html).
+La primera entrega se limitó a los Hitos 1–3. El Hito 4 (P15 OAuth, P16 confirmación por correo y P17 manejo de errores) se ha completado después, apoyándose en la base que ya existía: el modelo de usuario con el estado `pending` y el campo `authProvider` (`local` o `google`). Está desplegado y comprobado en producción (ver [Capturas](#capturas)).
 
-### Hito 4 (segunda entrega)
+### Hito 4
 
 | PBI | Qué hace | Dónde |
 |---|---|---|
 | **P16 · Confirmación por correo** (T23, T24) | Al registrarse con email y contraseña la cuenta queda `pending` y se envía un correo con un enlace firmado (HMAC, caduca a las 24 h). `GET /api/auth/confirm` la activa. Si el correo falla la cuenta se crea igualmente y se puede pedir otro (`POST /api/auth/resend-confirmation`, que responde igual exista o no la cuenta). El login de una cuenta pendiente devuelve `403 ACCOUNT_PENDING` y la interfaz ofrece reenviar el correo. | `src/integrations/mailer.js`, `src/services/tokenSigner.js`, `src/services/accountConfirmationService.js` |
 | **P15 · Inicio de sesión con Google** (T22) | OAuth 2.0 «authorization code»: `/api/auth/google` manda al usuario a Google con un `state` aleatorio guardado en su sesión; `/api/auth/google/callback` comprueba el `state` (anti-CSRF, de un solo uso), cambia el código por el email **en el servidor** (el `client_secret` nunca llega al navegador) y abre sesión. Si no existía la cuenta se crea ya activa (`authProvider: google`); una cuenta local pendiente queda confirmada; una eliminada no entra. Sin las variables de Google, el botón no aparece. | `src/integrations/googleOAuth.js`, `userService.loginWithOAuth`, `public/js/ui/google.js` |
 | **P17 · Manejo de errores** | Toda la interfaz traduce los errores a avisos legibles y los registra en la consola; hay estados de carga, vacío y error con reintento, timeout de 15 s en las peticiones, captura global de promesas rechazadas, y redirecciones de OAuth/confirmación que vuelven a la web con un aviso en lugar de mostrar JSON. | `public/js/ui/componentes.js`, `public/js/ui.js`, `src/api/errorHandler.js` |
+| **Secretos y despliegue** (T25) | El workflow de despliegue entrega a Cloud Run los secretos `smtp-url`, `mail-from`, `google-client-id` y `google-client-secret`. Un script de Cloud Shell los crea en Secret Manager y da acceso a la cuenta de servicio. | `.github/workflows/deploy-cloud-run.yml`, `scripts/gcp/configurar-hito4.sh`, [`docs/hito4-configuracion.md`](docs/hito4-configuracion.md) |
+| **Política de privacidad** (T26) | Página pública que explica qué datos se guardan, para qué y cómo borrarlos. Google la exige para publicar la aplicación de inicio de sesión. | [`public/privacidad.html`](public/privacidad.html) |
 
 ## Arquitectura
 
@@ -80,7 +127,10 @@ flowchart LR
     subgraph "Servidor Node.js + Express"
         API["Capa API<br/>src/api<br/>rutas, sesión, roles, logs"] --> SRV["Lógica de negocio<br/>src/services"]
         SRV --> REPO["Acceso a datos<br/>src/repositories"]
+        SRV --> INT["Integraciones<br/>src/integrations<br/>correo y Google"]
     end
+    INT -- "SMTP" --> SMTP["Gmail<br/>correo de confirmación"]
+    INT -- "OAuth 2.0" --> GOO["Google<br/>inicio de sesión"]
     REPO -- "producción" --> PG[("PostgreSQL<br/>Neon")]
     REPO -. "desarrollo y pruebas" .-> MEM[("Memoria")]
     API -- "sesiones" --> PG
@@ -91,6 +141,7 @@ flowchart LR
 - **API** (`src/api/`): traduce HTTP a llamadas a la lógica. Aquí están los middlewares de sesión (`requireAuth`), roles (`requireRole`), registro de peticiones y el manejador de errores común.
 - **Lógica** (`src/services/`): reglas de negocio (registro, autenticación, roles, bajas, último administrador). Recibe sus dependencias por parámetro.
 - **Datos** (`src/repositories/`): dos implementaciones del mismo contrato, en memoria y en PostgreSQL. Las mismas pruebas se pasan a las dos.
+- **Integraciones** (`src/integrations/`): lo que habla con servicios externos, el correo (SMTP) y Google (OAuth 2.0). La lógica solo conoce su contrato (`mailer.send(...)`, `client.getProfile(...)`), así que en las pruebas se sustituyen por versiones falsas y no se envía nada ni se llama a Google.
 
 ## Tecnologías
 
@@ -102,6 +153,8 @@ Cada tecnología lleva una frase que justifica por qué se ha elegido.
 | HTML, CSS y JavaScript sin framework | Frontend | El propio backend sirve el frontend (mismo origen, sin CORS), no hace falta compilar nada y la frontera entre interfaz (`ui.js` y `ui/`) y cliente (`api.js`) se ve en dos ficheros. |
 | PostgreSQL en Neon (capa gratuita) | Base de datos | Base de datos relacional real, gestionada y gratuita. Las tablas se crean con migraciones SQL versionadas. |
 | `pg`, `connect-pg-simple` | Acceso a PostgreSQL y sesiones | Consultas parametrizadas (sin inyección SQL) y sesiones guardadas en la base de datos, que sobreviven a reinicios y despliegues. |
+| `nodemailer` + SMTP de Gmail | Correo de confirmación | Librería estándar para enviar correo por SMTP autenticado (puerto 465), que sí funciona en Cloud Run; el SMTP directo suele estar bloqueado. Sin `SMTP_URL`, el correo se escribe en el registro, útil en local. |
+| Google OAuth 2.0 (Google Auth Platform) | Inicio de sesión con Google | Flujo de código de autorización con intercambio en el servidor: el secreto del cliente nunca llega al navegador y solo se acepta un email verificado. Escrito con `fetch`, sin librerías de terceros. |
 | `express-session`, `bcryptjs` | Autenticación | Sesión en el servidor con cookie `httpOnly`; contraseñas guardadas solo como hash bcrypt. |
 | `node:test` + `pg-mem` | Pruebas | Framework incluido en Node. `pg-mem` emula PostgreSQL en local y el CI usa un PostgreSQL 17 real. |
 | GitHub Actions | Integración continua | Ejecuta las pruebas en cada PR y en cada cambio de `main` y de las ramas de hito; las ramas protegidas exigen que pasen. |
@@ -122,10 +175,12 @@ src/
   api/                 Capa API: rutas, sesión, roles, logs de peticiones y errores
   services/            Capa de lógica de negocio
   repositories/        Capa de acceso a datos (memoria y PostgreSQL)
+  integrations/        Servicios externos: correo (SMTP) y Google OAuth
   models/              Modelo de usuario (roles, estados)
   db/                  Conexión, migraciones SQL y script de migración
 public/
   index.html           Página única (SPA con rutas por hash)
+  privacidad.html      Política de privacidad (requisito de Google)
   css/                 Sistema de diseño: tokens, base, componentes, vistas y juego
   fonts/               Plus Jakarta Sans autoalojada (licencia OFL)
   js/ui.js             Punto de entrada: enrutador, control de acceso, foco y errores
@@ -134,10 +189,10 @@ public/
   js/api.js            Cliente de comunicación con la API (único sitio con fetch)
   js/game/             Juego «survivor» rojiblanco: simulación pura, dibujo en canvas, HUD, audio y entrada
 tests/                 Pruebas automatizadas (unitarias, de API y de base de datos)
-docs/                  Capturas, gestión del proyecto y revisión de la entrega
+docs/                  Capturas, gestión del proyecto, configuración del Hito 4 y revisión de la entrega
 memoria/               Memoria del proyecto en LuaLaTeX
 Dockerfile             Imagen de la aplicación (Cloud Run)
-scripts/gcp/           Preparación de Google Cloud (una sola vez)
+scripts/gcp/           Preparación de Google Cloud y de los secretos del Hito 4 (una sola vez)
 render.yaml            Despliegue en Render (Blueprint)
 .github/workflows/     Integración continua y despliegue en Cloud Run
 ```
@@ -150,6 +205,7 @@ La grada es un *survivor*: oleadas de rivales cada 30 segundos, experiencia, mej
 - **Armas** (se disparan solas, 5 niveles): balón, bufanda, banderines y cánticos. **Pasivas**: botas, imán, pasión, táctica, cantera y masaje.
 - **Arquitectura**: `game/mundo.js` es una simulación pura (paso fijo 1/60 s, generador con semilla, sin DOM) que se prueba en `tests/game.test.js`; `render.js` dibuja el estado en un canvas 2D; `hud.js`, `audio.js` (Web Audio sintetizado) y `entrada.js` son independientes entre sí; `juego.js` los conecta.
 - Respeta `prefers-reduced-motion` (sin sacudidas ni partículas).
+- Capturas en [Capturas del juego](#capturas).
 
 ## Ejecutar en local
 
@@ -179,13 +235,16 @@ No hace falta tener PostgreSQL: en local, las pruebas de base de datos usan `pg-
 TEST_DATABASE_URL=postgresql://usuario:clave@localhost:5432/grada_test npm test
 ```
 
-Son 80 pruebas automatizadas:
+Son 138 pruebas automatizadas (23 suites):
 
 - **Lógica (pruebas unitarias):** registro, email repetido, cuenta pendiente que intenta entrar, usuario normal que intenta eliminar a otro, roles, bajas y último administrador. Muchas comprueban casos de error, no solo el camino feliz.
 - **Repositorios:** el mismo contrato para memoria y para PostgreSQL.
 - **API:** códigos 401 y 403, sesión, cambio de rol y baja.
 - **Configuración y secretos.**
 - **Logs:** se comprueba también que nunca aparecen contraseñas.
+- **Confirmación por correo:** el token firmado (válido, manipulado y caducado), el correo con su enlace, el reenvío sin revelar si la cuenta existe y el aviso de cuenta pendiente.
+- **Google OAuth:** el `state` (falso, ausente y reutilizado), la cuenta nueva, la pendiente que se confirma, la eliminada y el email sin verificar, todo con un `fetch` falso, sin llamar a Google.
+- **Interfaz y juego:** que solo `api.js` use `fetch`, que la interfaz no inserte texto de usuario como HTML, que los módulos se puedan importar y la simulación del juego (paso fijo, semilla y reglas de armas y niveles).
 - **Migraciones y arranque.**
 - **Recorrido completo con PostgreSQL:** registro, inicio de sesión y sesión guardada en la base de datos.
 
@@ -196,7 +255,7 @@ El CI ejecuta todas las pruebas contra un PostgreSQL 17 real.
 La configuración y los secretos llegan **solo por variables de entorno** ([`src/loadConfig.js`](src/loadConfig.js)); en el código y en el repositorio no hay ningún valor secreto.
 
 - **En local:** se copian las variables en un fichero `.env` (partiendo de [`.env.example`](.env.example)). Ese fichero está en `.gitignore` y nunca se sube.
-- **En producción (Cloud Run):** los secretos están en **Secret Manager** (`database-url`, `session-secret`, `admin-email` y `admin-password`) y Cloud Run los entrega a la aplicación como variables de entorno. Solo los puede leer la cuenta de servicio con la que se ejecuta la aplicación.
+- **En producción (Cloud Run):** los secretos están en **Secret Manager** (`database-url`, `session-secret`, `admin-email`, `admin-password`, `smtp-url`, `mail-from`, `google-client-id` y `google-client-secret`) y Cloud Run los entrega a la aplicación como variables de entorno. Solo los puede leer la cuenta de servicio con la que se ejecuta la aplicación.
 - **En Render (alternativo):** los valores se guardan en el panel del servicio (*Environment*). `SESSION_SECRET` lo genera Render y el resto se introduce a mano (`sync: false` en [`render.yaml`](render.yaml)).
 - Si en producción falta un secreto obligatorio, la aplicación no arranca y lo indica en el log, en lugar de funcionar de forma insegura.
 
@@ -256,6 +315,13 @@ Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; c
 
 Para probar también los permisos de un usuario normal, basta con registrar una cuenta nueva desde **Registrarse**. La cuenta queda pendiente hasta que se pulsa el enlace del correo de confirmación (con Google, queda activa al momento).
 
+### Probar el Hito 4
+
+1. **Confirmación por correo:** en **Crear cuenta**, registrarse con un email real (sirve un alias como `tunombre+prueba@gmail.com`). Llega un correo de *La Grada Colchonera*; hasta pulsar **Confirmar mi cuenta**, entrar da el error de cuenta pendiente con el botón para reenviarlo.
+2. **Enlace no válido:** cambiar el último carácter del token del enlace y abrirlo; sale el aviso rojo y la cuenta sigue pendiente.
+3. **Google:** en **Entrar**, pulsar **Entrar con Google** con cualquier cuenta de Google; la cuenta se crea activa y se entra directamente al juego. (Los alias con `+` solo sirven para recibir correo, no para entrar con Google.)
+4. En **Administración** se ven todas las cuentas con su estado (activa, pendiente o eliminada).
+
 ## Registro de actividad (logs)
 
 La aplicación escribe cada evento relevante como una línea JSON en la salida estándar ([`src/logger.js`](src/logger.js)). En Cloud Run se consultan en **Cloud Logging**, en la pestaña *Registros* del servicio, y en Render en la pestaña *Logs*. Se pueden filtrar por texto, por ejemplo `auth.login_failed`.
@@ -269,6 +335,9 @@ La aplicación escribe cada evento relevante como una línea JSON en la salida e
 | `auth.login` / `auth.logout` | info | Inicio y cierre de sesión |
 | `auth.login_failed` | warn | Intento de inicio de sesión rechazado (email, motivo e IP) |
 | `auth.forbidden` | warn | Acceso denegado por falta de permisos |
+| `mail.confirmation_sent` / `mail.failed` | info / error | Correo de confirmación enviado o error al enviarlo (la cuenta se crea igualmente) |
+| `user.confirmed` / `user.confirm_failed` | info / warn | Cuenta confirmada con el enlace; enlace rechazado por inválido o caducado |
+| `auth.oauth_denied` / `auth.oauth_failed` | info / warn | El usuario cancela en Google; fallo al volver de Google (`state` no válido, cuenta rechazada) |
 | `user.role_changed`, `user.deleted` | info | Cambios de rol y bajas (quién lo hace y sobre quién) |
 | `http.error` | error | Errores inesperados, con su traza |
 
@@ -287,6 +356,9 @@ La aplicación se despliega de forma continua en **dos plataformas** a partir de
 | Coste | Créditos de Google Cloud para educación. Escala a cero cuando no hay tráfico | Capa gratuita |
 
 - **Base de datos:** PostgreSQL en Neon (región Frankfurt). Al arrancar, la aplicación aplica las migraciones y crea el primer administrador.
+- **Secretos del Hito 4:** `scripts/gcp/configurar-hito4.sh` guarda en Secret Manager el SMTP (`smtp-url`, `mail-from`) y el cliente de Google (`google-client-id`, `google-client-secret`); el workflow los entrega a Cloud Run. Pasos completos en [`docs/hito4-configuracion.md`](docs/hito4-configuracion.md).
+- **Rotar un secreto** (por ejemplo la contraseña de aplicación de Gmail): se crea una versión nueva del secreto en Secret Manager y se fuerza una revisión nueva de Cloud Run para que la lea, sin tocar el código.
+- **Google OAuth:** cada URL pública de la aplicación necesita su URI de redirección autorizada (`<URL>/api/auth/google/callback`) en el cliente de Google; Cloud Run tiene dos formas de URL y cada una cuenta por separado. Si falta una, Google responde `redirect_uri_mismatch`.
 - **Preparar Google Cloud:** solo una vez, con [`scripts/gcp/preparar-cloud-run.sh`](scripts/gcp/preparar-cloud-run.sh) en Cloud Shell. El script crea el proyecto, las APIs, Artifact Registry, los secretos, las cuentas de servicio y la federación de identidad. Al terminar, muestra las variables que hay que añadir al repositorio: `GCP_PROJECT_ID`, `GCP_REGION`, `GCP_WIF_PROVIDER` y `GCP_DEPLOY_SA`.
 - **Si una versión no arranca**, por ejemplo porque falta un secreto, ni Cloud Run ni Render la ponen en marcha: siguen sirviendo la anterior.
 - **Arranque en frío:** Cloud Run (con 0 instancias mínimas) y la capa gratuita de Render detienen la aplicación cuando no hay tráfico, así que la primera petición puede tardar unos segundos.
@@ -323,6 +395,7 @@ gitGraph
 - `hito-N/integracion`: rama de cada hito. Reúne las tareas del hito y se integra en `main` con un PR al cerrarlo, que se publica como release `hito-N`.
 - `hito-N/Tx-descripcion`: una rama por tarea de DoneTonic, que se integra en la rama de su hito mediante un PR titulado `[Tx] ...`.
 - `main` y `hito-*/integracion` están protegidas: solo admiten cambios por PR y exigen que el check **Pruebas** del CI esté en verde.
+- **Hito 4:** se hizo con una rama por tarea (T22–T26) integrada directamente en `main` con su PR (#37–#41), cada una con el CI en verde y desplegada al fusionarse. Como las ramas dependían unas de otras, se reubicaron sobre el `main` real antes de abrir los PRs.
 - Antes de abrir cada PR se ejecuta `npm test` en local. Después, el CI vuelve a ejecutar las pruebas en el PR y otra vez al llegar a `main`, y entonces se despliega en Cloud Run sin intervención manual.
 
 ## Prueba técnica del Sprint 1 (variante 3)
@@ -361,7 +434,7 @@ Ejercicio de la prueba técnica del Sprint 1, realizado sobre este mismo reposit
 
 ## Gestión del proyecto
 
-El trabajo se ha planificado y seguido en **DoneTonic** (espacio *TFG*, equipo *Colchoneros*, Sprint 1 del 29/09/2026 al 27/10/2026). Hay 19 PBIs priorizados por hito, cada uno con sus tareas, y cada tarea corresponde a una rama y a un PR de este repositorio.
+El trabajo se ha planificado y seguido en **DoneTonic** (espacio *TFG*, equipo *Colchoneros*, Sprint 1 del 29/09/2026 al 27/10/2026). Hay 19 PBIs priorizados por hito, cada uno con sus tareas, y cada tarea corresponde a una rama y a un PR de este repositorio. Los cuatro hitos están completados.
 
 En [`docs/gestion/README.md`](docs/gestion/README.md) están:
 
