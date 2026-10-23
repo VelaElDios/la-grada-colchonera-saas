@@ -8,12 +8,13 @@ export function montar(raiz, { navegar }) {
     modo: 'registro',
     alEnviar: async (email, password) => {
       const usuario = await api.register(email, password);
-      avisar(
-        usuario.status === 'pending'
-          ? 'Cuenta creada. Revisa tu correo para confirmarla antes de entrar.'
-          : 'Cuenta creada. Ya puedes entrar con tu email y contraseña.',
-        'exito',
-      );
+      if (usuario.status !== 'pending') {
+        avisar('Cuenta creada. Ya puedes entrar con tu email y contraseña.', 'exito');
+      } else if (usuario.confirmationEmailSent) {
+        avisar(`Cuenta creada. Te hemos enviado un correo a ${usuario.email} con un enlace para confirmarla (mira también en spam). Hasta entonces no podrás entrar.`, 'exito');
+      } else {
+        avisar('Cuenta creada, pero no hemos podido enviar el correo de confirmación. Inténtalo en unos minutos con «Reenviar el correo de confirmación».', 'error');
+      }
       navegar('/entrar');
     },
   });

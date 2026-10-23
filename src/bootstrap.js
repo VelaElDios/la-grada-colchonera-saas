@@ -12,6 +12,7 @@ const { createPostgresUserRepository } = require('./repositories/postgresUserRep
 const { createPasswordHasher } = require('./services/passwordHasher');
 const { createUserService } = require('./services/userService');
 const { createLogger } = require('./logger');
+const { createMailer } = require('./integrations/mailer');
 
 /**
  * Prepara la capa de datos para la configuración dada.
@@ -72,7 +73,15 @@ async function bootstrap(config, options = {}) {
     }
   }
 
+  const mailer = options.mailer || createMailer(config.mail, { logger });
+  if (mailer.kind === 'SMTP') {
+    logger.info('app.mail', 'Correo saliente por SMTP', { from: config.mail.from });
+  } else if (config.requireEmailConfirmation) {
+    logger.warn('app.mail', 'Sin SMTP_URL: los enlaces de confirmación se escriben en el registro en lugar de enviarse');
+  }
+
   const app = createApp({
+    mailer,
     config,
     userRepository: data.userRepository,
     sessionStore: data.sessionStore,

@@ -78,3 +78,10 @@ test('los módulos del frontend se pueden importar (sin errores de sintaxis ni d
   for (const f of modulos) await import(pathToFileURL(f).href);
   await import(pathToFileURL(path.join(PUBLIC, 'js', 'api.js')).href);
 });
+
+test('la interfaz gestiona la confirmación por correo (aviso del enlace y reenvío)', () => {
+  const leer = (...partes) => fs.readFileSync(path.join(PUBLIC, 'js', ...partes), 'utf8');
+  assert.match(leer('ui.js'), /cuenta-confirmada/);
+  assert.match(leer('ui', 'vistas', 'entrar.js'), /ACCOUNT_PENDING/);
+  assert.match(leer('api.js'), /resendConfirmation/);
+});

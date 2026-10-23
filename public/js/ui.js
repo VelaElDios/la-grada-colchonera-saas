@@ -96,7 +96,24 @@ async function renderizar() {
   if (titulo) { titulo.tabIndex = -1; titulo.focus({ preventScroll: true }); }
 }
 
+// Avisos que llegan en la URL (?aviso=...) cuando el servidor redirige a la interfaz,
+// por ejemplo al abrir el enlace del correo de confirmación o al volver de Google
+const AVISOS = {
+  'cuenta-confirmada': { texto: '¡Cuenta confirmada! Ya puedes entrar en la grada.', tipo: 'exito' },
+  'enlace-no-valido': { texto: 'El enlace de confirmación no es válido o ha caducado. Entra con tu email y contraseña para pedir otro.', tipo: 'error' },
+  'error-servidor': { texto: 'Ha habido un problema en el servidor. Inténtalo de nuevo en unos minutos.', tipo: 'error' },
+};
+
+/** Lee el aviso de la URL (si lo hay) y lo quita de la barra de direcciones. */
+function leerAvisoDeLaUrl() {
+  const parametros = new URLSearchParams(location.search);
+  const aviso = AVISOS[parametros.get('aviso')];
+  if (parametros.has('aviso')) history.replaceState(null, '', location.pathname + location.hash);
+  return aviso || null;
+}
+
 async function iniciar() {
+  const avisoUrl = leerAvisoDeLaUrl();
   // Si ya había sesión, se recupera para que recargar no obligue a entrar de nuevo
   try {
     ponerUsuario(await api.me());
@@ -113,6 +130,7 @@ async function iniciar() {
     navegar('/entrar');
   });
   window.addEventListener('hashchange', renderizar);
+  if (avisoUrl) avisar(avisoUrl.texto, avisoUrl.tipo);
   renderizar();
 }
 

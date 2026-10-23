@@ -49,7 +49,7 @@ async function peticion(metodo, ruta, cuerpo) {
       datos?.error?.message || `Error ${respuesta.status}`,
     );
     // Un 401 en una ruta protegida significa que la sesión ya no es válida
-    const esRutaDeSesion = ruta === '/auth/login' || ruta === '/auth/me';
+    const esRutaDeSesion = ruta.startsWith('/auth/');
     if (respuesta.status === 401 && !esRutaDeSesion && alNoAutenticado) {
       alNoAutenticado(error);
     }
@@ -66,6 +66,7 @@ export const api = {
   login: (email, password) => peticion('POST', '/auth/login', { email, password }),
   logout: () => peticion('POST', '/auth/logout'),
   me: () => peticion('GET', '/auth/me'),
+  resendConfirmation: (email) => peticion('POST', '/auth/resend-confirmation', { email }),
 
   // Usuarios
   listUsers: () => peticion('GET', '/users'),

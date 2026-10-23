@@ -38,4 +38,28 @@ class ForbiddenError extends AppError {
   }
 }
 
-module.exports = { AppError, ValidationError, UnauthorizedError, NotFoundError, ConflictError, ForbiddenError };
+/** La cuenta existe pero aún no ha confirmado su correo: no puede iniciar sesión (es un 403 más concreto). */
+class AccountPendingError extends ForbiddenError {
+  constructor(message) {
+    super(message);
+    this.code = 'ACCOUNT_PENDING';
+  }
+}
+
+/** Un servicio externo (por ejemplo, el de correo) no responde. */
+class ServiceUnavailableError extends AppError {
+  constructor(message) {
+    super(message, 'SERVICE_UNAVAILABLE');
+  }
+}
+
+module.exports = {
+  ServiceUnavailableError,
+  AppError,
+  ValidationError,
+  UnauthorizedError,
+  NotFoundError,
+  ConflictError,
+  ForbiddenError,
+  AccountPendingError,
+};

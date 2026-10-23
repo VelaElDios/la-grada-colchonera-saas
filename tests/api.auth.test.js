@@ -123,7 +123,79 @@ describe('API /api/auth', () => {
       });
 
       assert.equal(registro.body.status, 'pending');
+      assert.equal(registro.body.confirmationEmailSent, true);
       assert.equal(login.status, 403);
+      assert.equal(login.body.error.code, 'ACCOUNT_PENDING');
+    });
+
+    test('el enlace del correo confirma la cuenta y redirige a la interfaz; después puede entrar', async () => {
+      const correo = srvConfirmacion.mailer.sent.find((c) => c.to === 'pendiente@grada.es');
+      const ruta = new URL(correo.link).pathname.replace(/^\/api/, '') + new URL(correo.link).search;
+
+      const confirmar = await srvConfirmacion.request('GET', ruta);
+      const login = await srvConfirmacion.request('POST', '/auth/login', {
+        body: { email: 'pendiente@grada.es', password: 'aupa-atleti' },
+      });
+
+      assert.equal(confirmar.status, 303);
+      assert.equal(confirmar.location, '/?aviso=cuenta-confirmada#/entrar');
+      assert.equal(login.status, 200);
+      assert.equal(login.body.status, 'active');
+    });
+
+    test('un enlace no válido redirige con un aviso de error (no confirma nada)', async () => {
+      const res = await srvConfirmacion.request('GET', '/auth/confirm?token=falso.falso');
+
+      assert.equal(res.status, 303);
+      assert.equal(res.location, '/?aviso=enlace-no-valido#/entrar');
+    });
+
+    test('el enlace usa la URL pública de la petición', async () => {
+      await srvConfirmacion.request('POST', '/auth/register', { body: { email: 'url@grada.es', password: 'aupa-atleti' } });
+      const correo = srvConfirmacion.mailer.sent.find((c) => c.to === 'url@grada.es');
+
+      assert.ok(correo.link.startsWith(`${srvConfirmacion.baseUrl}/auth/confirm?token=`));
+    });
+
+    test('reenviar la confirmación responde igual exista o no la cuenta (202)', async () => {
+      await srvConfirmacion.request('POST', '/auth/register', { body: { email: 'reenvio@grada.es', password: 'aupa-atleti' } });
+      const antes = srvConfirmacion.mailer.sent.length;
+
+      const existe = await srvConfirmacion.request('POST', '/auth/resend-confirmation', { body: { email: 'reenvio@grada.es' } });
+      const noExiste = await srvConfirmacion.request('POST', '/auth/resend-confirmation', { body: { email: 'nadie@grada.es' } });
+      const vacio = await srvConfirmacion.request('POST', '/auth/resend-confirmation', { body: {} });
+
+      assert.equal(existe.status, 202);
+      assert.equal(noExiste.status, 202);
+      assert.equal(existe.body.message, noExiste.body.message);
+      assert.equal(vacio.status, 400);
+      assert.equal(srvConfirmacion.mailer.sent.length, antes + 1);
+    });
+  });
+
+  describe('si el servicio de correo falla', () => {
+    let srvSinCorreo;
+
+    before(async () => {
+      const mailer = { kind: 'roto', send: async () => { throw new Error('SMTP caído'); } };
+      srvSinCorreo = await createTestServer({ config: { requireEmailConfirmation: true }, mailer });
+    });
+
+    after(() => srvSinCorreo.close());
+
+    test('la cuenta se crea igualmente y se avisa de que el correo no ha salido', async () => {
+      const res = await srvSinCorreo.request('POST', '/auth/register', { body: { email: 'sincorreo@grada.es', password: 'aupa-atleti' } });
+
+      assert.equal(res.status, 201);
+      assert.equal(res.body.status, 'pending');
+      assert.equal(res.body.confirmationEmailSent, false);
+    });
+
+    test('el reenvío responde 503 con un mensaje claro', async () => {
+      const res = await srvSinCorreo.request('POST', '/auth/resend-confirmation', { body: { email: 'sincorreo@grada.es' } });
+
+      assert.equal(res.status, 503);
+      assert.equal(res.body.error.code, 'SERVICE_UNAVAILABLE');
     });
   });
 });

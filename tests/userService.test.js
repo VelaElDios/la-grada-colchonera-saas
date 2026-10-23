@@ -4,7 +4,9 @@ const assert = require('node:assert/strict');
 
 const { createUserService } = require('../src/services/userService');
 const { createMemoryUserRepository } = require('../src/repositories/memoryUserRepository');
-const { ValidationError, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError } = require('../src/services/errors');
+const {
+  ValidationError, ConflictError, ForbiddenError, NotFoundError, UnauthorizedError, AccountPendingError,
+} = require('../src/services/errors');
 const { createPasswordHasher } = require('../src/services/passwordHasher');
 const { ROLES, STATUS, AUTH_PROVIDERS } = require('../src/models/user');
 
@@ -206,7 +208,7 @@ describe('Servicio de usuarios', () => {
     test('una cuenta pendiente de confirmar no puede iniciar sesión', async () => {
       await service.registerUser({ email: 'joao@grada.es', password: 'partido-a-partido' });
 
-      await assert.rejects(service.authenticate({ email: 'joao@grada.es', password: 'partido-a-partido' }), ForbiddenError);
+      await assert.rejects(service.authenticate({ email: 'joao@grada.es', password: 'partido-a-partido' }), AccountPendingError);
     });
 
     test('una cuenta eliminada no puede volver a iniciar sesión', async () => {

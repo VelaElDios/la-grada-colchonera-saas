@@ -14,8 +14,19 @@ const TEST_CONFIG = {
 // Coste bajo de bcrypt para que las pruebas sean rápidas
 const passwordHasher = createPasswordHasher({ rounds: 4 });
 
-async function createTestServer({ config = {}, userRepository = createMemoryUserRepository() } = {}) {
-  const app = createApp({ config: { ...TEST_CONFIG, ...config }, userRepository, passwordHasher });
+/** Servicio de correo falso: guarda los correos "enviados" para que las pruebas los lean. */
+function createFakeMailer() {
+  const sent = [];
+  return { kind: 'pruebas', sent, send: async (message) => { sent.push(message); } };
+}
+
+async function createTestServer({
+  config = {},
+  userRepository = createMemoryUserRepository(),
+  mailer = createFakeMailer(),
+  ...extra
+} = {}) {
+  const app = createApp({ config: { ...TEST_CONFIG, ...config }, userRepository, passwordHasher, mailer, ...extra });
   const server = app.listen(0);
   const baseUrl = `http://localhost:${server.address().port}/api`;
 
@@ -23,6 +34,7 @@ async function createTestServer({ config = {}, userRepository = createMemoryUser
   async function request(method, path, { body, cookie, headers = {} } = {}) {
     const res = await fetch(`${baseUrl}${path}`, {
       method,
+      redirect: 'manual', // las redirecciones (confirmación, OAuth) se comprueban en las pruebas
       headers: {
         ...(body !== undefined ? { 'Content-Type': 'application/json' } : {}),
         ...(cookie ? { Cookie: cookie } : {}),
@@ -32,10 +44,12 @@ async function createTestServer({ config = {}, userRepository = createMemoryUser
     });
     const text = await res.text();
     const setCookie = res.headers.get('set-cookie');
+    const isJson = (res.headers.get('content-type') || '').includes('application/json');
     return {
       status: res.status,
-      body: text ? JSON.parse(text) : null,
+      body: text && isJson ? JSON.parse(text) : (text || null),
       cookie: setCookie ? setCookie.split(';')[0] : null,
+      location: res.headers.get('location'),
     };
   }
 
@@ -50,7 +64,7 @@ async function createTestServer({ config = {}, userRepository = createMemoryUser
     });
   }
 
-  return { request, seedUser, userRepository, baseUrl, close: () => server.close() };
+  return { request, seedUser, userRepository, mailer, baseUrl, close: () => server.close() };
 }
 
-module.exports = { createTestServer, passwordHasher };
+module.exports = { createTestServer, createFakeMailer, passwordHasher };
