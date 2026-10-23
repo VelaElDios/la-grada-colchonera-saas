@@ -9,7 +9,7 @@ Esta página reúne todo lo que se ha gestionado en **DoneTonic**, para que pued
 | Sprint | **Sprint 1**, del 29/09/2026 al 27/10/2026 |
 | Product Backlog | 19 PBIs (P1–P19) con 32 tareas (T1–T32), etiquetados por hito (H1–H4) |
 | Prioridad | Orden del backlog de P1 a P18, siguiendo los hitos. Todos los PBIs son **MUST** porque son requisitos obligatorios del enunciado |
-| Alcance de la entrega | Hitos 1, 2 y 3 (P1–P14), P18 (README y revisión) y P19 (despliegue en Google Cloud Run con los créditos de educación). El profesor ha limitado esta primera entrega a los Hitos 1–3, así que P15–P17 (Hito 4) quedan para la siguiente |
+| Alcance de la entrega | Hitos 1, 2 y 3 (P1–P14), P18 (README y revisión) y P19 (despliegue en Google Cloud Run con los créditos de educación). La primera entrega se limitó a los Hitos 1–3; P15–P17 (Hito 4) se han completado después (23/10/2026). Las capturas de DoneTonic de abajo son del cierre de la primera entrega (12/10/2026) |
 
 ## Cómo se ha trabajado
 
@@ -32,13 +32,13 @@ Un hito está **hecho** cuando su rama está en `main`, desplegada en la URL pú
 
 ## Capturas de DoneTonic
 
-Estado del Sprint 1 en DoneTonic al cerrar la entrega (12/10/2026). Los Hitos 1–3, P18 y P19 están hechos; quedan pendientes los tres PBIs del Hito 4 (P15–P17), que son de la siguiente entrega.
+Estado del Sprint 1 en DoneTonic al cerrar la primera entrega (12/10/2026). Los Hitos 1–3, P18 y P19 estaban hechos y los tres PBIs del Hito 4 (P15–P17) quedaban pendientes; se completaron después (23/10/2026, tareas T22–T26, PRs #37–#41), como indica la tabla de estado de más abajo.
 
 **Tablero del Sprint 1.** Cada fila es un PBI con sus tareas repartidas por columnas de estado; los PBIs en verde están hechos.
 
 ![Tablero del Sprint 1 en DoneTonic](../capturas/donetonic/01-tablero-sprint.png)
 
-**Gráficas de seguimiento (*Paneles Scrum*).** Sprint Burnup y Sprint Burndown: 84 % completado y 3 PBIs pendientes, los del Hito 4. En el mismo panel están también el Backlog Burndown, el Backlog Burnup y el Velocity Chart, que se completan al cerrar el sprint.
+**Gráficas de seguimiento (*Paneles Scrum*).** Sprint Burnup y Sprint Burndown: 84 % completado y 3 PBIs pendientes, los del Hito 4 (hechos después). En el mismo panel están también el Backlog Burndown, el Backlog Burnup y el Velocity Chart, que se completan al cerrar el sprint.
 
 ![Sprint Burnup y Sprint Burndown en DoneTonic](../capturas/donetonic/02-graficas-sprint.png)
 
@@ -64,13 +64,13 @@ Estado del Sprint 1 en DoneTonic al cerrar la entrega (12/10/2026). Los Hitos 1�
 | P12 | H3 | Gestión de secretos con variables de entorno | Hecho | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) |
 | P13 | H3 | Roles de usuario y administrador | Hecho | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) |
 | P14 | H3 | Registro (log) de la actividad | Hecho | [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) |
-| P15 | H4 | Inicio de sesión con proveedor externo (OAuth) | Siguiente entrega | — |
-| P16 | H4 | Confirmación de cuenta por correo electrónico | Siguiente entrega | — |
-| P17 | H4 | Manejo de errores y feedback al usuario | Siguiente entrega | — |
+| P15 | H4 | Inicio de sesión con proveedor externo (OAuth) | Hecho | T22 · PR #40 |
+| P16 | H4 | Confirmación de cuenta por correo electrónico | Hecho | T23, T24 · PRs #38 y #39 |
+| P17 | H4 | Manejo de errores y feedback al usuario | Hecho | T22–T26 · PRs #37–#41 |
 | P18 | H4 | README completo y revisión de la entrega | Hecho | Cierre del sprint |
 | P19 | H4 | Despliegue continuo en Google Cloud Run | Hecho | Cierre del sprint |
 
-> Aunque P17 (manejo de errores) es del Hito 4, la aplicación ya tiene parte de esa funcionalidad desde el Hito 1: un manejador de errores común con el formato `{"error": {"code", "message"}}` y mensajes de error y de éxito en la interfaz.
+> Aunque P17 (manejo de errores) es del Hito 4, la aplicación ya tenía parte de esa funcionalidad desde el Hito 1: un manejador de errores común con el formato `{"error": {"code", "message"}}` y mensajes de error y de éxito en la interfaz.
 
 ## Trazabilidad: tarea → rama → pull request
 
