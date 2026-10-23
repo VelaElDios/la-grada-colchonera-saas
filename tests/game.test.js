@@ -97,7 +97,7 @@ test('si la vida llega a 0 la partida termina y el resumen es coherente', async 
   mundo.jugador.invul = 0;
   // un rival encima del jugador
   const { crearEnemigo } = await cargar('oleadas.js');
-  const e = crearEnemigo('rival', mundo.jugador.x, mundo.jugador.y, 1);
+  const e = crearEnemigo('madrid', mundo.jugador.x, mundo.jugador.y, 1);
   mundo.enemigos.push(e);
   await simular(m, mundo, 3);
   assert.equal(mundo.estado, 'fin');

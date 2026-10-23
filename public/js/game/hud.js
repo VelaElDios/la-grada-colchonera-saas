@@ -1,6 +1,6 @@
-// Interfaz que se superpone al juego (vida, experiencia, tiempo, oleada, armas...).
+// Interfaz que se superpone al juego (vida, experiencia, tiempo, oleada, armas, ulti y barra de jefe...).
 // Solo toca el DOM cuando un valor cambia, para no gastar rendimiento en cada fotograma.
-import { ARMAS, PASIVAS } from './config.js';
+import { ARMAS, PASIVAS, EXTRAS, ENTRENADORES } from './config.js';
 import { xpSiguiente } from './mundo.js';
 import { formatearTiempo } from './util.js';
 import { icono } from './iconos.js';
@@ -17,6 +17,12 @@ export function crearHud(raiz) {
     xpBarra: q('xp-barra'),
     equipo: q('equipo'),
     aviso: q('aviso'),
+    ulti: q('ulti'),
+    ultiBarra: q('ulti-barra'),
+    ultiNombre: q('ulti-nombre'),
+    jefe: q('jefe'),
+    jefeNombre: q('jefe-nombre'),
+    jefeBarra: q('jefe-barra'),
   };
   const ultimo = {};
   let temporizadorAviso = 0;
@@ -40,6 +46,8 @@ export function crearHud(raiz) {
       const n = j.pasivas[clave];
       if (n > 0) piezas.push({ nombre: pasiva.nombre, icono: pasiva.icono, nivel: n, clase: 'pasiva' });
     });
+    const totalExtras = Object.keys(EXTRAS).reduce((s, k) => s + j.extras[k], 0);
+    if (totalExtras > 0) piezas.push({ nombre: 'Mejoras extra', icono: 'mas', nivel: totalExtras, clase: 'extra' });
     const firma = piezas.map((p) => `${p.nombre}${p.nivel}`).join('|');
     if (firma === ultimo.equipo) return;
     ultimo.equipo = firma;
@@ -49,6 +57,52 @@ export function crearHud(raiz) {
         <span class="pieza__nivel" aria-hidden="true">${p.nivel}</span>
         <span class="sr-only">${p.nombre}, nivel ${p.nivel}</span>
       </li>`).join('');
+  }
+
+  function pintarUlti(mundo) {
+    const j = mundo.jugador;
+    const u = j.ulti;
+    const pct = Math.min(100, (u.carga / u.max) * 100);
+    if (ultimo.ultiPct !== Math.round(pct)) {
+      ultimo.ultiPct = Math.round(pct);
+      el.ultiBarra.style.height = `${pct}%`;
+    }
+    const lista = u.carga >= u.max;
+    if (ultimo.ultiLista !== lista) {
+      ultimo.ultiLista = lista;
+      el.ulti.classList.toggle('ulti--lista', lista);
+      el.ulti.setAttribute('aria-label', lista ? `Lanzar la ulti: ${ENTRENADORES[j.entrenador].ulti.nombre}` : 'Ulti cargándose');
+    }
+    const activa = j.furia > 0 || j.animo > 0;
+    if (ultimo.ultiActiva !== activa) {
+      ultimo.ultiActiva = activa;
+      el.ulti.classList.toggle('ulti--activa', activa);
+    }
+    poner('ultiNombre', el.ultiNombre, lista ? '¡LISTA!' : `${Math.floor(pct)} %`);
+  }
+
+  function pintarJefe(mundo) {
+    let jefe = null;
+    for (let i = 0; i < mundo.enemigos.length; i += 1) {
+      if (mundo.enemigos[i].jefe) { jefe = mundo.enemigos[i]; break; }
+    }
+    if (!jefe) {
+      if (ultimo.jefeVisible) {
+        ultimo.jefeVisible = false;
+        el.jefe.hidden = true;
+      }
+      return;
+    }
+    if (!ultimo.jefeVisible) {
+      ultimo.jefeVisible = true;
+      el.jefe.hidden = false;
+    }
+    poner('jefeNombre', el.jefeNombre, jefe.nombre);
+    const pct = Math.max(0, (jefe.vida / jefe.vidaMax) * 100);
+    if (ultimo.jefePct !== Math.round(pct * 2)) {
+      ultimo.jefePct = Math.round(pct * 2);
+      el.jefeBarra.style.width = `${pct}%`;
+    }
   }
 
   return {
@@ -72,6 +126,8 @@ export function crearHud(raiz) {
         el.xpBarra.style.width = `${xpPct}%`;
       }
       pintarEquipo(mundo);
+      pintarUlti(mundo);
+      pintarJefe(mundo);
     },
     /** Muestra un cartel grande durante un par de segundos. */
     aviso(texto, tipo = 'oleada') {
@@ -83,6 +139,8 @@ export function crearHud(raiz) {
       el.aviso.classList.add('hud__aviso--visible');
       temporizadorAviso = setTimeout(() => el.aviso.classList.remove('hud__aviso--visible'), 2200);
     },
+    /** Al empezar una partida hay que volver a pintar todo. */
+    reiniciar() { Object.keys(ultimo).forEach((k) => delete ultimo[k]); },
     destruir() { clearTimeout(temporizadorAviso); },
   };
 }

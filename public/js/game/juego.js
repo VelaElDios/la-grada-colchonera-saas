@@ -1,7 +1,8 @@
 // Montaje del juego: pantallas (menú, pausa, mejora, final), bucle principal y conexión entre
 // la simulación (mundo.js), el dibujo (render.js), el sonido y la interfaz superpuesta (hud.js).
-import { MUNDO } from './config.js';
-import { crearMundo, avanzar, elegirMejora, resumen } from './mundo.js';
+import { MUNDO, PERSONAJES, POSICIONES, ENTRENADORES } from './config.js';
+import { crearMundo, avanzar, elegirMejora, resumen, usarUlti } from './mundo.js';
+import { retratoUrl, aspectoDe } from './sprites.js';
 import { dibujar } from './render.js';
 import { crearEntrada } from './entrada.js';
 import { crearAudio } from './audio.js';
@@ -34,6 +35,14 @@ const PLANTILLA = `
     </div>
     <ul class="hud__equipo" data-hud="equipo" aria-label="Armas y mejoras"></ul>
     <div class="hud__aviso" data-hud="aviso" aria-hidden="true"></div>
+    <div class="hud__jefe" data-hud="jefe" hidden>
+      <span class="hud__jefe-nombre" data-hud="jefe-nombre"></span>
+      <div class="barra barra--jefe" aria-hidden="true"><div class="barra__relleno" data-hud="jefe-barra"></div></div>
+    </div>
+    <button type="button" class="ulti" data-hud="ulti" data-accion="ulti" aria-label="Ulti cargándose">
+      <span class="ulti__barra" aria-hidden="true"><span class="ulti__relleno" data-hud="ulti-barra"></span></span>
+      <span class="ulti__texto"><strong>ULTI</strong><span data-hud="ulti-nombre">0 %</span><kbd aria-hidden="true">Espacio</kbd></span>
+    </button>
     <div class="hud__xp">
       <span class="hud__nivel" data-hud="nivel">Nivel 1</span>
       <div class="barra barra--xp" aria-hidden="true"><div class="barra__relleno" data-hud="xp-barra"></div></div>
@@ -49,10 +58,26 @@ const PLANTILLA = `
         <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o las flechas para moverte. En el móvil, arrastra el dedo por la pantalla.</li>
         <li>Las armas atacan solas: tú solo tienes que esquivar.</li>
         <li>Los diamantes azules dan experiencia. <kbd>Esc</kbd> pausa la partida.</li>
+        <li>Con las bajas se carga la ulti de tu entrenador: <kbd>Espacio</kbd> o el botón <strong>ULTI</strong> para lanzarla.</li>
       </ul>
       <p class="pantalla__marca" data-campo="marca"></p>
       <div class="pantalla__acciones">
         <button type="button" class="btn btn--primario btn--grande" data-accion="jugar" data-enfoque>Jugar</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="pantalla" data-pantalla="seleccion" role="dialog" aria-modal="true" aria-labelledby="juego-t-sel" hidden>
+    <div class="pantalla__caja pantalla__caja--ancha">
+      <p class="pantalla__sobretitulo">Antes de salir al campo</p>
+      <h2 id="juego-t-sel" class="pantalla__titulo">Elige jugador y entrenador</h2>
+      <h3 class="seleccion__subtitulo">Jugador</h3>
+      <ul class="tarjetas" data-campo="personajes"></ul>
+      <h3 class="seleccion__subtitulo">Entrenador</h3>
+      <ul class="tarjetas tarjetas--dos" data-campo="entrenadores"></ul>
+      <div class="pantalla__acciones">
+        <button type="button" class="btn btn--primario btn--grande" data-accion="empezar" data-enfoque>¡Al campo!</button>
+        <button type="button" class="btn btn--fantasma" data-accion="volver-menu">Atrás</button>
       </div>
     </div>
   </section>
@@ -85,6 +110,7 @@ const PLANTILLA = `
       <dl class="resultado" data-campo="resultado"></dl>
       <div class="pantalla__acciones">
         <button type="button" class="btn btn--primario" data-accion="reiniciar" data-enfoque>Jugar otra vez</button>
+        <button type="button" class="btn btn--secundario" data-accion="elegir">Cambiar jugador</button>
         <button type="button" class="btn btn--fantasma" data-accion="salir">Salir al inicio</button>
       </div>
     </div>
@@ -108,6 +134,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   const ctx = lienzo.getContext('2d');
   const pantallas = {
     menu: q('[data-pantalla="menu"]'),
+    seleccion: q('[data-pantalla="seleccion"]'),
     pausa: q('[data-pantalla="pausa"]'),
     mejora: q('[data-pantalla="mejora"]'),
     fin: q('[data-pantalla="fin"]'),
@@ -120,8 +147,17 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   const hud = crearHud(contenedor);
   const reducirMovimiento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
-  let mundo = crearMundo({ efectosReducidos: reducirMovimiento });
-  let fase = 'menu'; // menu | jugando | pausa | mejora | fin
+  const CLAVE_ELECCION = 'grada.eleccion';
+  let eleccion = { personaje: 'koke', entrenador: 'cholo' };
+  try {
+    const guardada = JSON.parse(localStorage.getItem(CLAVE_ELECCION));
+    if (PERSONAJES[guardada?.personaje]) eleccion.personaje = guardada.personaje;
+    if (ENTRENADORES[guardada?.entrenador]) eleccion.entrenador = guardada.entrenador;
+  } catch { /* sin almacenamiento: se usa la elección por defecto */ }
+
+  const nuevoMundo = () => crearMundo({ efectosReducidos: reducirMovimiento, ...eleccion });
+  let mundo = nuevoMundo();
+  let fase = 'menu'; // menu | seleccion | jugando | pausa | mejora | fin
   let vista = { ancho: 800, alto: 600, escala: 1, dpr: 1 };
   let acumulador = 0;
   let previo = performance.now();
@@ -154,9 +190,52 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     botonSonido.innerHTML = icono(mudo ? 'silencio' : 'sonido', 20);
   }
 
+  // --- Selección de jugador y entrenador -----------------------------------------------------
+
+  const barraEstadistica = (etiqueta, fraccion, texto) => `
+    <div class="stat"><span class="stat__etiqueta">${etiqueta}</span>
+      <span class="stat__barra"><span style="width:${Math.round(Math.max(0, Math.min(1, fraccion)) * 100)}%"></span></span>
+      <span class="stat__valor">${texto}</span></div>`;
+
+  function pintarSeleccion() {
+    q('[data-campo="personajes"]').innerHTML = Object.entries(PERSONAJES).map(([clave, p]) => {
+      const pos = POSICIONES[p.posicion];
+      return `<li><button type="button" class="tarjeta" data-personaje="${clave}" aria-pressed="${eleccion.personaje === clave}">
+        <img class="tarjeta__retrato" alt="" width="80" height="100" src="${retratoUrl(`p:${clave}`, aspectoDe('personaje', clave))}">
+        <span class="tarjeta__nombre">${p.nombre}</span>
+        <span class="tarjeta__posicion">${pos.nombre}</span>
+        ${barraEstadistica('Vida', pos.vida / 170, pos.vida)}
+        ${barraEstadistica('Velocidad', pos.vel / 160, pos.vel)}
+        ${barraEstadistica('Cuerpo a cuerpo', pos.cuerpo / 1.4, `x${pos.cuerpo}`)}
+        ${barraEstadistica('Disparo', pos.disparo / 1.4, pos.disparo ? `x${pos.disparo}` : 'No')}
+      </button></li>`;
+    }).join('');
+    q('[data-campo="entrenadores"]').innerHTML = Object.entries(ENTRENADORES).map(([clave, e]) => `
+      <li><button type="button" class="tarjeta tarjeta--entrenador" data-entrenador="${clave}" aria-pressed="${eleccion.entrenador === clave}">
+        <img class="tarjeta__retrato" alt="" width="80" height="100" src="${retratoUrl(`c:${clave}`, aspectoDe('entrenador', clave))}">
+        <span class="tarjeta__nombre">${e.nombre}</span>
+        <span class="tarjeta__posicion">${e.resumen}</span>
+        <span class="tarjeta__ulti"><strong>Ulti: ${e.ulti.nombre}</strong> ${e.ulti.descripcion}</span>
+      </button></li>`).join('');
+  }
+
+  function elegirOpcion(tipo, clave) {
+    eleccion = { ...eleccion, [tipo]: clave };
+    try { localStorage.setItem(CLAVE_ELECCION, JSON.stringify(eleccion)); } catch { /* da igual */ }
+    contenedor.querySelectorAll(`[data-${tipo}]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[tipo] === clave)));
+  }
+
+  function irASeleccion() {
+    fase = 'seleccion';
+    zonaHud.hidden = true;
+    pintarSeleccion();
+    mostrar('seleccion');
+  }
+
   function empezar() {
     audio.activar();
-    mundo = crearMundo({ efectosReducidos: reducirMovimiento });
+    mundo = nuevoMundo();
+    hud.reiniciar();
     entrada.soltarTodo();
     acumulador = 0;
     fase = 'jugando';
@@ -196,7 +275,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       boton.className = `opcion opcion--${o.tipo}`;
       boton.dataset.mejora = o.id;
       if (i === 0) boton.dataset.enfoque = '';
-      const etiqueta = o.tipo === 'cura' ? 'Recuperación'
+      const etiqueta = o.tipo === 'extra' ? 'Extra'
         : o.nivelNuevo === 1 ? '¡Nueva!' : `Nivel ${o.nivelNuevo}`;
       boton.innerHTML = `
         <span class="opcion__icono">${icono(o.icono, 28)}</span>
@@ -236,7 +315,10 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       <div><dt>Tiempo aguantado</dt><dd>${formatearTiempo(r.tiempo)}</dd></div>
       <div><dt>Oleada</dt><dd>${r.oleada}</dd></div>
       <div><dt>Nivel</dt><dd>${r.nivel}</dd></div>
-      <div><dt>Rivales eliminados</dt><dd>${r.bajas}</dd></div>`;
+      <div><dt>Rivales eliminados</dt><dd>${r.bajas}</dd></div>
+      <div><dt>Jefes derrotados</dt><dd>${r.jefes}</dd></div>
+      <div><dt>Jugador</dt><dd>${PERSONAJES[r.personaje].nombre}</dd></div>
+      <div><dt>Entrenador</dt><dd>${ENTRENADORES[r.entrenador].nombre}</dd></div>`;
     // Pequeña pausa para que se vea el golpe final antes de tapar la pantalla
     setTimeout(() => {
       if (fase !== 'fin') return;
@@ -249,7 +331,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   function irAlMenu() {
     fase = 'menu';
     zonaHud.hidden = true;
-    mundo = crearMundo({ efectosReducidos: reducirMovimiento });
+    mundo = nuevoMundo();
     pintarMenu();
     mostrar('menu');
   }
@@ -263,10 +345,12 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
         hud.aviso(`Oleada ${ev.oleada}`);
         anunciar(`Oleada ${ev.oleada}`);
       } else if (ev.tipo === 'aviso') {
-        hud.aviso(ev.texto, 'alerta');
+        hud.aviso(ev.texto, ev.jefe ? 'jefe' : 'alerta');
         anunciar(ev.texto);
+      } else if (ev.tipo === 'ulti') {
+        hud.aviso(ev.texto, 'exito');
       } else if (ev.tipo === 'jefe-derrotado') {
-        hud.aviso('¡Míster Rival eliminado!', 'exito');
+        hud.aviso(`¡${ev.nombre} eliminado!`, 'exito');
       }
     }
   }
@@ -317,7 +401,11 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   // --- Eventos de la interfaz -------------------------------------------------------------------
 
   const acciones = {
-    jugar: empezar,
+    jugar: irASeleccion,
+    elegir: irASeleccion,
+    empezar,
+    'volver-menu': () => { fase = 'menu'; pintarMenu(); mostrar('menu'); },
+    ulti: () => { if (fase === 'jugando') usarUlti(mundo); },
     reiniciar: empezar,
     reanudar,
     salir: alSalir,
@@ -331,11 +419,26 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       elegir(mejora.dataset.mejora);
       return;
     }
+    const personaje = ev.target.closest('[data-personaje]');
+    if (personaje) {
+      elegirOpcion('personaje', personaje.dataset.personaje);
+      return;
+    }
+    const entrenador = ev.target.closest('[data-entrenador]');
+    if (entrenador) {
+      elegirOpcion('entrenador', entrenador.dataset.entrenador);
+      return;
+    }
     const boton = ev.target.closest('[data-accion]');
     if (boton) acciones[boton.dataset.accion]?.();
   }
 
   function alPulsarTecla(ev) {
+    if (fase === 'jugando' && (ev.code === 'Space' || ev.code === 'KeyE') && !ev.repeat) {
+      ev.preventDefault();
+      usarUlti(mundo);
+      return;
+    }
     if (fase === 'mejora' && /^Digit[1-3]$/.test(ev.code)) {
       const opcion = mundo.opciones[Number(ev.code.slice(5)) - 1];
       if (opcion) elegir(opcion.id);

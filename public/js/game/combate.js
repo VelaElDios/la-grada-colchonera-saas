@@ -1,5 +1,5 @@
 // Daño, muertes, recompensas y efectos visuales sencillos (números flotantes y partículas).
-import { MUNDO } from './config.js';
+import { MUNDO, EQUIPOS, JEFES } from './config.js';
 
 const MAX_TEXTOS = 40;
 const MAX_PARTICULAS = 260;
@@ -16,7 +16,7 @@ export function crearParticulas(mundo, x, y, color, cantidad = 6, velocidad = 12
       const ang = mundo.rng.rango(0, Math.PI * 2);
       const v = mundo.rng.rango(0.3, 1) * velocidad;
       const vida = mundo.rng.rango(0.25, 0.5);
-      mundo.particulas.push({ x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, vida, total: vida, color, r: mundo.rng.rango(1.5, 3.2) });
+      mundo.particulas.push({ x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, vida, total: vida, color, r: mundo.rng.rango(2, 4) });
     }
   }
 }
@@ -37,36 +37,48 @@ export function curar(mundo, cantidad) {
   return j.vida - antes;
 }
 
+/** Multiplicador de daño del jugador según el tipo de ataque ('cuerpo', 'disparo' o 'ulti'). */
+export function multiplicadorDano(jugador, tipo) {
+  const porTipo = tipo === 'disparo' ? jugador.mult.disparo : tipo === 'cuerpo' ? jugador.mult.cuerpo : 1;
+  return jugador.mult.dano * porTipo * (jugador.animo > 0 ? jugador.bonoAnimo : 1);
+}
+
 /**
- * Resta vida a un enemigo (aplicando el multiplicador de daño del jugador).
+ * Resta vida a un rival aplicando los multiplicadores del jugador (posición, mejoras, entrenador).
  * `empuje` = [dx, dy] unitario y velocidad inicial del empujón.
  */
-export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0) {
+export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo = 'cuerpo') {
   if (enemigo.muerto) return;
-  const cantidad = Math.max(1, Math.round(base * mundo.jugador.mult.dano));
+  const cantidad = Math.max(1, Math.round(base * multiplicadorDano(mundo.jugador, tipo)));
   enemigo.vida -= cantidad;
   enemigo.flash = 0.1;
   if (empuje && velEmpuje) {
-    const freno = enemigo.tipo === 'jefe' ? 0.15 : enemigo.tipo === 'central' ? 0.5 : 1;
-    enemigo.kx += empuje[0] * velEmpuje * freno;
-    enemigo.ky += empuje[1] * velEmpuje * freno;
+    enemigo.kx += empuje[0] * velEmpuje * enemigo.freno;
+    enemigo.ky += empuje[1] * velEmpuje * enemigo.freno;
   }
-  crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), enemigo.tipo === 'jefe' ? '#ffd166' : '#ffffff');
+  crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), enemigo.jefe ? '#ffd166' : '#ffffff');
   if (enemigo.vida <= 0) matar(mundo, enemigo);
   else mundo.eventos.push({ tipo: 'golpe' });
+}
+
+function colorDe(enemigo) {
+  if (enemigo.jefe) return JEFES[enemigo.jefe].aspecto.camiseta.c;
+  return EQUIPOS[enemigo.tipo]?.kit.camiseta.c ?? '#ffffff';
 }
 
 function matar(mundo, enemigo) {
   enemigo.muerto = true;
   mundo.jugador.bajas += 1;
+  mundo.cargaPendiente += enemigo.jefe ? 12 : 1;
   soltarGema(mundo, enemigo.x, enemigo.y, enemigo.xp);
-  crearParticulas(mundo, enemigo.x, enemigo.y, enemigo.color, enemigo.tipo === 'jefe' ? 30 : 7, enemigo.tipo === 'jefe' ? 260 : 130);
+  crearParticulas(mundo, enemigo.x, enemigo.y, colorDe(enemigo), enemigo.jefe ? 30 : 7, enemigo.jefe ? 260 : 130);
 
-  if (enemigo.tipo === 'jefe') {
-    for (let i = 0; i < 4; i += 1) soltarGema(mundo, enemigo.x, enemigo.y, 8);
+  if (enemigo.jefe) {
+    for (let i = 0; i < 4; i += 1) soltarGema(mundo, enemigo.x, enemigo.y, enemigo.xp);
     mundo.curas.push({ x: enemigo.x, y: enemigo.y });
     mundo.sacudida = Math.max(mundo.sacudida, 0.4);
-    mundo.eventos.push({ tipo: 'jefe-derrotado' });
+    mundo.jugador.jefes += 1;
+    mundo.eventos.push({ tipo: 'jefe-derrotado', nombre: enemigo.nombre });
   } else if (mundo.rng.siguiente() < 0.018) {
     mundo.curas.push({ x: enemigo.x, y: enemigo.y });
   }
