@@ -46,6 +46,14 @@ export const TERRENO = {
   claroInicial: 320, // radio alrededor del inicio sin gradas
 };
 
+// Biomas del campo: cambian cada pocos pasos y deciden cuántas estructuras (gradas, corrales, pasillos…) hay.
+export const BIOMAS = {
+  abierto: { peso: 0.3, estructura: 0.4, focos: 0, lluvia: 0.2, barro: 0.14, pesos: { foco: 0.2, hilera: 0.3, muralla: 0.25, banquillos: 0.1, miniCampo: 0.15 } },
+  estadio: { peso: 0.3, estructura: 0.92, focos: 0.45, lluvia: 0.1, barro: 0.06, pesos: { muralla: 0.28, corral: 0.32, pasillo: 0.28, hilera: 0.12 } },
+  cantera: { peso: 0.2, estructura: 0.6, focos: 0.2, lluvia: 0.06, barro: 0.4, pesos: { hilera: 0.25, foco: 0.1, corral: 0.25, muralla: 0.2, pasillo: 0.2 } },
+  entrenamiento: { peso: 0.2, estructura: 0.75, focos: 0.1, lluvia: 0.14, barro: 0.1, pesos: { miniCampo: 0.4, banquillos: 0.2, hilera: 0.2, foco: 0.1, muralla: 0.1 } },
+};
+
 // Premios repartidos por el campo: hay que ir a por ellos.
 export const PREMIOS = {
   cada: 7, // segundos entre apariciones

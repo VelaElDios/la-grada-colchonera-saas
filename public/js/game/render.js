@@ -339,7 +339,7 @@ const lienzoPx = (w, h) => {
 };
 
 function guardar(clave, lienzo) {
-  if (cacheTerreno.size > 160) cacheTerreno.delete(cacheTerreno.keys().next().value);
+  if (cacheTerreno.size > 420) cacheTerreno.delete(cacheTerreno.keys().next().value);
   cacheTerreno.set(clave, lienzo);
   return lienzo;
 }
@@ -411,15 +411,9 @@ function dibujarZona(ctx, z, t) {
   }
 }
 
-function spriteGrada(g) {
-  const clave = `g:${g.id}`;
-  const hecho = cacheTerreno.get(clave);
-  if (hecho) return hecho;
-  const pw = Math.max(8, Math.round(g.w / TAM_CELDA));
-  const ph = Math.max(8, Math.round(g.h / TAM_CELDA));
-  const c = lienzoPx(pw, ph);
-  const cx = c.getContext('2d');
-  const CONTORNO = '#14102a';
+const CONTORNO = '#14102a';
+
+function pintarGrada(cx, pw, ph, semilla) {
   cx.fillStyle = CONTORNO;
   cx.fillRect(0, 0, pw, ph);
   // Tejadillo claro arriba y muro con bufandas rojiblancas abajo
@@ -440,21 +434,231 @@ function spriteGrada(g) {
     cx.fillStyle = '#272c4a';
     cx.fillRect(1, y + 3, pw - 2, 1); // escalón
     for (let x = 1; x + 3 <= pw - 1; x += 3) {
-      const a = hash(x + g.semilla, y);
+      const a = hash(x + semilla, y);
       if (a < 0.12) continue; // asiento vacío
-      cx.fillStyle = pieles[Math.floor(hash(x, y + g.semilla) * pieles.length)];
+      cx.fillStyle = pieles[Math.floor(hash(x, y + semilla) * pieles.length)];
       cx.fillRect(x + 1, y, 1, 1);
       cx.fillStyle = camisetas[Math.floor(a * camisetas.length)];
       cx.fillRect(x, y + 1, 3, 2);
     }
   }
+}
+
+function pintarCartel(cx, pw, ph, semilla) {
+  const colores = [['#c8102e', '#ff8a9a'], ['#1b4fa8', '#7fb0ff'], ['#f2f2f8', '#9aa0b8'], ['#e8a800', '#fff0a0']];
+  const [fondo, claro] = colores[semilla % colores.length];
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(0, 0, pw, ph - 2);
+  cx.fillStyle = fondo;
+  cx.fillRect(1, 1, pw - 2, ph - 5);
+  // «Texto» del anuncio: bloques claros
+  cx.fillStyle = claro;
+  for (let x = 3; x < pw - 4; x += 1) {
+    if (hash(x + semilla, 3) > 0.45) cx.fillRect(x, 2 + Math.floor(hash(x, semilla) * 2), 1, 2);
+  }
+  cx.fillStyle = 'rgba(255,255,255,.35)';
+  cx.fillRect(1, 1, pw - 2, 1);
+  // Patas
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(2, ph - 3, 2, 3);
+  cx.fillRect(pw - 4, ph - 3, 2, 3);
+}
+
+function pintarPorteria(cx, pw, ph) {
+  cx.clearRect(0, 0, pw, ph);
+  // Red de fondo
+  for (let y = 2; y < ph - 3; y += 1) {
+    for (let x = 3; x < pw - 3; x += 1) {
+      if ((x + y) % 2 === 0) { cx.fillStyle = 'rgba(235,240,255,.55)'; cx.fillRect(x, y, 1, 1); }
+    }
+  }
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(0, 0, pw, 3);
+  cx.fillRect(0, 0, 3, ph);
+  cx.fillRect(pw - 3, 0, 3, ph);
+  cx.fillStyle = '#ffffff';
+  cx.fillRect(1, 1, pw - 2, 1); // larguero
+  cx.fillRect(1, 1, 1, ph - 1); // postes
+  cx.fillRect(pw - 2, 1, 1, ph - 1);
+  cx.fillStyle = '#c9ced9';
+  cx.fillRect(1, ph - 2, 3, 2);
+  cx.fillRect(pw - 4, ph - 2, 3, 2);
+}
+
+function pintarBanquillo(cx, pw, ph, semilla) {
+  cx.clearRect(0, 0, pw, ph);
+  // Techo transparente azulado
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(0, 0, pw, 8);
+  cx.fillStyle = '#5b86b8';
+  cx.fillRect(1, 1, pw - 2, 6);
+  cx.fillStyle = '#9cc4ee';
+  cx.fillRect(1, 1, pw - 2, 1);
+  // Interior con suplentes sentados
+  cx.fillStyle = '#1d2347';
+  cx.fillRect(1, 8, pw - 2, ph - 8);
+  const camis = ['#c8102e', '#ffffff', '#c8102e'];
+  for (let x = 3; x + 4 < pw - 2; x += 5) {
+    cx.fillStyle = ['#f2c6a0', '#c68642', '#8d5524'][Math.floor(hash(x, semilla) * 3)];
+    cx.fillRect(x + 1, 9, 2, 2);
+    cx.fillStyle = camis[Math.floor(hash(x + 1, semilla) * 3)];
+    cx.fillRect(x, 11, 4, 4);
+  }
+  cx.fillStyle = '#e8e8f0';
+  cx.fillRect(1, ph - 3, pw - 2, 2); // banco
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(0, 8, 1, ph - 8);
+  cx.fillRect(pw - 1, 8, 1, ph - 8);
+  cx.fillRect(0, ph - 1, pw, 1);
+}
+
+function pintarFoco(cx, pw, ph) {
+  cx.clearRect(0, 0, pw, ph);
+  const m = Math.floor(pw / 2);
+  // Pie
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(0, ph - pw, pw, pw);
+  cx.fillStyle = '#59607f';
+  cx.fillRect(1, ph - pw + 1, pw - 2, pw - 2);
+  cx.fillStyle = '#7d86a8';
+  cx.fillRect(1, ph - pw + 1, pw - 2, 2);
+  // Poste
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(m - 1, 6, 3, ph - pw - 5);
+  cx.fillStyle = '#9aa2c0';
+  cx.fillRect(m, 6, 1, ph - pw - 5);
+  // Cabezal con las lámparas
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(0, 0, pw, 7);
+  cx.fillStyle = '#3b4262';
+  cx.fillRect(1, 1, pw - 2, 5);
+  for (let x = 2; x < pw - 2; x += 3) {
+    cx.fillStyle = '#fff6b0';
+    cx.fillRect(x, 2, 2, 3);
+  }
+}
+
+function spriteObstaculo(o) {
+  const clave = `o:${o.id}`;
+  const hecho = cacheTerreno.get(clave);
+  if (hecho) return hecho;
+  const pw = Math.max(6, Math.round(o.w / TAM_CELDA));
+  const ph = Math.max(6, Math.round((o.h + o.alto) / TAM_CELDA));
+  const c = lienzoPx(pw, ph);
+  const cx = c.getContext('2d');
+  if (o.tipo === 'grada') pintarGrada(cx, pw, ph, o.semilla);
+  else if (o.tipo === 'cartel') pintarCartel(cx, pw, ph, o.semilla);
+  else if (o.tipo === 'porteria') pintarPorteria(cx, pw, ph);
+  else if (o.tipo === 'banquillo') pintarBanquillo(cx, pw, ph, o.semilla);
+  else pintarFoco(cx, pw, ph);
   return guardar(clave, c);
 }
 
-function dibujarGrada(ctx, g) {
-  const c = spriteGrada(g);
-  sombra(ctx, g.x, g.y + g.h / 2 - 2, g.w * 0.5, 7);
-  ctx.drawImage(c, g.x - g.w / 2, g.y - g.h / 2, g.w, g.h);
+function dibujarObstaculo(ctx, o) {
+  const c = spriteObstaculo(o);
+  if (o.tipo === 'foco') sombra(ctx, o.x + 26, o.y + o.h / 2 - 4, 44, 8);
+  else sombra(ctx, o.x, o.y + o.h / 2 - 2, o.w * 0.5, 7);
+  ctx.drawImage(c, o.x - o.w / 2, o.y - o.h / 2 - o.alto, o.w, o.h + o.alto);
+}
+
+// Adornos del suelo: baldosas de explanada, parches de tierra o césped, líneas de campo, conos y balones perdidos
+function spriteSuelo(d) {
+  const clave = `d:${d.id}`;
+  const hecho = cacheTerreno.get(clave);
+  if (hecho) return hecho;
+  if (d.tipo === 'losa') {
+    const pw = Math.round(d.w / TAM_CELDA);
+    const ph = Math.round(d.h / TAM_CELDA);
+    const c = lienzoPx(pw, ph);
+    const cx = c.getContext('2d');
+    for (let y = 0; y < ph; y += 1) {
+      for (let x = 0; x < pw; x += 1) {
+        const borde = Math.min(x, y, pw - 1 - x, ph - 1 - y);
+        if (borde < 1 && hash(x + d.semilla, y) < 0.5) continue; // borde roído
+        const linea = x % 10 === 0 || y % 10 === 0;
+        cx.globalAlpha = borde < 3 ? 0.55 : 0.75;
+        cx.fillStyle = linea ? '#6b728c' : hash(x * 5, y * 3 + d.semilla) > 0.9 ? '#929ab4' : '#8088a3';
+        cx.fillRect(x, y, 1, 1);
+      }
+    }
+    return guardar(clave, c);
+  }
+  // parche redondo
+  const px = Math.ceil((d.r * 2) / TAM_CELDA) + 2;
+  const c = lienzoPx(px, px);
+  const cx = c.getContext('2d');
+  const mid = px / 2;
+  const paleta = d.color === 'tierra' ? ['#9a8050', '#8a7048', '#a58b58', '#7a6240'] : d.color === 'oscuro' ? ['#1f6a2e', '#256f33', '#1a5e29'] : ['#7ad06a', '#6cc45c', '#86d776'];
+  const alfa = d.color === 'tierra' ? 0.7 : 0.5;
+  for (let y = 0; y < px; y += 1) {
+    for (let x = 0; x < px; x += 1) {
+      const dx = x + 0.5 - mid;
+      const dy = y + 0.5 - mid;
+      const ang = Math.atan2(dy, dx);
+      const lim = (mid - 1) * (0.86 + 0.1 * Math.sin(ang * 4 + d.semilla) + 0.04 * Math.sin(ang * 9)) - hash(x, y + d.semilla) * 1.5;
+      if (Math.hypot(dx, dy) > lim) continue;
+      cx.globalAlpha = alfa;
+      cx.fillStyle = paleta[Math.floor(hash(x * 3 + d.semilla, y * 7) * paleta.length)];
+      cx.fillRect(x, y, 1, 1);
+    }
+  }
+  return guardar(clave, c);
+}
+
+function dibujarMarca(ctx, d) {
+  ctx.save();
+  ctx.fillStyle = 'rgba(255,255,255,.5)';
+  const x0 = d.x - d.w / 2;
+  const y0 = d.y - d.h / 2;
+  const g = 6;
+  ctx.fillRect(x0, y0, d.w, g);
+  ctx.fillRect(x0, y0 + d.h - g, d.w, g);
+  ctx.fillRect(x0, y0, g, d.h);
+  ctx.fillRect(x0 + d.w - g, y0, g, d.h);
+  ctx.fillRect(x0, d.y - g / 2, d.w, g); // línea de medio campo
+  ctx.strokeStyle = 'rgba(255,255,255,.5)';
+  ctx.lineWidth = g;
+  ctx.beginPath();
+  ctx.arc(d.x, d.y, 46, 0, Math.PI * 2);
+  ctx.stroke();
+  // Áreas
+  ctx.strokeRect(d.x - 80, y0 + g / 2, 160, 70);
+  ctx.strokeRect(d.x - 80, y0 + d.h - 70 - g / 2, 160, 70);
+  ctx.restore();
+}
+
+function dibujarConos(ctx, d) {
+  for (let i = 0; i < (d.n || 3); i += 1) {
+    const x = d.x + i * (d.dx || 0);
+    const y = d.y + i * (d.dy || 0);
+    sombra(ctx, x, y + 7, 7, 2.5);
+    recto(ctx, x, y + 7, () => {
+      ctx.fillStyle = CONTORNO;
+      ctx.fillRect(x - 6, y + 2, 12, 5);
+      ctx.fillRect(x - 4, y - 6, 8, 9);
+      ctx.fillStyle = '#ff7a1a';
+      ctx.fillRect(x - 5, y + 3, 10, 3);
+      ctx.fillRect(x - 3, y - 5, 6, 8);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x - 3, y - 1, 6, 2);
+    });
+  }
+}
+
+function dibujarDecor(ctx, d, t) {
+  if (d.tipo === 'losa') {
+    const c = spriteSuelo(d);
+    ctx.drawImage(c, d.x - d.w / 2, d.y - d.h / 2, c.width * TAM_CELDA, c.height * TAM_CELDA);
+  } else if (d.tipo === 'parche') {
+    const c = spriteSuelo(d);
+    const lado = c.width * TAM_CELDA;
+    ctx.drawImage(c, d.x - lado / 2, d.y - lado / 2, lado, lado);
+  } else if (d.tipo === 'marca') dibujarMarca(ctx, d);
+  else if (d.tipo === 'conos') dibujarConos(ctx, d);
+  else if (d.tipo === 'balon') {
+    sombra(ctx, d.x, d.y + 8, 7, 2.5);
+    recto(ctx, d.x, d.y + 8, () => dibujarBalon(ctx, d.x, d.y, 6, false));
+  }
 }
 
 // Premios del campo
@@ -705,8 +909,8 @@ export function dibujar(ctx, mundo, vista) {
   const visible = (o) => Math.abs(o.x - cam.x) < mx && Math.abs(o.y - cam.y) < my;
 
   const area = terrenoVisible(mundo.terreno, cam.x - mx, cam.y - my, cam.x + mx, cam.y + my);
+  area.decor.forEach((d) => dibujarDecor(ctx, d, t));
   area.zonas.forEach((z) => dibujarZona(ctx, z, t));
-  area.gradas.forEach((g) => dibujarGrada(ctx, g));
 
   mundo.avisosJefe.forEach((a) => dibujarAvisoJefe(ctx, a));
   mundo.premios.forEach((p) => visible(p) && dibujarPremio(ctx, p, t));
@@ -714,16 +918,22 @@ export function dibujar(ctx, mundo, vista) {
   mundo.curas.forEach((c) => visible(c) && recto(ctx, c.x, c.y, () => dibujarCura(ctx, c, t)));
   mundo.ondas.forEach((o) => dibujarOnda(ctx, o));
 
-  // Los rivales más abajo en pantalla se dibujan delante
-  const enemigos = mundo.enemigos.filter(visible).sort((a, b) => a.y - b.y);
-  for (const e of enemigos) {
+  // Rivales, jugador y obstáculos se ordenan por su «suelo»: lo que está más abajo en pantalla se dibuja delante
+  const lista = [];
+  for (const o of area.obstaculos) {
+    if (o.x + o.w / 2 < cam.x - mx || o.x - o.w / 2 > cam.x + mx || o.y + o.h / 2 < cam.y - my || o.y - o.h / 2 - o.alto > cam.y + my) continue;
+    lista.push({ y: o.y + o.h / 2, f: () => dibujarObstaculo(ctx, o) });
+  }
+  for (const e of mundo.enemigos) {
+    if (!visible(e)) continue;
     const dx = j.x - e.x;
     const l = Math.hypot(dx, j.y - e.y) || 1;
     e.mx = dx / l;
-    dibujarEnemigo(ctx, e, t);
+    lista.push({ y: e.y + e.r, f: () => dibujarEnemigo(ctx, e, t) });
   }
-
-  if (mundo.estado !== 'fin') dibujarJugador(ctx, j, t);
+  if (mundo.estado !== 'fin') lista.push({ y: j.y + j.r, f: () => dibujarJugador(ctx, j, t) });
+  lista.sort((a, b) => a.y - b.y);
+  for (const d of lista) d.f();
   mundo.tajos.forEach(dibujarTajo.bind(null, ctx));
   j.banderines.forEach((b) => recto(ctx, b.x, b.y, () => dibujarBanderin(ctx, b, t)));
   mundo.proyectiles.forEach((p) => dibujarProyectil(ctx, p));

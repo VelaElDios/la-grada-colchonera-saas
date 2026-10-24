@@ -254,3 +254,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
   .ajuste { grid-template-columns: 1fr; }
   .ajuste select { grid-column: auto; }
 }
+
+/* Mientras se juega, la cabecera de la web se esconde: más campo a la vista y F11 va de maravilla */
+.en-partida .cabecera { display: none; }
+.en-partida .avisos { top: 72px; }

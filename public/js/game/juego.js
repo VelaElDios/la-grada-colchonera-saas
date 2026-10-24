@@ -32,6 +32,8 @@ const PLANTILLA = `
       <div class="hud__bloque hud__bloque--der">
         <span class="hud__dato" title="Rivales eliminados">${icono('calavera', 16)}<span data-hud="bajas">0</span></span>
         <button type="button" class="boton-icono" data-accion="sonido" aria-label="Silenciar sonido" aria-pressed="false">${icono('sonido', 20)}</button>
+        <button type="button" class="boton-icono" data-accion="pantalla" aria-label="Pantalla completa (F)" aria-pressed="false">${icono('pantalla', 20)}</button>
+        <button type="button" class="boton-icono" data-accion="ajustesPartida" aria-label="Ajustes">${icono('ajustes', 20)}</button>
         <button type="button" class="boton-icono" data-accion="pausa" aria-label="Pausar (Esc)">${icono('pausa', 20)}</button>
       </div>
     </div>
@@ -95,7 +97,7 @@ const PLANTILLA = `
       <h2 id="juego-t-vest" class="pantalla__titulo">Elige a tu jugador</h2>
       <p class="pantalla__texto">Todos los de una misma posición tienen las mismas estadísticas. Por ahora cambia la posición, no el jugador.</p>
       <ul class="tarjetas" data-campo="personajes"></ul>
-      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Listo</button></div>
+      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="cerrarAjustes" data-enfoque>${icono('volver', 18)} Listo</button></div>
     </div>
   </section>
 
@@ -140,7 +142,7 @@ const PLANTILLA = `
         <legend>Controles</legend>
         <ul class="instrucciones">
           <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o las flechas: moverte.</li>
-          <li><kbd>Espacio</kbd> o <kbd>E</kbd>: lanzar la ulti. <kbd>Esc</kbd> o <kbd>P</kbd>: pausa.</li>
+          <li><kbd>Espacio</kbd> o <kbd>E</kbd>: lanzar la ulti. <kbd>Esc</kbd> o <kbd>P</kbd>: pausa. <kbd>F</kbd>: pantalla completa.</li>
           <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>: elegir una mejora al subir de nivel.</li>
         </ul>
         <label class="ajuste ajuste--check"><input type="checkbox" data-ajuste="joystick"><span>Joystick táctil en el móvil</span></label>
@@ -156,7 +158,7 @@ const PLANTILLA = `
       <ul class="instrucciones">
         <li><strong>Muévete siempre.</strong> Corriendo sube tu <em>ritmo</em>: más daño, más experiencia y la ulti se carga sola. Si te quedas quieto, los rivales aprietan.</li>
         <li>Las armas atacan solas. Los diamantes azules dan experiencia y los <strong>premios</strong> del campo (flechas en el borde) te curan, suben de nivel o cargan la ulti.</li>
-        <li><strong>Barro</strong>: te frena. <strong>Lluvia</strong>: los balones, tuyos y rivales, corren más. Las <strong>gradas</strong> no se atraviesan: ni tú, ni los rivales, ni los balones.</li>
+        <li><strong>Barro</strong>: te frena. <strong>Lluvia</strong>: los balones, tuyos y rivales, corren más. El campo cambia por tramos (estadio, cantera, campo de entrenamiento): <strong>gradas, corrales, pasillos, carteles, porterías y focos</strong> no se atraviesan, ni tú, ni los rivales, ni los balones. Hay que dar rodeos.</li>
         <li>Algunos rivales embisten (se agachan antes) y otros disparan balones. Cada 5 oleadas llega un <strong>jefe</strong> con tres fases.</li>
       </ul>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Entendido</button></div>
@@ -381,7 +383,11 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     pintarCartelJugador();
   }
 
+  // En partida la cabecera de la web se esconde para no quitar visión (la clase la oculta con CSS)
+  const ponerEnPartida = (si) => document.body.classList.toggle('en-partida', si);
+
   function irAlHub(panel = 'hub') {
+    ponerEnPartida(false);
     if (fase !== 'hub') {
       fase = 'hub';
       zonaHud.hidden = true;
@@ -404,6 +410,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     entrada.soltarTodo();
     acumulador = 0;
     fase = 'jugando';
+    ponerEnPartida(true);
     zonaHud.hidden = false;
     mostrar(null);
     hud.actualizar(mundo);
@@ -412,6 +419,10 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   }
 
   function alternarPausa() {
+    if (fase === 'pausa' && pantallaActual === 'ajustes') {
+      mostrar('pausa'); // Esc dentro de los ajustes de la partida: vuelves a la pausa
+      return;
+    }
     if (fase === 'jugando') {
       fase = 'pausa';
       entrada.soltarTodo();
@@ -420,6 +431,38 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       reanudar();
     }
   }
+
+  /** El engranaje de la partida: pausa y abre todos los ajustes. */
+  function abrirAjustesPartida() {
+    if (fase === 'jugando') alternarPausa();
+    if (fase !== 'pausa') return;
+    pintarAjustes();
+    mostrar('ajustes');
+  }
+
+  function cerrarAjustes() {
+    if (fase === 'pausa') mostrar('pausa');
+    else irAlHub('hub');
+  }
+
+  // --- Pantalla completa -------------------------------------------------------------------------
+
+  const botonPantalla = q('[data-accion="pantalla"]');
+  function pintarBotonPantalla() {
+    const dentro = Boolean(document.fullscreenElement);
+    botonPantalla.setAttribute('aria-pressed', String(dentro));
+    botonPantalla.setAttribute('aria-label', dentro ? 'Salir de pantalla completa (F)' : 'Pantalla completa (F)');
+    botonPantalla.innerHTML = icono(dentro ? 'pantallaSalir' : 'pantalla', 20);
+  }
+  function alternarPantallaCompleta() {
+    try {
+      if (document.fullscreenElement) document.exitFullscreen?.();
+      else document.documentElement.requestFullscreen?.();
+    } catch { /* algunos navegadores (iPhone) no la permiten */ }
+  }
+  const alCambiarPantalla = () => pintarBotonPantalla();
+  document.addEventListener('fullscreenchange', alCambiarPantalla);
+  if (!document.documentElement.requestFullscreen) botonPantalla.hidden = true;
 
   function reanudar() {
     if (fase !== 'pausa') return;
@@ -589,6 +632,9 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     reanudar,
     salir: alSalir,
     pausa: alternarPausa,
+    pantalla: alternarPantallaCompleta,
+    ajustesPartida: abrirAjustesPartida,
+    cerrarAjustes,
     sonido: () => { audio.alternar(); actualizarBotonSonido(); },
   };
 
@@ -613,6 +659,10 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   }
 
   function alPulsarTecla(ev) {
+    if (ev.code === 'KeyF' && !ev.repeat && !ev.ctrlKey && !ev.metaKey && fase !== 'hub') {
+      alternarPantallaCompleta();
+      return;
+    }
     if (fase === 'jugando' && (ev.code === 'Space' || ev.code === 'KeyE') && !ev.repeat) {
       ev.preventDefault();
       usarUlti(mundo);
@@ -638,6 +688,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
 
   lienzo.tabIndex = -1;
   aplicarAjustes();
+  pintarBotonPantalla();
   actualizarBotonSonido();
   irAlHub('hub');
   raf = requestAnimationFrame(bucle);
@@ -653,6 +704,9 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       contenedor.removeEventListener('change', alCambiarAjuste);
       window.removeEventListener('keydown', alPulsarTecla);
       document.removeEventListener('visibilitychange', alCambiarVisibilidad);
+      document.removeEventListener('fullscreenchange', alCambiarPantalla);
+      ponerEnPartida(false);
+      if (document.fullscreenElement) document.exitFullscreen?.();
       contenedor.classList.remove('juego');
       contenedor.replaceChildren();
     },

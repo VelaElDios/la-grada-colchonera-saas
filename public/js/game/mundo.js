@@ -10,7 +10,7 @@ import { generarOpciones, aplicarMejora, recalcular } from './mejoras.js';
 import { oleadaEn, empezarOleada, actualizarApariciones, reciclarLejanos } from './oleadas.js';
 import { actualizarJefe, danarJugador } from './jefes.js';
 import { actualizarUlti, cargarUlti, lanzarUlti } from './ulti.js';
-import { crearTerreno, zonaEn, resolver, tocaGrada } from './terreno.js';
+import { crearTerreno, zonaEn, resolver, tocaGrada, rayoLibre } from './terreno.js';
 import { comportamiento } from './rivales.js';
 
 const SIN_ENTRADA = { x: 0, y: 0 };
@@ -193,7 +193,20 @@ function moverEnemigos(mundo, dt) {
     const habilidadPropia = e.jefe ? actualizarJefe(mundo, e, dt) : false;
     if (!habilidadPropia) {
       const factor = e.jefe ? 1 : comportamiento(mundo, e, dt, dist);
-      const [dx, dy] = e.embestida > 0 ? [e.dirX, e.dirY] : normalizar(j.x - e.x, j.y - e.y);
+      let [dx, dy] = e.embestida > 0 ? [e.dirX, e.dirY] : normalizar(j.x - e.x, j.y - e.y);
+      // Rodeando una pared: la sigue (pegado a ella) hasta que tenga camino libre hacia ti
+      if (e.rodeo && e.embestida <= 0) {
+        e.rodeoT += dt;
+        e.rayoT -= dt;
+        if (e.rayoT <= 0) {
+          e.rayoT = 0.15;
+          if ((e.rodeoT > 0.4 && rayoLibre(terreno, e.x, e.y, j.x, j.y, 400, e.r)) || e.rodeoT > 7) e.rodeo = 0;
+        }
+        if (e.rodeo) {
+          dx = -e.ny * e.rodeo * 0.95 - e.nx * 0.4;
+          dy = e.nx * e.rodeo * 0.95 - e.ny * 0.4;
+        }
+      }
       const v = (e.lento > 0 ? e.vel * 0.35 : e.vel) * factor;
       e.x += dx * v * dt;
       e.y += dy * v * dt;
@@ -219,7 +232,21 @@ function moverEnemigos(mundo, dt) {
     });
 
     // Las gradas también les cierran el paso: la rodean para llegar a ti
-    if (resolver(terreno, e, j.x, j.y, e.vel * dt * 0.9) && e.embestida > 0) e.embestida = 0;
+    const rodeaba = e.rodeo;
+    const choco = resolver(terreno, e, j.x, j.y, e.vel * dt * 0.9);
+    if (choco && e.embestida > 0) e.embestida = 0;
+    if (choco && !rodeaba && e.rodeo) { e.rodeoT = 0; e.rayoT = 0.4; }
+    if (choco) e.chocoVentana = true;
+    // Si lleva casi un segundo pegado a una pared sin avanzar, rodea por el otro lado
+    e.tAncla = (e.tAncla || 0) + dt;
+    if (e.tAncla > 0.9) {
+      const avance = Math.hypot(e.x - (e.axx ?? e.x), e.y - (e.ayy ?? e.y));
+      if (e.chocoVentana && dist > e.r * 3 && avance < e.vel * 0.9 * 0.3) e.rodeo = -(e.rodeo || 1);
+      e.tAncla = 0;
+      e.chocoVentana = false;
+      e.axx = e.x;
+      e.ayy = e.y;
+    }
 
     // Contacto con el jugador
     if (j.invul <= 0 && (e.x - j.x) ** 2 + (e.y - j.y) ** 2 < (e.r + j.r * 0.8) ** 2) {

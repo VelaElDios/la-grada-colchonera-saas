@@ -318,6 +318,12 @@ Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; c
 
 La cámara es 3/4: el suelo se aplasta en vertical (`CAMARA.inclinacion`) y los muñecos, balones y textos se dibujan de pie sobre él, algo más pequeños cuanto más arriba están. Sigue al jugador con suavidad y mira un poco hacia donde corres. El movimiento tiene inercia (`FISICA`), el jugador se inclina y se estira al correr, los golpes aplastan al muñeco y congelan un instante la partida, los balones dejan estela y al disparar hay destello y retroceso. Todo se ajusta en `public/js/game/config.js`.
 
+#### Mapa procedural, gradas y pantalla completa
+
+El campo es infinito pero siempre igual para una semilla (`terreno.js`). Cada «región» de 3×3 celdas tiene un bioma (`BIOMAS` en `config.js`): **abierto**, **estadio** (muy denso en gradas, con explanada de baldosas), **cantera** (barro y tierra) y **campo de entrenamiento** (mini campos con líneas, porterías, banquillos y conos). Las estructuras son piezas con colisión (`grada`, `cartel`, `porteria`, `banquillo`, `foco`): muros con o sin puerta, corrales en U, pasillos estrechos, carteles en zigzag… y nunca encierran a nadie ni caen sobre el punto de salida (hay tests). Los rivales rodean las paredes siguiéndolas (`rodeo`) hasta tener camino libre, así que un corral no los atrapa. Los dibujos de los muñecos van por capas (pelo/piel, camiseta y botas) en `sprites.js`.
+
+En partida la cabecera de la web se esconde (`body.en-partida`). En la esquina de la pantalla hay silenciar, **pantalla completa** (también la tecla `F`; `F11` funciona igual), **ajustes** (el engranaje pausa y abre todas las opciones) y pausa.
+
 ### Roles
 
 - **user:** gestiona su propia cuenta (ver su perfil y darse de baja).
