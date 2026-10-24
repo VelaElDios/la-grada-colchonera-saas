@@ -4,8 +4,10 @@ import {
   JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir,
 } from './config.js';
 import { crearRng, crearCuadricula, normalizar } from './util.js';
-import { actualizarArmas } from './armas.js';
-import { curar, danar, crearParticulas, crearTexto } from './combate.js';
+import { actualizarArmas, actualizarAcciones } from './armas.js';
+import {
+  curar, danar, aturdir, crearParticulas, crearTexto,
+} from './combate.js';
 import { generarOpciones, aplicarMejora, recalcular } from './mejoras.js';
 import { oleadaEn, empezarOleada, actualizarApariciones, reciclarLejanos } from './oleadas.js';
 import { actualizarJefe, danarJugador } from './jefes.js';
@@ -19,11 +21,12 @@ const SIN_ENTRADA = { x: 0, y: 0 };
  * @param {object} [opciones]
  * @param {number} [opciones.semilla] Semilla del generador aleatorio
  * @param {boolean} [opciones.efectosReducidos] Sin partículas ni sacudidas (accesibilidad)
- * @param {string} [opciones.personaje] Clave de PERSONAJES (oblak, godin, koke, griezmann)
+ * @param {string} [opciones.personaje] Clave de PERSONAJES (ver config.js)
  * @param {string} [opciones.entrenador] Clave de ENTRENADORES (cholo, aragones)
+ * @param {boolean} [opciones.pasilloMenu] Deja libre de obstáculos la franja por la que pasea el muñeco del menú
  */
 export function crearMundo({
-  semilla = Date.now(), efectosReducidos = false, personaje = 'koke', entrenador = 'cholo',
+  semilla = Date.now(), efectosReducidos = false, personaje = 'koke', entrenador = 'cholo', pasilloMenu = false,
 } = {}) {
   const pj = PERSONAJES[personaje] ?? PERSONAJES.koke;
   const clavePersonaje = PERSONAJES[personaje] ? personaje : 'koke';
@@ -32,7 +35,7 @@ export function crearMundo({
 
   const armas = {};
   Object.keys(ARMAS).forEach((k) => { armas[k] = { nivel: 0, cd: 0 }; });
-  armas[posicion.armaInicial] = { nivel: 1, cd: 0.3 };
+  armas[ARMAS[pj.armaInicial] ? pj.armaInicial : posicion.armaInicial] = { nivel: 1, cd: 0.3 };
   const pasivas = {};
   Object.keys(PASIVAS).forEach((k) => { pasivas[k] = 0; });
   const extras = {};
@@ -40,7 +43,7 @@ export function crearMundo({
 
   const mundo = {
     semilla,
-    terreno: crearTerreno(semilla),
+    terreno: crearTerreno(semilla, { pasillo: pasilloMenu ? 190 : 0 }),
     rng: crearRng(semilla),
     efectosReducidos,
     tiempo: 0,
@@ -83,6 +86,11 @@ export function crearMundo({
       regen: 0,
       puedeDisparar: true,
       ulti: { carga: 0, max: ULTI.base, usos: 0 },
+      sinergias: [], // claves de las combinaciones activas
+      dash: null, // regate o entrada en curso
+      escudo: 0, // segundos que le quedan a la barrera
+      escudoRadio: 60,
+      contra: null, // contragolpe en curso { t, vel, dano }
       animo: 0, // segundos que le quedan al bonus de daño del Cholo
       furia: 0, // segundos que le quedan a la Furia Roja de Luis
       bonoAnimo: ENTRENADORES.cholo.ulti.bonoDano,
@@ -98,6 +106,10 @@ export function crearMundo({
     ondas: [],
     rayos: [],
     tarjetas: [],
+    impactos: [], // marcas de vaselinas, penaltis y otros avisos visuales
+    acciones: [], // acciones del jugador programadas { t, hacer }
+    jefesVistos: [], // jefes ya salidos en la ronda actual
+    sinergiasLogradas: [], // combinaciones conseguidas en esta partida
     avisosJefe: [],
     textos: [],
     particulas: [],
@@ -141,14 +153,26 @@ function moverJugador(mundo, dt, entrada) {
   }
   j.zona = zonaEn(mundo.terreno, j.x, j.y);
   const bonoFuria = j.furia > 0 ? ENTRENADORES.aragones.ulti.bonoVel : 1;
+  const bonoContra = j.contra && j.contra.t > 0 ? 1 + j.contra.vel : 1;
   const barro = j.zona === 'barro' ? TERRENO.barro : 1;
-  const v = j.velBase * j.mult.vel * bonoFuria * barro * fuerza;
+  const v = j.velBase * j.mult.vel * bonoFuria * bonoContra * barro * fuerza;
   const x0 = j.x;
   const y0 = j.y;
-  // Aceleración y frenada con algo de inercia: arrancas y paras con ritmo, no de golpe
-  const k = 1 - Math.exp(-(j.moviendo ? FISICA.aceleracion : FISICA.frenada) * dt);
-  j.vx += (dx * v - j.vx) * k;
-  j.vy += (dy * v - j.vy) * k;
+  if (j.dash) {
+    // Regate o entrada: avanzas en línea recta a toda velocidad y arrollas a quien cruzas
+    const d = j.dash;
+    d.t -= dt;
+    j.vx = d.dx * d.v;
+    j.vy = d.dy * d.v;
+    j.moviendo = true;
+    golpesDeDash(mundo, d);
+    if (d.t <= 0) j.dash = null;
+  } else {
+    // Aceleración y frenada con algo de inercia: arrancas y paras con ritmo, no de golpe
+    const k = 1 - Math.exp(-(j.moviendo ? FISICA.aceleracion : FISICA.frenada) * dt);
+    j.vx += (dx * v - j.vx) * k;
+    j.vy += (dy * v - j.vy) * k;
+  }
   j.x += j.vx * dt;
   j.y += j.vy * dt;
   resolver(mundo.terreno, j); // las gradas no se atraviesan
@@ -172,7 +196,28 @@ function moverJugador(mundo, dt, entrada) {
 
   j.invul = Math.max(0, j.invul - dt);
   j.flash = Math.max(0, j.flash - dt);
+  j.escudo = Math.max(0, j.escudo - dt);
+  if (j.contra) {
+    j.contra.t -= dt;
+    if (j.contra.t <= 0) j.contra = null;
+  }
   if (j.regen > 0) curar(mundo, j.regen * dt);
+}
+
+/** Daño a los rivales que cruza el jugador durante un regate o una entrada. */
+function golpesDeDash(mundo, d) {
+  const j = mundo.jugador;
+  const alcance = j.r + d.ancho / 2;
+  mundo.cuadricula.cerca(j.x, j.y, alcance + 40, (e) => {
+    if (e.muerto || d.golpeados.has(e.id)) return;
+    if ((e.x - j.x) ** 2 + (e.y - j.y) ** 2 > (e.r + alcance) ** 2) return;
+    d.golpeados.add(e.id);
+    danar(mundo, e, d.dano, normalizar(e.x - j.x + d.dx * 20, e.y - j.y + d.dy * 20), d.empuje, d.tipoDano);
+    if (d.aturde) aturdir(mundo, e, d.aturde);
+  });
+  if (!mundo.efectosReducidos && mundo.ondas.length < 40 && Math.round(mundo.tiempo * 60) % 2 === 0) {
+    mundo.ondas.push({ x: j.x, y: j.y + j.r, radio: 14, vida: 0.16, total: 0.16, color: d.color });
+  }
 }
 
 function moverEnemigos(mundo, dt) {
@@ -188,6 +233,17 @@ function moverEnemigos(mundo, dt) {
     e.flash = Math.max(0, e.flash - dt);
     e.cdBanderin = Math.max(0, e.cdBanderin - dt);
     e.lento = Math.max(0, e.lento - dt);
+    e.aturdido = Math.max(0, (e.aturdido ?? 0) - dt);
+
+    if (e.aturdido > 0) {
+      // Aturdido: solo se deja empujar (no se mueve por su cuenta, no ataca y no hace daño)
+      e.x += e.kx * dt;
+      e.y += e.ky * dt;
+      e.kx *= decaimiento;
+      e.ky *= decaimiento;
+      resolver(terreno, e);
+      continue;
+    }
 
     const dist = Math.hypot(j.x - e.x, j.y - e.y);
     const habilidadPropia = e.jefe ? actualizarJefe(mundo, e, dt) : false;
@@ -269,20 +325,34 @@ function moverProyectiles(mundo, dt) {
         p.vy = ny * 300;
       }
     }
+    if (p.pared) { // la pared: va, y vuelve a tus pies
+      p.tIda -= dt;
+      if (p.tIda <= 0 && !p.vuelta) {
+        p.vuelta = true;
+        p.golpeados.clear();
+      }
+      if (p.vuelta) {
+        const j = mundo.jugador;
+        const [vx, vy] = normalizar(j.x - p.x, j.y - p.y);
+        p.vx = vx * 470;
+        p.vy = vy * 470;
+        if ((j.x - p.x) ** 2 + (j.y - p.y) ** 2 < 26 * 26) p.vida = 0;
+      }
+    }
     // Bajo la lluvia los balones corren más
     const k = zonaEn(mundo.terreno, p.x, p.y) === 'lluvia' ? TERRENO.lluvia : 1;
     p.x += p.vx * dt * k;
     p.y += p.vy * dt * k;
     p.rot += dt * 14;
     p.vida -= dt;
-    if (p.vida > 0 && tocaGrada(mundo.terreno, p.x, p.y, p.r)) p.vida = 0; // se estrella contra la grada
+    if (p.vida > 0 && !p.vuelta && tocaGrada(mundo.terreno, p.x, p.y, p.r)) p.vida = 0; // se estrella contra la grada
     if (p.vida > 0) {
       mundo.cuadricula.cerca(p.x, p.y, p.r + 24, (e) => {
         if (p.perfora <= 0 || e.muerto || p.golpeados.has(e.id)) return;
         if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 > (e.r + p.r) ** 2) return;
         p.golpeados.add(e.id);
         p.perfora -= 1;
-        danar(mundo, e, p.dano, normalizar(p.vx, p.vy), p.empuje, 'disparo');
+        danar(mundo, e, p.dano, normalizar(p.vx, p.vy), p.empuje, p.tipoDano ?? 'disparo');
         if (mundo.ondas.length < 40) mundo.ondas.push({ x: p.x, y: p.y, radio: 18, vida: 0.14, total: 0.14 });
       });
     }
@@ -320,6 +390,11 @@ function moverDisparosEnemigos(mundo, dt) {
     d.rot += dt * 10;
     d.vida -= dt;
     if (d.vida > 0 && tocaGrada(mundo.terreno, d.x, d.y, d.r)) d.vida = 0;
+    if (d.vida > 0 && j.escudo > 0 && (d.x - j.x) ** 2 + (d.y - j.y) ** 2 < (d.r + j.escudoRadio) ** 2) {
+      d.vida = 0; // la barrera los rechaza
+      crearParticulas(mundo, d.x, d.y, '#9fd8ff', 4, 120);
+      continue;
+    }
     if (d.vida > 0 && j.invul <= 0 && (d.x - j.x) ** 2 + (d.y - j.y) ** 2 < (d.r + j.r * 0.8) ** 2) {
       danarJugador(mundo, d.dano);
       d.vida = 0;
@@ -414,7 +489,7 @@ function recogerObjetos(mundo, dt) {
 
 function actualizarEfectos(mundo, dt) {
   mundo.sacudida = mundo.efectosReducidos ? 0 : Math.max(0, mundo.sacudida - dt);
-  for (const lista of [mundo.tajos, mundo.ondas, mundo.textos, mundo.particulas, mundo.rayos, mundo.tarjetas, mundo.avisosJefe]) {
+  for (const lista of [mundo.tajos, mundo.ondas, mundo.textos, mundo.particulas, mundo.rayos, mundo.tarjetas, mundo.avisosJefe, mundo.impactos]) {
     for (let i = 0; i < lista.length; i += 1) lista[i].vida -= dt;
   }
   for (let i = 0; i < mundo.textos.length; i += 1) mundo.textos[i].y -= 28 * dt;
@@ -464,6 +539,7 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   moverJugador(mundo, dt, entrada);
   actualizarApariciones(mundo, dt);
   moverEnemigos(mundo, dt);
+  actualizarAcciones(mundo, dt);
   actualizarArmas(mundo, dt);
   moverProyectiles(mundo, dt);
   moverDisparosEnemigos(mundo, dt);
@@ -482,6 +558,7 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   compactar(mundo.ondas, (o) => o.vida > 0);
   compactar(mundo.rayos, (r) => r.vida > 0);
   compactar(mundo.tarjetas, (t) => t.vida > 0);
+  compactar(mundo.impactos, (t) => t.vida > 0);
   compactar(mundo.avisosJefe, (a) => a.vida > 0);
   compactar(mundo.textos, (t) => t.vida > 0);
   compactar(mundo.particulas, (p) => p.vida > 0);
@@ -529,5 +606,6 @@ export function resumen(mundo) {
   const j = mundo.jugador;
   return {
     tiempo: mundo.tiempo, oleada: mundo.oleada, nivel: j.nivel, bajas: j.bajas, jefes: j.jefes, personaje: j.personaje, entrenador: j.entrenador,
+    sinergias: [...mundo.sinergiasLogradas],
   };
 }

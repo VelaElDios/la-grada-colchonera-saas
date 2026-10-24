@@ -195,7 +195,7 @@ function estela(ctx, p, color, n) {
 function dibujarProyectil(ctx, p) {
   sombra(ctx, p.x, p.y + p.r * 1.6, p.r * 0.9, p.r * 0.3);
   recto(ctx, p.x, p.y, () => {
-    estela(ctx, p, p.grande ? '#ffd166' : '#ffffff', p.grande ? 4 : 3);
+    estela(ctx, p, p.pared ? '#8fd8ff' : p.grande ? '#ffd166' : '#ffffff', p.grande || p.pared ? 4 : 3);
     dibujarBalon(ctx, p.x, p.y, p.r, false);
   });
 }
@@ -224,7 +224,7 @@ function dibujarTajo(ctx, tj) {
   const grad = ctx.createRadialGradient(0, 0, 8, 0, 0, tj.largo);
   grad.addColorStop(0, 'rgba(255,255,255,0)');
   grad.addColorStop(0.7, 'rgba(255,255,255,.85)');
-  grad.addColorStop(1, 'rgba(200,16,46,.9)');
+  grad.addColorStop(1, tj.color ?? 'rgba(200,16,46,.9)');
   ctx.fillStyle = grad;
   ctx.beginPath();
   ctx.moveTo(0, 0);
@@ -238,7 +238,7 @@ function dibujarOnda(ctx, o) {
   const k = 1 - o.vida / o.total;
   ctx.save();
   ctx.globalAlpha = (1 - k) * 0.9;
-  ctx.strokeStyle = o.enemiga ? '#ff3b3b' : o.ulti ? '#ffd166' : o.silbato ? '#8fd8ff' : ROJO_CLARO;
+  ctx.strokeStyle = o.color ?? (o.enemiga ? '#ff3b3b' : o.ulti ? '#ffd166' : o.silbato ? '#8fd8ff' : ROJO_CLARO);
   ctx.lineWidth = (o.ulti ? 12 : 6) * (1 - k) + 2;
   ctx.beginPath();
   ctx.arc(o.x, o.y, o.radio * (0.2 + 0.8 * k), 0, Math.PI * 2);
@@ -249,6 +249,61 @@ function dibujarOnda(ctx, o) {
     ctx.fill();
   }
   ctx.restore();
+}
+
+/** Marcas en el suelo (dónde caerá una vaselina, a quién va el penalti) y la línea del penalti. */
+function dibujarImpacto(ctx, im, t) {
+  const k = im.vida / im.total;
+  ctx.save();
+  ctx.strokeStyle = im.color ?? '#ffffff';
+  if (im.tipo === 'linea') {
+    ctx.globalAlpha = Math.min(1, k * 1.5);
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(im.x, im.y);
+    ctx.lineTo(im.x2, im.y2);
+    ctx.stroke();
+  } else {
+    // Un círculo que se cierra sobre el objetivo
+    ctx.globalAlpha = 0.85;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 6]);
+    ctx.beginPath();
+    ctx.arc(im.x, im.y, im.radio, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.globalAlpha = 0.25 * (1 - k);
+    ctx.fillStyle = im.color ?? '#ffffff';
+    ctx.beginPath();
+    ctx.arc(im.x, im.y, im.radio * (1 - k), 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.restore();
+}
+
+/** La barrera defensiva: un círculo en el suelo alrededor del jugador. */
+function dibujarEscudo(ctx, j, t) {
+  const final = j.escudo < 0.6 ? 0.5 + 0.5 * Math.sin(t * 30) : 1; // parpadea al acabarse
+  ctx.save();
+  ctx.globalAlpha = 0.28 * final;
+  ctx.fillStyle = '#9fd8ff';
+  ctx.beginPath();
+  ctx.arc(j.x, j.y, j.escudoRadio, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 0.9 * final;
+  ctx.strokeStyle = '#e8f6ff';
+  ctx.lineWidth = 3;
+  ctx.stroke();
+  ctx.restore();
+}
+
+/** Estrellitas girando sobre un rival aturdido. */
+function dibujarAturdido(ctx, e, alto, t) {
+  ctx.fillStyle = '#ffd166';
+  for (let i = 0; i < 3; i += 1) {
+    const a = t * 6 + (i * Math.PI * 2) / 3;
+    ctx.fillRect(e.x + Math.cos(a) * alto * 0.22 - 2, e.y - alto / 2 - 4 + Math.sin(a) * 4 - 2, 5, 5);
+  }
 }
 
 function dibujarRayo(ctx, r) {
@@ -822,6 +877,8 @@ function dibujarEnemigoRecto(ctx, e, t, sprite, alto, frame, bote, altura, quiet
     dibujarSprite(ctx, sprite, e.x, e.y - bote - altura, alto, frame, (e.mx || 0) < 0, e.flash > 0);
   });
 
+  if (e.aturdido > 0) dibujarAturdido(ctx, e, alto, t);
+
   // Rival normal que va a embestir: se agacha y aparece un «!»
   if (e.aviso > 0) {
     ctx.fillStyle = '#ff3b3b';
@@ -845,11 +902,12 @@ function dibujarJugador(ctx, j, t) {
   const frame = j.moviendo ? Math.floor(t * 10) % 2 : 0;
   const parpadeo = j.invul > 0 && Math.floor(t * 20) % 2 === 0;
 
-  // Aura de las ultis activas
-  if (j.furia > 0 || j.animo > 0) {
+  if (j.escudo > 0) dibujarEscudo(ctx, j, t);
+  // Aura de las ultis activas y del contragolpe
+  if (j.furia > 0 || j.animo > 0 || j.contra) {
     ctx.save();
     ctx.globalAlpha = 0.35 + 0.15 * Math.sin(t * 12);
-    ctx.fillStyle = j.furia > 0 ? '#ff4d63' : '#ffd166';
+    ctx.fillStyle = j.furia > 0 ? '#ff4d63' : j.contra ? '#ff9a3c' : '#ffd166';
     ctx.beginPath();
     ctx.ellipse(j.x, j.y + alto * 0.44, alto * 0.5, alto * 0.16, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -916,6 +974,7 @@ export function dibujar(ctx, mundo, vista) {
   mundo.premios.forEach((p) => visible(p) && dibujarPremio(ctx, p, t));
   mundo.gemas.forEach((g) => visible(g) && recto(ctx, g.x, g.y, () => dibujarGema(ctx, g, t)));
   mundo.curas.forEach((c) => visible(c) && recto(ctx, c.x, c.y, () => dibujarCura(ctx, c, t)));
+  mundo.impactos.forEach((im) => dibujarImpacto(ctx, im, t));
   mundo.ondas.forEach((o) => dibujarOnda(ctx, o));
 
   // Rivales, jugador y obstáculos se ordenan por su «suelo»: lo que está más abajo en pantalla se dibuja delante

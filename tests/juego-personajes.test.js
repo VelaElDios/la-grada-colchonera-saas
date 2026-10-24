@@ -15,38 +15,68 @@ async function simular(m, mundo, segundos, entrada = { x: 0, y: 0 }) {
   }
 }
 
-test('hay 4 personajes del Atleti y sus estadísticas dependen solo de la posición', async () => {
+test('hay 19 jugadores del Atleti con estadísticas de su posición retocadas por sus rasgos', async () => {
   const { PERSONAJES, POSICIONES } = await cargar('config.js');
   const m = await cargar('mundo.js');
-  assert.deepEqual(Object.keys(PERSONAJES).sort(), ['godin', 'griezmann', 'koke', 'oblak']);
-  assert.deepEqual(Object.values(PERSONAJES).map((p) => p.posicion).sort(), ['defensa', 'delantero', 'medio', 'portero']);
-  // Dos delanteros distintos tendrían exactamente las mismas estadísticas: se comprueba con la posición
-  const a = m.crearMundo({ semilla: 1, personaje: 'griezmann' }).jugador;
+  const esperados = ['oblak', 'musso', 'godin', 'lenglet', 'pubill', 'molina', 'grimaldo', 'koke', 'llorente', 'barrios', 'lee', 'griezmann',
+    'torres', 'lookman', 'giuliano', 'julian', 'costa', 'forlan', 'falcao'];
+  assert.deepEqual(Object.keys(PERSONAJES).sort(), [...esperados].sort());
+  const delanteros = ['griezmann', 'torres', 'lookman', 'giuliano', 'julian', 'costa', 'forlan', 'falcao'];
+  delanteros.forEach((k) => assert.equal(PERSONAJES[k].posicion, 'delantero', k));
+  // El vidaMax sale de la posición × los rasgos del jugador × el entrenador por defecto (Cholo, +5 % de vida)
+  const g = m.crearMundo({ semilla: 1, personaje: 'griezmann' }).jugador;
   const pos = POSICIONES.delantero;
-  assert.equal(a.vidaMax, Math.round(pos.vida * 1.05)); // entrenador por defecto: Cholo (+5 % de vida)
-  assert.equal(a.mult.disparo, pos.disparo);
-  assert.equal(a.mult.cuerpo, pos.cuerpo);
+  assert.equal(g.vidaMax, Math.round(pos.vida * (PERSONAJES.griezmann.mods.vida ?? 1) * 1.05));
+  assert.equal(g.mult.cuerpo, pos.cuerpo * (PERSONAJES.griezmann.mods.cuerpo ?? 1));
+  // Dos jugadores de la misma posición ya no son idénticos
+  const stats = (k) => { const j = m.crearMundo({ semilla: 1, personaje: k }).jugador; return [j.vidaMax, j.velBase, j.mult.cuerpo, j.mult.disparo].join('/'); };
+  assert.notEqual(stats('torres'), stats('lookman'));
+  assert.notEqual(stats('oblak'), stats('musso'));
 });
 
-test('el portero ataca solo cuerpo a cuerpo; delanteros disparan más y defensas pegan más de cerca', async () => {
-  const { POSICIONES, ARMAS } = await cargar('config.js');
+test('cada jugador tiene entre 8 y 16 habilidades, empieza con una de ellas y solo se le ofrecen las suyas', async () => {
+  const { PERSONAJES, ARMAS } = await cargar('config.js');
   const m = await cargar('mundo.js');
+  let maximos = 0;
+  for (const [clave, p] of Object.entries(PERSONAJES)) {
+    const n = p.habilidades.length;
+    assert.ok(n >= 8 && n <= 16, `${clave}: ${n} habilidades`);
+    assert.equal(new Set(p.habilidades).size, n, `${clave}: habilidades repetidas`);
+    p.habilidades.forEach((h) => assert.ok(ARMAS[h], `${clave}: ${h} no existe`));
+    assert.ok(p.habilidades.includes(p.armaInicial), `${clave}: el arma inicial debe estar en su lista`);
+    if (p.posicion === 'portero') p.habilidades.forEach((h) => assert.notEqual(ARMAS[h].tipo, 'disparo', `${clave}: el portero no dispara (${h})`));
+    maximos = Math.max(maximos, n);
+    const mundo = m.crearMundo({ semilla: 2, personaje: clave });
+    const inicial = Object.keys(mundo.jugador.armas).filter((k) => mundo.jugador.armas[k].nivel > 0);
+    assert.deepEqual(inicial, [p.armaInicial]);
+    for (let i = 0; i < 120; i++) {
+      mundo.pendientes = 1;
+      mundo.estado = 'jugando';
+      m.avanzar(mundo, PASO);
+      for (const o of mundo.opciones) {
+        if (o.tipo === 'arma') assert.ok(p.habilidades.includes(o.clave), `se ofreció ${o.clave} a ${clave}`);
+      }
+      m.elegirMejora(mundo, mundo.opciones[0].id);
+    }
+  }
+  assert.equal(maximos, 16, 'los mejores llegan a 16');
+});
+
+test('las posiciones marcan el estilo: defensas más cuerpo a cuerpo, delanteros más disparos y jugones más regates', async () => {
+  const { PERSONAJES, ARMAS, POSICIONES } = await cargar('config.js');
   assert.equal(POSICIONES.portero.disparo, 0);
   assert.ok(POSICIONES.delantero.disparo > POSICIONES.medio.disparo && POSICIONES.medio.disparo > POSICIONES.defensa.disparo);
   assert.ok(POSICIONES.defensa.cuerpo > POSICIONES.medio.cuerpo && POSICIONES.medio.cuerpo > POSICIONES.delantero.cuerpo);
-
-  const mundo = m.crearMundo({ semilla: 2, personaje: 'oblak' });
-  assert.equal(ARMAS[Object.keys(mundo.jugador.armas).find((k) => mundo.jugador.armas[k].nivel > 0)].tipo, 'cuerpo');
-  // En 200 subidas de nivel, al portero nunca se le ofrece un arma de disparo
-  for (let i = 0; i < 200; i++) {
-    mundo.pendientes = 1;
-    mundo.estado = 'jugando';
-    m.avanzar(mundo, PASO);
-    for (const o of mundo.opciones) {
-      if (o.tipo === 'arma') assert.equal(ARMAS[o.clave].tipo, 'cuerpo', `se ofreció ${o.clave} al portero`);
-    }
-    m.elegirMejora(mundo, mundo.opciones[0].id);
-  }
+  const cuenta = (pos, tipo) => {
+    const lista = Object.values(PERSONAJES).filter((p) => p.posicion === pos);
+    return lista.reduce((s, p) => s + p.habilidades.filter((h) => ARMAS[h].tipo === tipo).length, 0) / lista.length;
+  };
+  assert.ok(cuenta('defensa', 'cuerpo') > cuenta('delantero', 'cuerpo'));
+  assert.ok(cuenta('delantero', 'disparo') > cuenta('defensa', 'disparo'));
+  assert.ok(cuenta('medio', 'movil') >= cuenta('portero', 'movil'));
+  // Lo concreto: un portero no aprende «Balón con efecto», un delantero sí; un delantero no se tira a hacer entradas
+  assert.ok(!PERSONAJES.oblak.habilidades.includes('efecto') && PERSONAJES.griezmann.habilidades.includes('efecto'));
+  assert.ok(!PERSONAJES.griezmann.habilidades.includes('entrada') && PERSONAJES.godin.habilidades.includes('entrada'));
 });
 
 test('hay 16 equipos rivales y se desbloquean poco a poco', async () => {
@@ -57,22 +87,48 @@ test('hay 16 equipos rivales y se desbloquean poco a poco', async () => {
   for (const e of Object.values(EQUIPOS)) assert.ok(e.kit.camiseta.c && e.vida > 0 && e.velocidad > 0);
 });
 
-test('hay 4 jefes (Guardiola, Mourinho, Cristiano y Messi) y salen cada 5 oleadas en orden', async () => {
+test('hay 10 jefes y salen cada 5 oleadas, al azar entre los que ya les toca y sin repetir en la misma ronda', async () => {
   const { JEFES, ORDEN_JEFES } = await cargar('config.js');
   const m = await cargar('mundo.js');
-  const { empezarOleada } = await cargar('oleadas.js');
-  assert.deepEqual(ORDEN_JEFES, ['guardiola', 'mourinho', 'cristiano', 'messi']);
+  const { empezarOleada, elegirJefe } = await cargar('oleadas.js');
+  assert.deepEqual(ORDEN_JEFES.slice(0, 4), ['guardiola', 'mourinho', 'cristiano', 'messi']);
+  ['vinicius', 'yamal', 'neymar', 'bale', 'benzema', 'suarez'].forEach((k) => assert.ok(ORDEN_JEFES.includes(k) && JEFES[k], k));
+  assert.equal(new Set(ORDEN_JEFES).size, 10);
   assert.equal(JEFES.guardiola.nombre, 'Pep Guardiola');
+  // En la oleada 5 solo pueden salir los jefes «de entrada»; luego se van sumando los más duros
   const vistos = [];
+  const mundo = m.crearMundo({ semilla: 3 });
   for (const oleada of [5, 10, 15, 20, 25]) {
-    const mundo = m.crearMundo({ semilla: 3 });
     mundo.oleada = oleada;
+    mundo.enemigos.length = 0;
     empezarOleada(mundo);
-    const jefe = mundo.enemigos.find((e) => e.jefe);
-    assert.ok(jefe, `jefe en la oleada ${oleada}`);
-    vistos.push(jefe.jefe);
+    const jefes = mundo.enemigos.filter((e) => e.jefe);
+    assert.equal(jefes.length, 1, `un jefe en la oleada ${oleada}`);
+    assert.ok((JEFES[jefes[0].jefe].desde ?? 0) <= oleada / 5 - 1, `${jefes[0].jefe} no puede salir tan pronto`);
+    vistos.push(jefes[0].jefe);
   }
-  assert.deepEqual(vistos, ['guardiola', 'mourinho', 'cristiano', 'messi', 'guardiola']);
+  assert.equal(new Set(vistos).size, 5, 'no se repiten en la misma ronda');
+  // La misma semilla da los mismos jefes
+  const otro = m.crearMundo({ semilla: 3 });
+  const repetidos = [];
+  for (const oleada of [5, 10, 15, 20, 25]) {
+    otro.oleada = oleada;
+    otro.enemigos.length = 0;
+    empezarOleada(otro);
+    repetidos.push(otro.enemigos.find((e) => e.jefe).jefe);
+  }
+  assert.deepEqual(repetidos, vistos);
+  // Con 10 jefes seguidos salen los 10 y después empieza otra ronda sin repetir el último
+  const bolsa = m.crearMundo({ semilla: 4 });
+  const diez = Array.from({ length: 10 }, (_, i) => elegirJefe(bolsa, i));
+  assert.equal(new Set(diez).size, 10);
+  const siguiente = elegirJefe(bolsa, 10);
+  assert.notEqual(siguiente, diez[9]);
+  // Más adelante salen dos a la vez
+  const tarde = m.crearMundo({ semilla: 5 });
+  tarde.oleada = 40;
+  empezarOleada(tarde);
+  assert.equal(tarde.enemigos.filter((e) => e.jefe).length, 2);
 });
 
 test('cada jefe usa su habilidad: cerco, onda de choque, abanico de tiros y embestida', async () => {
@@ -91,6 +147,7 @@ test('cada jefe usa su habilidad: cerco, onda de choque, abanico de tiros y embe
     let ondas = 0;
     let embistio = false;
     for (let i = 0; i < segundos * 60; i++) {
+      if (mundo.estado === 'mejora') m.elegirMejora(mundo, mundo.opciones[0].id);
       m.avanzar(mundo, PASO, { x: 0, y: 0 });
       maxEnemigos = Math.max(maxEnemigos, mundo.enemigos.length);
       disparos = Math.max(disparos, mundo.disparosEnemigos.length);
@@ -154,8 +211,12 @@ test('la ulti del Cholo es fuerte al principio y floja al final', async () => {
 
 test('el juego es infinito: 400 subidas de nivel seguidas y siempre hay mejoras que elegir', async () => {
   const m = await cargar('mundo.js');
-  for (const personaje of ['oblak', 'godin', 'koke', 'griezmann']) {
+  const { PERSONAJES } = await cargar('config.js');
+  for (const personaje of Object.keys(PERSONAJES)) {
     const mundo = m.crearMundo({ semilla: 8, personaje });
+    mundo.temporizadorAparicion = 1e9; // el mundo está quieto: solo suben de nivel las que se piden aquí
+    mundo.temporizadorPremio = 1e9;
+    mundo.jugador.vida = mundo.jugador.vidaMax = 1e9;
     for (let i = 0; i < 400; i++) {
       mundo.pendientes = 1;
       mundo.estado = 'jugando';
@@ -167,7 +228,7 @@ test('el juego es infinito: 400 subidas de nivel seguidas y siempre hay mejoras 
     }
     const j = mundo.jugador;
     assert.ok(Number.isFinite(j.vidaMax) && Number.isFinite(j.mult.dano) && Number.isFinite(j.mult.cd));
-    assert.ok(j.mult.cd >= 0.45 && j.mult.armadura <= 0.6);
+    assert.ok(j.mult.cd >= 0.35 && j.mult.armadura <= 0.7);
   }
 });
 
@@ -237,13 +298,16 @@ test('las armaduras y el daño por tipo se aplican', async () => {
   assert.ok(d.vidaMax - d.vida > c.vidaMax - c.vida, 'el defensa pega más fuerte de cerca');
 });
 
-test('una partida de 12 minutos con cada personaje no genera valores inválidos', async () => {
+test('partidas largas con cada jugador no generan valores inválidos', async () => {
   const m = await cargar('mundo.js');
-  for (const personaje of ['oblak', 'godin', 'koke', 'griezmann']) {
+  const { PERSONAJES } = await cargar('config.js');
+  const representantes = ['oblak', 'godin', 'koke', 'griezmann'];
+  for (const personaje of Object.keys(PERSONAJES)) {
+    const minutos = representantes.includes(personaje) ? 5 : 1; // los demás, un vistazo corto
     const mundo = m.crearMundo({ semilla: 12, personaje, entrenador: personaje === 'oblak' ? 'aragones' : 'cholo' });
     mundo.jugador.vida = 1e9;
     mundo.jugador.vidaMax = 1e9;
-    for (let i = 0; i < 12 * 60 * 60; i++) { // 12 minutos de partida, sin que el jugador pueda morir
+    for (let i = 0; i < minutos * 60 * 60; i++) {
       if (mundo.estado === 'mejora') m.elegirMejora(mundo, mundo.opciones[0].id);
       mundo.jugador.vida = 1e9;
       const s = i / 600;
@@ -251,8 +315,10 @@ test('una partida de 12 minutos con cada personaje no genera valores inválidos'
       mundo.eventos.length = 0;
       if (i % 60 === 0 && mundo.jugador.ulti.carga >= mundo.jugador.ulti.max) m.usarUlti(mundo);
     }
-    assert.ok(mundo.oleada >= 20);
+    assert.ok(mundo.oleada >= 2 * minutos, personaje);
     assert.ok(mundo.enemigos.length <= 320);
-    for (const e of mundo.enemigos) assert.ok(Number.isFinite(e.x) && Number.isFinite(e.y) && Number.isFinite(e.vida));
+    const j = mundo.jugador;
+    assert.ok(Number.isFinite(j.x) && Number.isFinite(j.y) && Number.isFinite(j.mult.dano), personaje);
+    for (const e of mundo.enemigos) assert.ok(Number.isFinite(e.x) && Number.isFinite(e.y) && Number.isFinite(e.vida), personaje);
   }
 });

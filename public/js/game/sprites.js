@@ -55,6 +55,18 @@ function pintarPelo(ctx, pelo, piel) {
       rect(ctx, c, 12, 3, 1, 2);
       rect(ctx, 'rgba(255,255,255,0.3)', 5, 1, 4, 1);
       break;
+    case 'rapado': // pelo muy corto, apenas una sombra
+      rect(ctx, c, 4, 1, 8, 1);
+      rect(ctx, c, 3, 2, 1, 2);
+      rect(ctx, c, 12, 2, 1, 2);
+      break;
+    case 'cresta': // cresta teñida hacia arriba
+      rect(ctx, c, 3, 2, 10, 1);
+      rect(ctx, c, 5, 0, 6, 2);
+      [6, 8, 10].forEach((x) => rect(ctx, c, x, 0, 1, 1));
+      rect(ctx, c, 3, 3, 1, 2);
+      rect(ctx, c, 12, 3, 1, 2);
+      break;
     default: // corto
       rect(ctx, c, 3, 1, 10, 2);
       rect(ctx, c, 3, 3, 1, 2);

@@ -1,6 +1,8 @@
 // Montaje del juego: pantallas (menú, pausa, mejora, final), bucle principal y conexión entre
 // la simulación (mundo.js), el dibujo (render.js), el sonido y la interfaz superpuesta (hud.js).
-import { MUNDO, PERSONAJES, POSICIONES, ENTRENADORES } from './config.js';
+import {
+  MUNDO, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, SINERGIAS,
+} from './config.js';
 import { crearMundo, avanzar, elegirMejora, resumen, usarUlti } from './mundo.js';
 import { retratoUrl, aspectoDe } from './sprites.js';
 import { dibujar, actualizarCamara } from './render.js';
@@ -9,9 +11,8 @@ import { crearAudio } from './audio.js';
 import { crearHud } from './hud.js';
 import { icono } from './iconos.js';
 import { formatearTiempo } from './util.js';
-import { leerStats, registrarPartida } from './marca.js';
+import { leerStats, registrarPartida, registrarSinergia } from './marca.js';
 import { leerAjustes, guardarAjustes, ZOOM } from './ajustes.js';
-import { resolver } from './terreno.js';
 
 const PLANTILLA = `
   <canvas class="juego__lienzo" role="img" aria-label="Zona de juego: tu colchonero rodeado de rivales"></canvas>
@@ -78,6 +79,9 @@ const PLANTILLA = `
       <button type="button" class="menu-item" data-accion="vestuario">
         ${icono('camiseta', 26)}<span><strong>Vestuario</strong><small>Elige a tu jugador</small></span>
       </button>
+      <button type="button" class="menu-item" data-accion="combos">
+        ${icono('estrella', 26)}<span><strong>Combinaciones</strong><small>Las metas: qué juntar</small></span>
+      </button>
       <button type="button" class="menu-item" data-accion="direccion">
         ${icono('pizarra', 26)}<span><strong>Dirección</strong><small>Elige a tu entrenador</small></span>
       </button>
@@ -92,12 +96,31 @@ const PLANTILLA = `
   </section>
 
   <section class="pantalla" data-pantalla="vestuario" role="dialog" aria-modal="true" aria-labelledby="juego-t-vest" hidden>
-    <div class="pantalla__caja pantalla__caja--ancha">
-      <p class="pantalla__sobretitulo">Vestuario</p>
-      <h2 id="juego-t-vest" class="pantalla__titulo">Elige a tu jugador</h2>
-      <p class="pantalla__texto">Todos los de una misma posición tienen las mismas estadísticas. Por ahora cambia la posición, no el jugador.</p>
-      <ul class="tarjetas" data-campo="personajes"></ul>
+    <div class="pantalla__caja pantalla__caja--vestuario">
+      <div class="vest__cabecera">
+        <div>
+          <p class="pantalla__sobretitulo">Vestuario</p>
+          <h2 id="juego-t-vest" class="pantalla__titulo">Elige a tu jugador</h2>
+        </div>
+        <p class="vest__aviso">Cada jugador tiene sus estadísticas y <strong>solo puede aprender las habilidades que encajan con su forma de jugar</strong>.</p>
+      </div>
+      <div class="vest__filtros" role="group" aria-label="Filtrar por posición" data-campo="filtros"></div>
+      <div class="vest">
+        <ul class="plantilla" data-campo="personajes" aria-label="Plantilla"></ul>
+        <aside class="vest__detalle" data-campo="detalle" aria-live="polite"></aside>
+      </div>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="cerrarAjustes" data-enfoque>${icono('volver', 18)} Listo</button></div>
+    </div>
+  </section>
+
+  <section class="pantalla" data-pantalla="combos" role="dialog" aria-modal="true" aria-labelledby="juego-t-combos" hidden>
+    <div class="pantalla__caja pantalla__caja--ancha">
+      <p class="pantalla__sobretitulo">Combinaciones</p>
+      <h2 id="juego-t-combos" class="pantalla__titulo">Las metas de la grada</h2>
+      <p class="pantalla__texto">Junta ciertas habilidades a cierto nivel durante la partida y se activa una combinación con un bonus extra. Algunas son más fuertes que otras: ¡descúbrelas todas!</p>
+      <p class="combos__cuenta" data-campo="combos-cuenta"></p>
+      <ul class="combos" data-campo="combos"></ul>
+      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Volver</button></div>
     </div>
   </section>
 
@@ -159,7 +182,8 @@ const PLANTILLA = `
         <li><strong>Muévete siempre.</strong> Corriendo sube tu <em>ritmo</em>: más daño, más experiencia y la ulti se carga sola. Si te quedas quieto, los rivales aprietan.</li>
         <li>Las armas atacan solas. Los diamantes azules dan experiencia y los <strong>premios</strong> del campo (flechas en el borde) te curan, suben de nivel o cargan la ulti.</li>
         <li><strong>Barro</strong>: te frena. <strong>Lluvia</strong>: los balones, tuyos y rivales, corren más. El campo cambia por tramos (estadio, cantera, campo de entrenamiento): <strong>gradas, corrales, pasillos, carteles, porterías y focos</strong> no se atraviesan, ni tú, ni los rivales, ni los balones. Hay que dar rodeos.</li>
-        <li>Algunos rivales embisten (se agachan antes) y otros disparan balones. Cada 5 oleadas llega un <strong>jefe</strong> con tres fases.</li>
+        <li>Algunos rivales embisten (se agachan antes) y otros disparan balones. Cada 5 oleadas llega un <strong>jefe</strong> con tres fases; salen al azar entre todos y cada vez son más duros.</li>
+        <li>Cada jugador solo aprende <strong>las habilidades de su estilo</strong> (un portero no chuta, un defensa mete cabezazos y entradas…). Al juntar ciertas habilidades se activan <strong>combinaciones</strong> con bonus: mira las metas en el menú.</li>
       </ul>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Entendido</button></div>
     </div>
@@ -202,8 +226,8 @@ const PLANTILLA = `
   <p class="sr-only" data-campo="anuncio" role="status" aria-live="polite"></p>
 `;
 
-const PANTALLAS = ['hub', 'vestuario', 'direccion', 'ranking', 'ajustes', 'ayuda', 'pausa', 'mejora', 'fin'];
-const PANELES_DEL_HUB = new Set(['vestuario', 'direccion', 'ranking', 'ajustes', 'ayuda']);
+const PANTALLAS = ['hub', 'vestuario', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda', 'pausa', 'mejora', 'fin'];
+const PANELES_DEL_HUB = new Set(['vestuario', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda']);
 
 const textoPartida = (f) => `${formatearTiempo(f.tiempo)} · ${PERSONAJES[f.personaje]?.nombre ?? '—'} · oleada ${f.oleada}`;
 
@@ -239,19 +263,20 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     if (ENTRENADORES[guardada?.entrenador]) eleccion.entrenador = guardada.entrenador;
   } catch { /* sin almacenamiento: se usa la elección por defecto */ }
 
-  const nuevoMundo = () => {
-    const m = crearMundo({ efectosReducidos: !ajustes.efectos, ...eleccion });
+  /** `paraMenu`: el mundo del menú tiene un pasillo libre de obstáculos por el que pasea el muñeco. */
+  const nuevoMundo = (paraMenu = false) => {
+    const m = crearMundo({ efectosReducidos: !ajustes.efectos, ...eleccion, pasilloMenu: paraMenu });
     m.sinNumeros = !ajustes.numeros;
     return m;
   };
-  let mundo = nuevoMundo();
+  let mundo = nuevoMundo(true);
   let fase = 'hub'; // hub | jugando | pausa | mejora | fin
   let pantallaActual = 'hub';
   let vista = { ancho: 800, alto: 600, escala: 1, dpr: 1 };
   let acumulador = 0;
   let previo = performance.now();
   let raf = 0;
-  let rumboHub = 1; // en el menú el jugador pasea por el campo
+  let filtroPos = 'todos'; // filtro de posición del vestuario
 
   const entrada = crearEntrada(contenedor, { alPausar: alternarPausa, activo: () => fase === 'jugando' });
 
@@ -353,19 +378,79 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       <span class="stat__barra"><span style="width:${Math.round(Math.max(0, Math.min(1, fraccion)) * 100)}%"></span></span>
       <span class="stat__valor">${texto}</span></div>`;
 
-  function pintarSeleccion() {
-    q('[data-campo="personajes"]').innerHTML = Object.entries(PERSONAJES).map(([clave, p]) => {
-      const pos = POSICIONES[p.posicion];
-      return `<li><button type="button" class="tarjeta" data-personaje="${clave}" aria-pressed="${eleccion.personaje === clave}">
-        <img class="tarjeta__retrato" alt="" width="80" height="100" src="${retratoUrl(`p:${clave}`, aspectoDe('personaje', clave))}">
-        <span class="tarjeta__nombre">${p.nombre}</span>
-        <span class="tarjeta__posicion">${pos.nombre}</span>
-        ${barraEstadistica('Vida', pos.vida / 175, pos.vida)}
-        ${barraEstadistica('Velocidad', pos.vel / 190, pos.vel)}
-        ${barraEstadistica('Cuerpo a cuerpo', pos.cuerpo / 1.4, `x${pos.cuerpo}`)}
-        ${barraEstadistica('Disparo', pos.disparo / 1.4, pos.disparo ? `x${pos.disparo}` : 'No')}
+  const ORDEN_POSICIONES = ['portero', 'defensa', 'medio', 'delantero'];
+  const NOMBRE_TIPO = { cuerpo: 'Cuerpo a cuerpo', disparo: 'Disparo', movil: 'Regates y movilidad' };
+
+  /** Estadísticas reales de un jugador: las de su posición retocadas con sus propios rasgos. */
+  function estadisticasDe(clave) {
+    const p = PERSONAJES[clave];
+    const pos = POSICIONES[p.posicion];
+    const m = p.mods ?? {};
+    return {
+      vida: Math.round(pos.vida * (m.vida ?? 1)),
+      vel: Math.round(pos.vel * (m.vel ?? 1)),
+      cuerpo: Math.round(pos.cuerpo * (m.cuerpo ?? 1) * 100) / 100,
+      disparo: Math.round(pos.disparo * (m.disparo ?? 1) * 100) / 100,
+    };
+  }
+
+  function pintarDetalle() {
+    const clave = eleccion.personaje;
+    const p = PERSONAJES[clave];
+    const pos = POSICIONES[p.posicion];
+    const st = estadisticasDe(clave);
+    const habs = p.habilidades.map((k) => ({ k, ...ARMAS[k] }));
+    const porTipo = ['cuerpo', 'disparo', 'movil'].map((tipo) => ({ tipo, lista: habs.filter((h) => h.tipo === tipo) })).filter((g) => g.lista.length);
+    q('[data-campo="detalle"]').innerHTML = `
+      <div class="detalle__cabecera">
+        <img class="detalle__retrato" alt="" width="96" height="120" src="${retratoUrl(`p:${clave}`, aspectoDe('personaje', clave))}">
+        <div>
+          <h3 class="detalle__nombre">${p.nombre}</h3>
+          <p class="detalle__posicion">${pos.nombre}</p>
+          <p class="detalle__total"><strong>${habs.length}</strong> habilidades</p>
+        </div>
+      </div>
+      <p class="detalle__estilo">${p.estilo}</p>
+      <div class="detalle__stats">
+        ${barraEstadistica('Vida', st.vida / 190, st.vida)}
+        ${barraEstadistica('Velocidad', st.vel / 195, st.vel)}
+        ${barraEstadistica('Cuerpo a cuerpo', st.cuerpo / 1.5, `x${st.cuerpo}`)}
+        ${barraEstadistica('Disparo', st.disparo / 1.5, st.disparo ? `x${st.disparo}` : 'No')}
+      </div>
+      <div class="detalle__habs">
+        ${porTipo.map((g) => `
+          <h4 class="detalle__tipo">${NOMBRE_TIPO[g.tipo]} <span>${g.lista.length}</span></h4>
+          <ul class="habs">${g.lista.map((h) => `
+            <li class="hab hab--${g.tipo}${h.k === p.armaInicial ? ' hab--inicial' : ''}" title="${h.descripcion}">
+              ${icono(h.icono, 18)}<span>${h.nombre}</span>${h.k === p.armaInicial ? '<em>inicial</em>' : ''}
+            </li>`).join('')}</ul>`).join('')}
+      </div>`;
+  }
+
+  function pintarVestuario() {
+    const lista = q('[data-campo="personajes"]');
+    const scroll = lista.scrollTop;
+    const claves = Object.keys(PERSONAJES);
+    q('[data-campo="filtros"]').innerHTML = ['todos', ...ORDEN_POSICIONES].map((f) => {
+      const n = f === 'todos' ? claves.length : claves.filter((c) => PERSONAJES[c].posicion === f).length;
+      if (!n) return '';
+      return `<button type="button" class="filtro" data-filtro="${f}" aria-pressed="${filtroPos === f}">${f === 'todos' ? 'Todos' : POSICIONES[f].nombre} <span>${n}</span></button>`;
+    }).join('');
+    const visibles = claves
+      .filter((c) => filtroPos === 'todos' || PERSONAJES[c].posicion === filtroPos)
+      .sort((a, b) => ORDEN_POSICIONES.indexOf(PERSONAJES[a].posicion) - ORDEN_POSICIONES.indexOf(PERSONAJES[b].posicion));
+    lista.innerHTML = visibles.map((clave) => {
+      const p = PERSONAJES[clave];
+      return `<li><button type="button" class="ficha" data-personaje="${clave}" aria-pressed="${eleccion.personaje === clave}">
+        <img class="ficha__retrato" alt="" width="40" height="50" src="${retratoUrl(`p:${clave}`, aspectoDe('personaje', clave))}">
+        <span class="ficha__texto"><span class="ficha__nombre">${p.nombre}</span><span class="ficha__posicion">${POSICIONES[p.posicion].nombre} · ${p.habilidades.length} hab.</span></span>
       </button></li>`;
     }).join('');
+    lista.scrollTop = scroll;
+    pintarDetalle();
+  }
+
+  function pintarDireccion() {
     q('[data-campo="entrenadores"]').innerHTML = Object.entries(ENTRENADORES).map(([clave, e]) => `
       <li><button type="button" class="tarjeta tarjeta--entrenador" data-entrenador="${clave}" aria-pressed="${eleccion.entrenador === clave}">
         <img class="tarjeta__retrato" alt="" width="80" height="100" src="${retratoUrl(`c:${clave}`, aspectoDe('entrenador', clave))}">
@@ -375,12 +460,45 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       </button></li>`).join('');
   }
 
+  /** Panel de combinaciones: las descubiertas se explican; las que no, solo dan una pista. */
+  function pintarCombos() {
+    const st = leerStats(usuario);
+    const hechas = new Set(st.sinergias);
+    const yo = PERSONAJES[eleccion.personaje];
+    const nombreDe = (k) => ARMAS[k]?.nombre ?? k;
+    const esPasiva = (k) => !ARMAS[k];
+    const claves = Object.keys(SINERGIAS);
+    q('[data-campo="combos-cuenta"]').textContent = `${claves.filter((k) => hechas.has(k)).length} de ${claves.length} descubiertas`;
+    q('[data-campo="combos"]').innerHTML = claves.map((k) => {
+      const c = SINERGIAS[k];
+      const conocida = hechas.has(k);
+      const armasNecesarias = Object.keys(c.requiere).filter((x) => !esPasiva(x));
+      const posible = armasNecesarias.every((x) => yo.habilidades.includes(x));
+      const requisitos = c.distintas
+        ? `${c.distintas.cuantas} habilidades distintas al nivel ${c.distintas.nivel}`
+        : Object.entries(c.requiere).map(([x, n]) => `${nombreDe(x)} <b>nv ${n}</b>`).join(' + ');
+      const pista = c.distintas
+        ? `Domina ${c.distintas.cuantas} habilidades a la vez.`
+        : `Necesita ${Object.keys(c.requiere).length} habilidades; una de ellas: ${nombreDe(Object.keys(c.requiere)[0])}.`;
+      return `<li class="combo${conocida ? ' combo--hecha' : ''}${posible ? '' : ' combo--imposible'}">
+        <span class="combo__icono">${icono(conocida ? c.icono : 'candado', 24)}</span>
+        <span class="combo__cuerpo">
+          <strong>${conocida ? c.nombre : '???'}</strong>
+          <span>${conocida ? c.descripcion : pista}</span>
+          ${conocida ? `<small>${requisitos}</small>` : ''}
+        </span>
+        <span class="combo__marca">${posible ? `Posible con ${yo.nombre}` : `No para ${yo.nombre}`}</span>
+      </li>`;
+    }).join('');
+  }
+
   function elegirOpcion(tipo, clave) {
     eleccion = { ...eleccion, [tipo]: clave };
     try { localStorage.setItem(CLAVE_ELECCION, JSON.stringify(eleccion)); } catch { /* da igual */ }
     contenedor.querySelectorAll(`[data-${tipo}]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[tipo] === clave)));
-    mundo = nuevoMundo(); // el menú enseña al jugador elegido paseando
+    mundo = nuevoMundo(true); // el menú enseña al jugador elegido paseando
     pintarCartelJugador();
+    if (tipo === 'personaje') pintarVestuario();
   }
 
   // En partida la cabecera de la web se esconde para no quitar visión (la clase la oculta con CSS)
@@ -391,13 +509,21 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     if (fase !== 'hub') {
       fase = 'hub';
       zonaHud.hidden = true;
-      mundo = nuevoMundo();
+      mundo = nuevoMundo(true);
       entrada.soltarTodo();
     }
     if (panel === 'hub') {
       pintarTiempos();
       pintarCartelJugador();
-    } else if (panel === 'vestuario' || panel === 'direccion') pintarSeleccion();
+    } else if (panel === 'vestuario') {
+      pintarVestuario();
+      requestAnimationFrame(() => { // la lista se desplaza hasta el jugador elegido (sin mover el resto de la pantalla)
+        const lista = q('[data-campo="personajes"]');
+        const ficha = lista.querySelector('.ficha[aria-pressed="true"]');
+        if (ficha) lista.scrollTop = Math.max(0, ficha.offsetTop - lista.offsetTop - lista.clientHeight / 2 + ficha.offsetHeight / 2);
+      });
+    } else if (panel === 'direccion') pintarDireccion();
+    else if (panel === 'combos') pintarCombos();
     else if (panel === 'ranking') pintarRanking();
     else if (panel === 'ajustes') pintarAjustes();
     mostrar(panel);
@@ -405,7 +531,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
 
   function empezar() {
     audio.activar();
-    mundo = nuevoMundo();
+    mundo = nuevoMundo(false);
     hud.reiniciar();
     entrada.soltarTodo();
     acumulador = 0;
@@ -495,6 +621,12 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
         <kbd class="opcion__tecla" aria-hidden="true">${i + 1}</kbd>`;
       boton.querySelector('.opcion__nombre').textContent = o.nombre;
       boton.querySelector('.opcion__descripcion').textContent = o.descripcion;
+      if (o.sinergia) {
+        const nota = document.createElement('span');
+        nota.className = 'opcion__sinergia';
+        nota.textContent = `★ Completa la combinación «${o.sinergia}»`;
+        boton.querySelector('.opcion__cuerpo').append(nota);
+      }
       li.append(boton);
       return li;
     }));
@@ -525,6 +657,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       <div><dt>Nivel</dt><dd>${r.nivel}</dd></div>
       <div><dt>Rivales eliminados</dt><dd>${r.bajas}</dd></div>
       <div><dt>Jefes derrotados</dt><dd>${r.jefes}</dd></div>
+      ${r.sinergias.length ? `<div><dt>Combinaciones</dt><dd>${r.sinergias.map((k) => SINERGIAS[k].nombre).join(', ')}</dd></div>` : ''}
       <div><dt>Jugador</dt><dd>${PERSONAJES[r.personaje].nombre}</dd></div>
       <div><dt>Entrenador</dt><dd>${ENTRENADORES[r.entrenador].nombre}</dd></div>`;
     // Pequeña pausa para que se vea el golpe final antes de tapar la pantalla
@@ -549,6 +682,10 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
         anunciar(ev.texto);
       } else if (ev.tipo === 'ulti') {
         hud.aviso(ev.texto, 'exito');
+      } else if (ev.tipo === 'sinergia') {
+        const nueva = registrarSinergia(usuario, ev.clave);
+        hud.aviso(`★ ${nueva ? 'Combinación nueva: ' : ''}${ev.nombre}`, 'exito');
+        anunciar(`Combinación conseguida: ${ev.nombre}. ${ev.descripcion}`);
       } else if (ev.tipo === 'jefe-derrotado') {
         hud.aviso(`¡${ev.nombre} eliminado!`, 'exito');
       }
@@ -563,12 +700,14 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     mundo.tiempo += dt;
     j.moviendo = true;
     j.dirX = 1;
+    j.dirY = 0;
     j.zona = null;
-    const x0 = j.x;
+    // Recto por un pasillo sin obstáculos (el mundo del menú lo deja libre): nunca se queda pillado
+    j.vx = 80;
+    j.vy = 0;
     j.x += 80 * dt;
-    j.y += rumboHub * 24 * dt;
-    if (resolver(mundo.terreno, j) && j.x - x0 < 30 * dt) rumboHub = -rumboHub; // si choca con una grada, la rodea
-    if (j.x > 9000) mundo = nuevoMundo();
+    j.y = 0;
+    if (j.x > 9000) mundo = nuevoMundo(true);
   }
 
   function bucle(ahora) {
@@ -623,6 +762,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     empezar,
     hub: () => irAlHub('hub'),
     vestuario: () => irAlHub('vestuario'),
+    combos: () => irAlHub('combos'),
     direccion: () => irAlHub('direccion'),
     ranking: () => irAlHub('ranking'),
     ajustes: () => irAlHub('ajustes'),
@@ -642,6 +782,12 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     const mejora = ev.target.closest('[data-mejora]');
     if (mejora) {
       elegir(mejora.dataset.mejora);
+      return;
+    }
+    const filtro = ev.target.closest('[data-filtro]');
+    if (filtro) {
+      filtroPos = filtro.dataset.filtro;
+      pintarVestuario();
       return;
     }
     const personaje = ev.target.closest('[data-personaje]');

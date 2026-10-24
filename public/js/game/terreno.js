@@ -10,8 +10,9 @@ function azar(semilla, cx, cy, canal) {
   return ((h ^ (h >>> 16)) >>> 0) / 4294967296;
 }
 
-export function crearTerreno(semilla = 1) {
-  return { semilla: (semilla >>> 0) % 2147483647, celdas: new Map() };
+/** `pasillo`: semialtura de una franja horizontal sin obstáculos (el menú pasea por ahí y nunca se atasca). */
+export function crearTerreno(semilla = 1, { pasillo = 0 } = {}) {
+  return { semilla: (semilla >>> 0) % 2147483647, celdas: new Map(), pasillo };
 }
 
 // Grosor de cada pieza. La grada es gruesa y alta; el cartel, fino.
@@ -174,6 +175,8 @@ export function celda(t, cx, cy) {
     const obs = est.obs.map((o, i) => ({ ...o, x: x0 + o.x, y: y0 + o.y, alto: ALTO_DE[o.tipo], id: `${clave}:${id}:${i}`, semilla: Math.floor(r() * 1e6) }));
     // Nada encima (ni pegado) del punto de salida
     if (obs.some((o) => distOrigen(o) < TERRENO.claroInicial)) return false;
+    // En el menú, nada en el camino del muñeco
+    if (t.pasillo && obs.some((o) => Math.abs(o.y) < t.pasillo + o.h / 2 + 40)) return false;
     // Ni encima de lo que ya hay en la celda
     const choca = (a, b) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 + 30 && Math.abs(a.y - b.y) < (a.h + b.h) / 2 + 30;
     if (obs.some((o) => c.obstaculos.some((p) => choca(o, p)))) return false;

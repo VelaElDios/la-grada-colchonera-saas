@@ -258,3 +258,66 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 /* Mientras se juega, la cabecera de la web se esconde: más campo a la vista y F11 va de maravilla */
 .en-partida .cabecera { display: none; }
 .en-partida .avisos { top: 72px; }
+
+/* ---------- Vestuario: plantilla filtrable + ficha del jugador ---------- */
+.pantalla__caja--vestuario { width: min(100%, 980px); height: min(calc(100vh - 100px), 700px); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.vest__cabecera { display: flex; justify-content: space-between; align-items: end; gap: var(--s-4); flex-wrap: wrap; }
+.vest__aviso { max-width: 360px; font-size: var(--t-xs); color: var(--gris-300); }
+.vest__filtros { display: flex; gap: var(--s-2); flex-wrap: wrap; }
+.filtro { padding: 6px 12px; border-radius: var(--r-pill); border: 1px solid var(--borde-fuerte); background: rgb(255 255 255 / 0.06); color: #fff; font-weight: 700; font-size: var(--t-xs); }
+.filtro span { margin-left: 4px; opacity: 0.6; }
+.filtro:hover { background: rgb(255 255 255 / 0.14); }
+.filtro[aria-pressed="true"] { background: #fff; color: var(--azul-900); }
+.vest { display: grid; grid-template-columns: minmax(230px, 300px) 1fr; grid-template-rows: minmax(0, 1fr); gap: var(--s-4); min-height: 0; }
+.plantilla { margin: 0; padding: 0 4px 0 0; list-style: none; display: grid; gap: 6px; align-content: start; overflow-y: auto; min-height: 0; }
+.ficha { width: 100%; display: flex; align-items: center; gap: var(--s-3); padding: 6px 10px; border-radius: var(--r-md); background: var(--azul-600); border: 2px solid var(--borde-fuerte); color: #fff; text-align: left; transition: background var(--t-rapida), border-color var(--t-rapida); }
+.ficha:hover { background: var(--azul-500); }
+.ficha:focus-visible { outline: none; box-shadow: var(--anillo); }
+.ficha[aria-pressed="true"] { border-color: #fff; background: var(--azul-500); box-shadow: 0 0 0 3px rgb(200 16 46 / 0.65); }
+.ficha__retrato { image-rendering: pixelated; width: 40px; height: 50px; object-fit: contain; flex: none; }
+.ficha__texto { display: grid; }
+.ficha__nombre { font-weight: 800; }
+.ficha__posicion { font-size: var(--t-xs); color: var(--gris-300); }
+.vest__detalle { display: grid; gap: var(--s-2); align-content: start; padding: var(--s-4); border-radius: var(--r-md); background: rgb(255 255 255 / 0.05); border: 1px solid var(--borde); overflow-y: auto; min-height: 0; }
+.detalle__cabecera { display: flex; gap: var(--s-3); align-items: center; }
+.detalle__retrato { image-rendering: pixelated; width: 72px; height: 90px; object-fit: contain; }
+.detalle__nombre { font-size: var(--t-xl); }
+.detalle__posicion { color: var(--rojo-texto); font-weight: 800; text-transform: uppercase; letter-spacing: 0.1em; font-size: var(--t-xs); }
+.detalle__total { font-size: var(--t-sm); color: var(--gris-300); }
+.detalle__total strong { color: #fff; font-size: var(--t-lg); }
+.detalle__estilo { color: var(--gris-300); font-size: var(--t-sm); }
+.detalle__stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2) var(--s-4); }
+.detalle__stats .stat { font-size: 11px; }
+.detalle__stats .stat__valor { display: block; font-weight: 800; color: #fff; }
+.detalle__tipo { margin-top: var(--s-2); font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--gris-300); }
+.detalle__tipo span { color: #fff; margin-left: 4px; }
+.habs { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.hab { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px 4px 8px; border-radius: var(--r-pill); font-size: var(--t-xs); font-weight: 700; background: rgb(255 255 255 / 0.08); border: 1px solid var(--borde-fuerte); }
+.hab em { font-style: normal; font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--ambar); }
+.hab--cuerpo { border-color: rgb(255 123 139 / 0.7); }
+.hab--disparo { border-color: rgb(255 209 102 / 0.8); }
+.hab--movil { border-color: rgb(122 162 255 / 0.8); }
+.hab--inicial { background: rgb(255 255 255 / 0.18); }
+@media (max-width: 760px) {
+  .pantalla__caja--vestuario { height: auto; }
+  .vest { grid-template-columns: 1fr; grid-template-rows: auto; }
+  .plantilla { grid-auto-flow: column; grid-auto-columns: 210px; overflow-x: auto; overflow-y: hidden; max-height: none; padding-bottom: 6px; }
+  .vest__detalle { overflow: visible; }
+  .detalle__stats { grid-template-columns: 1fr; }
+}
+
+/* ---------- Combinaciones (las metas) ---------- */
+.combos__cuenta { font-weight: 800; color: var(--ambar); }
+.combos { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2); max-height: min(42vh, 360px); overflow-y: auto; }
+.combo { display: grid; grid-template-columns: auto 1fr; gap: 4px var(--s-3); padding: var(--s-3); border-radius: var(--r-md); background: rgb(255 255 255 / 0.05); border: 1px solid var(--borde); color: var(--gris-300); }
+.combo--hecha { background: rgb(255 209 102 / 0.1); border-color: rgb(255 209 102 / 0.7); color: #fff; }
+.combo__icono { grid-row: 1 / span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-md); background: rgb(0 0 0 / 0.25); }
+.combo--hecha .combo__icono { color: var(--ambar); }
+.combo__cuerpo { display: grid; gap: 2px; font-size: var(--t-sm); }
+.combo__cuerpo strong { color: #fff; }
+.combo__cuerpo small { font-size: 11px; color: var(--gris-300); }
+.combo__marca { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #8ee6a0; }
+.combo--imposible .combo__marca { color: var(--gris-300); }
+.pieza--sinergia { border-color: rgb(255 209 102 / 0.95); box-shadow: 0 0 8px rgb(255 209 102 / 0.5); }
+.opcion__sinergia { display: block; margin-top: 2px; font-size: 11px; font-weight: 800; color: var(--ambar); }
+@media (max-width: 700px) { .combos { grid-template-columns: 1fr; } }
