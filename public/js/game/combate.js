@@ -1,5 +1,5 @@
 // Daño, muertes, recompensas y efectos visuales sencillos (números flotantes y partículas).
-import { MUNDO, EQUIPOS, JEFES } from './config.js';
+import { MUNDO, EQUIPOS, JEFES, MOVIMIENTO } from './config.js';
 
 const MAX_TEXTOS = 40;
 const MAX_PARTICULAS = 260;
@@ -40,7 +40,8 @@ export function curar(mundo, cantidad) {
 /** Multiplicador de daño del jugador según el tipo de ataque ('cuerpo', 'disparo' o 'ulti'). */
 export function multiplicadorDano(jugador, tipo) {
   const porTipo = tipo === 'disparo' ? jugador.mult.disparo : tipo === 'cuerpo' ? jugador.mult.cuerpo : 1;
-  return jugador.mult.dano * porTipo * (jugador.animo > 0 ? jugador.bonoAnimo : 1);
+  const ritmo = 1 + MOVIMIENTO.bonoDano * (jugador.ritmo ?? 0); // correr da más daño
+  return jugador.mult.dano * porTipo * ritmo * (jugador.animo > 0 ? jugador.bonoAnimo : 1);
 }
 
 /**
@@ -56,7 +57,7 @@ export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo =
     enemigo.kx += empuje[0] * velEmpuje * enemigo.freno;
     enemigo.ky += empuje[1] * velEmpuje * enemigo.freno;
   }
-  crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), enemigo.jefe ? '#ffd166' : '#ffffff');
+  if (!mundo.sinNumeros) crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), enemigo.jefe ? '#ffd166' : '#ffffff');
   if (enemigo.vida <= 0) matar(mundo, enemigo);
   else mundo.eventos.push({ tipo: 'golpe' });
 }

@@ -9,7 +9,9 @@ import { crearAudio } from './audio.js';
 import { crearHud } from './hud.js';
 import { icono } from './iconos.js';
 import { formatearTiempo } from './util.js';
-import { leerMarca, guardarMarca, textoMarca } from './marca.js';
+import { leerStats, registrarPartida } from './marca.js';
+import { leerAjustes, guardarAjustes, ZOOM } from './ajustes.js';
+import { resolver } from './terreno.js';
 
 const PLANTILLA = `
   <canvas class="juego__lienzo" role="img" aria-label="Zona de juego: tu colchonero rodeado de rivales"></canvas>
@@ -43,42 +45,121 @@ const PLANTILLA = `
       <span class="ulti__barra" aria-hidden="true"><span class="ulti__relleno" data-hud="ulti-barra"></span></span>
       <span class="ulti__texto"><strong>ULTI</strong><span data-hud="ulti-nombre">0 %</span><kbd aria-hidden="true">Espacio</kbd></span>
     </button>
+    <p class="hud__zona" data-hud="zona" hidden></p>
     <div class="hud__xp">
+      <div class="hud__ritmo" data-hud="ritmo" data-estado="normal" aria-hidden="true">
+        <span class="hud__ritmo-texto" data-hud="ritmo-texto">Ritmo</span>
+        <span class="hud__ritmo-barra"><span data-hud="ritmo-barra"></span></span>
+      </div>
       <span class="hud__nivel" data-hud="nivel">Nivel 1</span>
       <div class="barra barra--xp" aria-hidden="true"><div class="barra__relleno" data-hud="xp-barra"></div></div>
     </div>
   </div>
 
-  <section class="pantalla" data-pantalla="menu" role="dialog" aria-modal="true" aria-labelledby="juego-t-menu">
-    <div class="pantalla__caja">
-      <p class="pantalla__sobretitulo">Supervivencia rojiblanca</p>
-      <h2 id="juego-t-menu" class="pantalla__titulo">Aguanta, colchonero</h2>
-      <p class="pantalla__texto">Los rivales llegan en oleadas y no se acaban. Recoge la experiencia que sueltan, sube de nivel y elige mejoras para resistir cada vez más tiempo.</p>
-      <ul class="instrucciones">
-        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o las flechas para moverte. En el móvil, arrastra el dedo por la pantalla.</li>
-        <li>Las armas atacan solas: tú solo tienes que esquivar.</li>
-        <li>Los diamantes azules dan experiencia. <kbd>Esc</kbd> pausa la partida.</li>
-        <li>Con las bajas se carga la ulti de tu entrenador: <kbd>Espacio</kbd> o el botón <strong>ULTI</strong> para lanzarla.</li>
-      </ul>
-      <p class="pantalla__marca" data-campo="marca"></p>
-      <div class="pantalla__acciones">
-        <button type="button" class="btn btn--primario btn--grande" data-accion="jugar" data-enfoque>Jugar</button>
-      </div>
+  <section class="hub" data-pantalla="hub" aria-labelledby="juego-t-hub">
+    <h2 id="juego-t-hub" class="sr-only">Menú principal</h2>
+    <aside class="panel hub__tiempos" aria-labelledby="juego-t-tiempos">
+      <h3 id="juego-t-tiempos" class="panel__titulo">Tus tiempos</h3>
+      <div data-campo="tiempos"></div>
+    </aside>
+    <div class="hub__centro">
+      <p class="hub__logo" aria-hidden="true"><span>La Grada</span><strong>Colchonera</strong></p>
+      <button type="button" class="hub__jugador" data-accion="vestuario" aria-label="Cambiar de jugador en el vestuario">
+        <span class="hub__nombre" data-campo="nombre-jugador"></span>
+        <span class="hub__entrenador" data-campo="nombre-entrenador"></span>
+      </button>
+    </div>
+    <nav class="panel hub__menu" aria-label="Menú del juego">
+      <button type="button" class="menu-item menu-item--jugar" data-accion="jugar" data-enfoque>
+        ${icono('jugar', 26)}<span><strong>Jugar</strong><small>Sal al campo y aguanta</small></span>
+      </button>
+      <button type="button" class="menu-item" data-accion="vestuario">
+        ${icono('camiseta', 26)}<span><strong>Vestuario</strong><small>Elige a tu jugador</small></span>
+      </button>
+      <button type="button" class="menu-item" data-accion="direccion">
+        ${icono('pizarra', 26)}<span><strong>Dirección</strong><small>Elige a tu entrenador</small></span>
+      </button>
+      <button type="button" class="menu-item" data-accion="ranking">
+        ${icono('trofeo', 26)}<span><strong>Ranking</strong><small>Los mejores de la grada</small></span>
+      </button>
+      <button type="button" class="menu-item" data-accion="ajustes">
+        ${icono('ajustes', 26)}<span><strong>Ajustes</strong><small>Sonido, gráficos y controles</small></span>
+      </button>
+    </nav>
+    <button type="button" class="btn btn--secundario hub__ayuda" data-accion="ayuda">${icono('ayuda', 18)} Cómo se juega</button>
+  </section>
+
+  <section class="pantalla" data-pantalla="vestuario" role="dialog" aria-modal="true" aria-labelledby="juego-t-vest" hidden>
+    <div class="pantalla__caja pantalla__caja--ancha">
+      <p class="pantalla__sobretitulo">Vestuario</p>
+      <h2 id="juego-t-vest" class="pantalla__titulo">Elige a tu jugador</h2>
+      <p class="pantalla__texto">Todos los de una misma posición tienen las mismas estadísticas. Por ahora cambia la posición, no el jugador.</p>
+      <ul class="tarjetas" data-campo="personajes"></ul>
+      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Listo</button></div>
     </div>
   </section>
 
-  <section class="pantalla" data-pantalla="seleccion" role="dialog" aria-modal="true" aria-labelledby="juego-t-sel" hidden>
+  <section class="pantalla" data-pantalla="direccion" role="dialog" aria-modal="true" aria-labelledby="juego-t-dir" hidden>
     <div class="pantalla__caja pantalla__caja--ancha">
-      <p class="pantalla__sobretitulo">Antes de salir al campo</p>
-      <h2 id="juego-t-sel" class="pantalla__titulo">Elige jugador y entrenador</h2>
-      <h3 class="seleccion__subtitulo">Jugador</h3>
-      <ul class="tarjetas" data-campo="personajes"></ul>
-      <h3 class="seleccion__subtitulo">Entrenador</h3>
+      <p class="pantalla__sobretitulo">Dirección deportiva</p>
+      <h2 id="juego-t-dir" class="pantalla__titulo">Elige a tu entrenador</h2>
+      <p class="pantalla__texto">Mejora tus estadísticas y te da una ulti que se carga con las bajas… y corriendo.</p>
       <ul class="tarjetas tarjetas--dos" data-campo="entrenadores"></ul>
-      <div class="pantalla__acciones">
-        <button type="button" class="btn btn--primario btn--grande" data-accion="empezar" data-enfoque>¡Al campo!</button>
-        <button type="button" class="btn btn--fantasma" data-accion="volver-menu">Atrás</button>
-      </div>
+      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Listo</button></div>
+    </div>
+  </section>
+
+  <section class="pantalla" data-pantalla="ranking" role="dialog" aria-modal="true" aria-labelledby="juego-t-rank" hidden>
+    <div class="pantalla__caja">
+      <p class="pantalla__sobretitulo">Ranking</p>
+      <h2 id="juego-t-rank" class="pantalla__titulo">Tus mejores partidas</h2>
+      <div data-campo="mejores"></div>
+      <p class="pantalla__marca">El ranking de toda la grada llegará pronto: aquí podrás compararte con el resto de colchoneros.</p>
+      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Volver</button></div>
+    </div>
+  </section>
+
+  <section class="pantalla" data-pantalla="ajustes" role="dialog" aria-modal="true" aria-labelledby="juego-t-aj" hidden>
+    <div class="pantalla__caja">
+      <p class="pantalla__sobretitulo">Ajustes</p>
+      <h2 id="juego-t-aj" class="pantalla__titulo">Sonido, gráficos y controles</h2>
+      <fieldset class="ajustes__grupo">
+        <legend>Sonido</legend>
+        <label class="ajuste"><span>Volumen</span><input type="range" min="0" max="100" step="5" data-ajuste="volumen"><output data-campo="volumen-valor"></output></label>
+        <label class="ajuste ajuste--check"><input type="checkbox" data-ajuste="sonido"><span>Sonido activado</span></label>
+      </fieldset>
+      <fieldset class="ajustes__grupo">
+        <legend>Gráficos</legend>
+        <label class="ajuste ajuste--check"><input type="checkbox" data-ajuste="efectos"><span>Partículas y sacudidas de pantalla</span></label>
+        <label class="ajuste ajuste--check"><input type="checkbox" data-ajuste="numeros"><span>Números de daño sobre los rivales</span></label>
+        <label class="ajuste"><span>Cámara</span>
+          <select data-ajuste="zoom"><option value="cerca">Cerca</option><option value="normal">Normal</option><option value="lejos">Lejos (ves más campo)</option></select>
+        </label>
+      </fieldset>
+      <fieldset class="ajustes__grupo">
+        <legend>Controles</legend>
+        <ul class="instrucciones">
+          <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> o las flechas: moverte.</li>
+          <li><kbd>Espacio</kbd> o <kbd>E</kbd>: lanzar la ulti. <kbd>Esc</kbd> o <kbd>P</kbd>: pausa.</li>
+          <li><kbd>1</kbd><kbd>2</kbd><kbd>3</kbd>: elegir una mejora al subir de nivel.</li>
+        </ul>
+        <label class="ajuste ajuste--check"><input type="checkbox" data-ajuste="joystick"><span>Joystick táctil en el móvil</span></label>
+      </fieldset>
+      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Listo</button></div>
+    </div>
+  </section>
+
+  <section class="pantalla" data-pantalla="ayuda" role="dialog" aria-modal="true" aria-labelledby="juego-t-ayuda" hidden>
+    <div class="pantalla__caja">
+      <p class="pantalla__sobretitulo">Cómo se juega</p>
+      <h2 id="juego-t-ayuda" class="pantalla__titulo">Aguanta, colchonero</h2>
+      <ul class="instrucciones">
+        <li><strong>Muévete siempre.</strong> Corriendo sube tu <em>ritmo</em>: más daño, más experiencia y la ulti se carga sola. Si te quedas quieto, los rivales aprietan.</li>
+        <li>Las armas atacan solas. Los diamantes azules dan experiencia y los <strong>premios</strong> del campo (flechas en el borde) te curan, suben de nivel o cargan la ulti.</li>
+        <li><strong>Barro</strong>: te frena. <strong>Lluvia</strong>: los balones, tuyos y rivales, corren más. Las <strong>gradas</strong> no se atraviesan: ni tú, ni los rivales, ni los balones.</li>
+        <li>Algunos rivales embisten (se agachan antes) y otros disparan balones. Cada 5 oleadas llega un <strong>jefe</strong> con tres fases.</li>
+      </ul>
+      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Entendido</button></div>
     </div>
   </section>
 
@@ -88,7 +169,7 @@ const PLANTILLA = `
       <div class="pantalla__acciones pantalla__acciones--columna">
         <button type="button" class="btn btn--primario" data-accion="reanudar" data-enfoque>Seguir jugando</button>
         <button type="button" class="btn btn--secundario" data-accion="reiniciar">Empezar de nuevo</button>
-        <button type="button" class="btn btn--fantasma" data-accion="salir">Salir al inicio</button>
+        <button type="button" class="btn btn--fantasma" data-accion="hub">Volver al menú</button>
       </div>
     </div>
   </section>
@@ -110,14 +191,19 @@ const PLANTILLA = `
       <dl class="resultado" data-campo="resultado"></dl>
       <div class="pantalla__acciones">
         <button type="button" class="btn btn--primario" data-accion="reiniciar" data-enfoque>Jugar otra vez</button>
-        <button type="button" class="btn btn--secundario" data-accion="elegir">Cambiar jugador</button>
-        <button type="button" class="btn btn--fantasma" data-accion="salir">Salir al inicio</button>
+        <button type="button" class="btn btn--secundario" data-accion="vestuario">Vestuario</button>
+        <button type="button" class="btn btn--fantasma" data-accion="hub">Menú</button>
       </div>
     </div>
   </section>
 
   <p class="sr-only" data-campo="anuncio" role="status" aria-live="polite"></p>
 `;
+
+const PANTALLAS = ['hub', 'vestuario', 'direccion', 'ranking', 'ajustes', 'ayuda', 'pausa', 'mejora', 'fin'];
+const PANELES_DEL_HUB = new Set(['vestuario', 'direccion', 'ranking', 'ajustes', 'ayuda']);
+
+const textoPartida = (f) => `${formatearTiempo(f.tiempo)} · ${PERSONAJES[f.personaje]?.nombre ?? '—'} · oleada ${f.oleada}`;
 
 /**
  * Monta el juego dentro de `contenedor`.
@@ -132,13 +218,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   const q = (sel) => contenedor.querySelector(sel);
   const lienzo = q('.juego__lienzo');
   const ctx = lienzo.getContext('2d');
-  const pantallas = {
-    menu: q('[data-pantalla="menu"]'),
-    seleccion: q('[data-pantalla="seleccion"]'),
-    pausa: q('[data-pantalla="pausa"]'),
-    mejora: q('[data-pantalla="mejora"]'),
-    fin: q('[data-pantalla="fin"]'),
-  };
+  const pantallas = Object.fromEntries(PANTALLAS.map((n) => [n, q(`[data-pantalla="${n}"]`)]));
   const zonaHud = q('[data-zona="hud"]');
   const anuncio = q('[data-campo="anuncio"]');
   const botonSonido = q('[data-accion="sonido"]');
@@ -146,6 +226,8 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   const audio = crearAudio();
   const hud = crearHud(contenedor);
   const reducirMovimiento = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  let ajustes = leerAjustes();
+  if (reducirMovimiento && localStorage.getItem('grada.ajustes') === null) ajustes.efectos = false;
 
   const CLAVE_ELECCION = 'grada.eleccion';
   let eleccion = { personaje: 'koke', entrenador: 'cholo' };
@@ -155,19 +237,62 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     if (ENTRENADORES[guardada?.entrenador]) eleccion.entrenador = guardada.entrenador;
   } catch { /* sin almacenamiento: se usa la elección por defecto */ }
 
-  const nuevoMundo = () => crearMundo({ efectosReducidos: reducirMovimiento, ...eleccion });
+  const nuevoMundo = () => {
+    const m = crearMundo({ efectosReducidos: !ajustes.efectos, ...eleccion });
+    m.sinNumeros = !ajustes.numeros;
+    return m;
+  };
   let mundo = nuevoMundo();
-  let fase = 'menu'; // menu | seleccion | jugando | pausa | mejora | fin
+  let fase = 'hub'; // hub | jugando | pausa | mejora | fin
+  let pantallaActual = 'hub';
   let vista = { ancho: 800, alto: 600, escala: 1, dpr: 1 };
   let acumulador = 0;
   let previo = performance.now();
   let raf = 0;
+  let rumboHub = 1; // en el menú el jugador pasea por el campo
 
   const entrada = crearEntrada(contenedor, { alPausar: alternarPausa, activo: () => fase === 'jugando' });
+
+  // --- Ajustes ----------------------------------------------------------------------------------
+
+  function aplicarAjustes() {
+    audio.volumen = ajustes.volumen / 100;
+    entrada.ponerJoystick(ajustes.joystick);
+    mundo.efectosReducidos = !ajustes.efectos;
+    mundo.sinNumeros = !ajustes.numeros;
+    ajustarTamano();
+  }
+
+  function pintarAjustes() {
+    q('[data-ajuste="volumen"]').value = String(ajustes.volumen);
+    q('[data-campo="volumen-valor"]').textContent = `${ajustes.volumen} %`;
+    q('[data-ajuste="sonido"]').checked = !audio.silenciado;
+    q('[data-ajuste="efectos"]').checked = ajustes.efectos;
+    q('[data-ajuste="numeros"]').checked = ajustes.numeros;
+    q('[data-ajuste="zoom"]').value = ajustes.zoom;
+    q('[data-ajuste="joystick"]').checked = ajustes.joystick;
+  }
+
+  function alCambiarAjuste(ev) {
+    const campo = ev.target.closest('[data-ajuste]');
+    if (!campo) return;
+    const clave = campo.dataset.ajuste;
+    if (clave === 'sonido') {
+      if (audio.silenciado === campo.checked) audio.alternar(); // «activado» = no silenciado
+      actualizarBotonSonido();
+      return;
+    }
+    ajustes = { ...ajustes, [clave]: campo.type === 'checkbox' ? campo.checked : campo.type === 'range' ? Number(campo.value) : campo.value };
+    guardarAjustes(ajustes);
+    aplicarAjustes();
+    q('[data-campo="volumen-valor"]').textContent = `${ajustes.volumen} %`;
+    if (clave === 'volumen') { audio.activar(); audio.reproducir('gema'); }
+  }
 
   // --- Pantallas ------------------------------------------------------------------------------
 
   function mostrar(nombre) {
+    pantallaActual = nombre;
     Object.entries(pantallas).forEach(([clave, nodo]) => { nodo.hidden = clave !== nombre; });
     if (nombre) {
       requestAnimationFrame(() => (pantallas[nombre].querySelector('[data-enfoque]') || pantallas[nombre].querySelector('button'))?.focus());
@@ -179,10 +304,6 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     setTimeout(() => { anuncio.textContent = texto; }, 30);
   }
 
-  function pintarMenu() {
-    q('[data-campo="marca"]').textContent = textoMarca(leerMarca(usuario));
-  }
-
   function actualizarBotonSonido() {
     const mudo = audio.silenciado;
     botonSonido.setAttribute('aria-pressed', String(mudo));
@@ -190,7 +311,40 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     botonSonido.innerHTML = icono(mudo ? 'silencio' : 'sonido', 20);
   }
 
-  // --- Selección de jugador y entrenador -----------------------------------------------------
+  // --- Menú: tus tiempos, vestuario, dirección y ranking --------------------------------------------
+
+  function pintarTiempos() {
+    const st = leerStats(usuario);
+    const caja = q('[data-campo="tiempos"]');
+    if (!st.partidas && !st.mejorTiempo) {
+      caja.innerHTML = '<p class="panel__vacio">Aún no has jugado ninguna partida. ¡Estrena la grada!</p>';
+      return;
+    }
+    const numero = (n) => n.toLocaleString('es-ES');
+    caja.innerHTML = `
+      <p class="tiempo-grande"><span>Mejor tiempo</span><strong>${formatearTiempo(st.mejorTiempo)}</strong></p>
+      <dl class="datos">
+        <div><dt>Oleada máxima</dt><dd>${st.mejorOleada}</dd></div>
+        <div><dt>Nivel máximo</dt><dd>${st.mejorNivel}</dd></div>
+        <div><dt>Partidas</dt><dd>${numero(st.partidas)}</dd></div>
+        <div><dt>Rivales derrotados</dt><dd>${numero(st.bajas)}</dd></div>
+        <div><dt>Jefes derrotados</dt><dd>${numero(st.jefes)}</dd></div>
+      </dl>
+      ${st.ultimas.length ? `<h4 class="panel__subtitulo">Últimas partidas</h4><ol class="lista-partidas">${st.ultimas.slice(0, 4).map((f) => `<li>${textoPartida(f)}</li>`).join('')}</ol>` : ''}`;
+  }
+
+  function pintarCartelJugador() {
+    q('[data-campo="nombre-jugador"]').textContent = PERSONAJES[eleccion.personaje].nombre;
+    q('[data-campo="nombre-entrenador"]').textContent = `con ${ENTRENADORES[eleccion.entrenador].nombre}`;
+  }
+
+  function pintarRanking() {
+    const st = leerStats(usuario);
+    q('[data-campo="mejores"]').innerHTML = st.mejores.length
+      ? `<ol class="ranking">${st.mejores.map((f, i) => `
+          <li><span class="ranking__puesto">${i + 1}</span><span class="ranking__datos">${textoPartida(f)}</span><span class="ranking__extra">${f.bajas} rivales</span></li>`).join('')}</ol>`
+      : '<p class="panel__vacio">Todavía no hay partidas. ¡Sal al campo y marca un tiempo!</p>';
+  }
 
   const barraEstadistica = (etiqueta, fraccion, texto) => `
     <div class="stat"><span class="stat__etiqueta">${etiqueta}</span>
@@ -204,8 +358,8 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
         <img class="tarjeta__retrato" alt="" width="80" height="100" src="${retratoUrl(`p:${clave}`, aspectoDe('personaje', clave))}">
         <span class="tarjeta__nombre">${p.nombre}</span>
         <span class="tarjeta__posicion">${pos.nombre}</span>
-        ${barraEstadistica('Vida', pos.vida / 170, pos.vida)}
-        ${barraEstadistica('Velocidad', pos.vel / 160, pos.vel)}
+        ${barraEstadistica('Vida', pos.vida / 175, pos.vida)}
+        ${barraEstadistica('Velocidad', pos.vel / 190, pos.vel)}
         ${barraEstadistica('Cuerpo a cuerpo', pos.cuerpo / 1.4, `x${pos.cuerpo}`)}
         ${barraEstadistica('Disparo', pos.disparo / 1.4, pos.disparo ? `x${pos.disparo}` : 'No')}
       </button></li>`;
@@ -223,13 +377,24 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     eleccion = { ...eleccion, [tipo]: clave };
     try { localStorage.setItem(CLAVE_ELECCION, JSON.stringify(eleccion)); } catch { /* da igual */ }
     contenedor.querySelectorAll(`[data-${tipo}]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[tipo] === clave)));
+    mundo = nuevoMundo(); // el menú enseña al jugador elegido paseando
+    pintarCartelJugador();
   }
 
-  function irASeleccion() {
-    fase = 'seleccion';
-    zonaHud.hidden = true;
-    pintarSeleccion();
-    mostrar('seleccion');
+  function irAlHub(panel = 'hub') {
+    if (fase !== 'hub') {
+      fase = 'hub';
+      zonaHud.hidden = true;
+      mundo = nuevoMundo();
+      entrada.soltarTodo();
+    }
+    if (panel === 'hub') {
+      pintarTiempos();
+      pintarCartelJugador();
+    } else if (panel === 'vestuario' || panel === 'direccion') pintarSeleccion();
+    else if (panel === 'ranking') pintarRanking();
+    else if (panel === 'ajustes') pintarAjustes();
+    mostrar(panel);
   }
 
   function empezar() {
@@ -309,8 +474,8 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     fase = 'fin';
     entrada.soltarTodo();
     const r = resumen(mundo);
-    const esRecord = guardarMarca(usuario, r);
-    q('[data-campo="record"]').hidden = !esRecord;
+    const { record } = registrarPartida(usuario, r);
+    q('[data-campo="record"]').hidden = !record;
     q('[data-campo="resultado"]').innerHTML = `
       <div><dt>Tiempo aguantado</dt><dd>${formatearTiempo(r.tiempo)}</dd></div>
       <div><dt>Oleada</dt><dd>${r.oleada}</dd></div>
@@ -326,14 +491,6 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       mostrar('fin');
       anunciar(`Te han eliminado. Has aguantado ${formatearTiempo(r.tiempo)} y llegado a la oleada ${r.oleada}.`);
     }, 900);
-  }
-
-  function irAlMenu() {
-    fase = 'menu';
-    zonaHud.hidden = true;
-    mundo = nuevoMundo();
-    pintarMenu();
-    mostrar('menu');
   }
 
   // --- Eventos de la simulación → sonido y avisos -----------------------------------------------
@@ -357,9 +514,23 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
 
   // --- Bucle principal --------------------------------------------------------------------------
 
+  /** En el menú el jugador pasea por el campo (sin rivales) para que la pantalla tenga vida. */
+  function pasearEnElMenu(dt) {
+    const j = mundo.jugador;
+    mundo.tiempo += dt;
+    j.moviendo = true;
+    j.dirX = 1;
+    j.zona = null;
+    const x0 = j.x;
+    j.x += 80 * dt;
+    j.y += rumboHub * 24 * dt;
+    if (resolver(mundo.terreno, j) && j.x - x0 < 30 * dt) rumboHub = -rumboHub; // si choca con una grada, la rodea
+    if (j.x > 9000) mundo = nuevoMundo();
+  }
+
   function bucle(ahora) {
     raf = requestAnimationFrame(bucle);
-    const dt = Math.min(0.1, (ahora - previo) / 1000);
+    const dt = Math.max(0, Math.min(0.1, (ahora - previo) / 1000)); // el reloj del navegador puede ir un pelo atrasado
     previo = ahora;
 
     if (fase === 'jugando') {
@@ -375,10 +546,13 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       hud.actualizar(mundo);
       if (mundo.estado === 'mejora') mostrarMejora();
       else if (mundo.estado === 'fin') mostrarFin();
+    } else if (fase === 'hub') {
+      pasearEnElMenu(dt);
     }
 
     ctx.setTransform(vista.dpr, 0, 0, vista.dpr, 0, 0);
-    dibujar(ctx, mundo, vista);
+    // En el menú el jugador se ve más grande
+    dibujar(ctx, mundo, fase === 'hub' ? { ...vista, escala: vista.escala * 2.1 } : vista);
   }
 
   // --- Tamaño del lienzo --------------------------------------------------------------------------
@@ -391,7 +565,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
     lienzo.width = Math.round(ancho * dpr);
     lienzo.height = Math.round(alto * dpr);
     // El zoom hace que en un móvil vertical se vea una zona parecida a la de un monitor ancho
-    const escala = Math.max(0.7, Math.min(1.5, Math.min(ancho, alto) / 540));
+    const escala = Math.max(0.7, Math.min(1.5, Math.min(ancho, alto) / 540)) * (ZOOM[ajustes.zoom] ?? 1);
     vista = { ancho, alto, escala, dpr };
   }
   const observador = new ResizeObserver(ajustarTamano);
@@ -401,10 +575,14 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   // --- Eventos de la interfaz -------------------------------------------------------------------
 
   const acciones = {
-    jugar: irASeleccion,
-    elegir: irASeleccion,
+    jugar: empezar,
     empezar,
-    'volver-menu': () => { fase = 'menu'; pintarMenu(); mostrar('menu'); },
+    hub: () => irAlHub('hub'),
+    vestuario: () => irAlHub('vestuario'),
+    direccion: () => irAlHub('direccion'),
+    ranking: () => irAlHub('ranking'),
+    ajustes: () => irAlHub('ajustes'),
+    ayuda: () => irAlHub('ayuda'),
     ulti: () => { if (fase === 'jugando') usarUlti(mundo); },
     reiniciar: empezar,
     reanudar,
@@ -439,6 +617,10 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       usarUlti(mundo);
       return;
     }
+    if (fase === 'hub' && ev.code === 'Escape' && PANELES_DEL_HUB.has(pantallaActual)) {
+      irAlHub('hub');
+      return;
+    }
     if (fase === 'mejora' && /^Digit[1-3]$/.test(ev.code)) {
       const opcion = mundo.opciones[Number(ev.code.slice(5)) - 1];
       if (opcion) elegir(opcion.id);
@@ -448,13 +630,15 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
   const alCambiarVisibilidad = () => { if (document.hidden && fase === 'jugando') alternarPausa(); };
 
   contenedor.addEventListener('click', alHacerClic);
+  contenedor.addEventListener('input', alCambiarAjuste);
+  contenedor.addEventListener('change', alCambiarAjuste);
   window.addEventListener('keydown', alPulsarTecla);
   document.addEventListener('visibilitychange', alCambiarVisibilidad);
 
   lienzo.tabIndex = -1;
+  aplicarAjustes();
   actualizarBotonSonido();
-  pintarMenu();
-  mostrar('menu');
+  irAlHub('hub');
   raf = requestAnimationFrame(bucle);
 
   return {
@@ -464,11 +648,13 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       entrada.destruir();
       hud.destruir();
       contenedor.removeEventListener('click', alHacerClic);
+      contenedor.removeEventListener('input', alCambiarAjuste);
+      contenedor.removeEventListener('change', alCambiarAjuste);
       window.removeEventListener('keydown', alPulsarTecla);
       document.removeEventListener('visibilitychange', alCambiarVisibilidad);
       contenedor.classList.remove('juego');
       contenedor.replaceChildren();
     },
-    irAlMenu,
+    irAlMenu: () => irAlHub('hub'),
   };
 }

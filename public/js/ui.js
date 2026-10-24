@@ -60,6 +60,10 @@ async function renderizar() {
     navegar('/perfil');
     return;
   }
+  if (ruta === '/' && estado.usuario) {
+    navegar('/jugar'); // con sesión, el inicio es el menú del juego
+    return;
+  }
   if (def.soloInvitados && estado.usuario) {
     navegar('/jugar');
     return;

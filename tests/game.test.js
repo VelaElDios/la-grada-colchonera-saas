@@ -67,7 +67,7 @@ test('los enemigos aparecen fuera de la pantalla, a la distancia configurada', a
   const m = await cargar('mundo.js');
   const { MUNDO } = await cargar('config.js');
   const mundo = m.crearMundo({ semilla: 11 });
-  await simular(m, mundo, 3);
+  await simular(m, mundo, 1); // enseguida: luego corren hacia ti
   assert.ok(mundo.enemigos.length > 0);
   const cerca = mundo.enemigos.filter((e) => Math.hypot(e.x - mundo.jugador.x, e.y - mundo.jugador.y) < MUNDO.distanciaAparicion - 150);
   assert.equal(cerca.length, 0);
@@ -117,6 +117,50 @@ test('la mejor marca solo se guarda si supera a la anterior', async () => {
     assert.equal(marca.leerMarca(u).tiempo, 50);
     assert.equal(marca.guardarMarca(u, { tiempo: 90, oleada: 4, nivel: 6, bajas: 60 }), true);
     assert.match(marca.textoMarca(marca.leerMarca(u)), /1:30/);
+  } finally {
+    delete global.localStorage;
+  }
+});
+
+test('tus tiempos: se acumulan partidas, totales, mejores marcas y las últimas 6', async () => {
+  const marca = await cargar('marca.js');
+  const almacen = new Map();
+  global.localStorage = { getItem: (k) => almacen.get(k) ?? null, setItem: (k, v) => almacen.set(k, String(v)) };
+  try {
+    const u = { id: 'u2' };
+    assert.equal(marca.leerStats(u).partidas, 0);
+    const partida = (tiempo, bajas) => ({ tiempo, oleada: 1 + Math.floor(tiempo / 30), nivel: 3, bajas, jefes: 1, personaje: 'koke', entrenador: 'cholo' });
+    assert.equal(marca.registrarPartida(u, partida(60, 40)).record, true);
+    assert.equal(marca.registrarPartida(u, partida(30, 10)).record, false);
+    for (let i = 0; i < 8; i++) marca.registrarPartida(u, partida(10 + i, 1));
+    const st = marca.leerStats(u);
+    assert.equal(st.partidas, 10);
+    assert.equal(st.bajas, 40 + 10 + 8);
+    assert.equal(st.jefes, 10);
+    assert.equal(st.mejorTiempo, 60);
+    assert.equal(st.ultimas.length, 6);
+    assert.deepEqual(st.mejores.map((f) => f.tiempo), [60, 30, 17, 16, 15]);
+  } finally {
+    delete global.localStorage;
+  }
+});
+
+test('los ajustes se leen con valores por defecto y se corrigen si están mal guardados', async () => {
+  const aj = await cargar('ajustes.js');
+  const almacen = new Map();
+  global.localStorage = { getItem: (k) => almacen.get(k) ?? null, setItem: (k, v) => almacen.set(k, String(v)) };
+  try {
+    assert.deepEqual(aj.leerAjustes(), aj.AJUSTES_BASE);
+    aj.guardarAjustes({ ...aj.AJUSTES_BASE, volumen: 20, zoom: 'lejos', efectos: false });
+    const l = aj.leerAjustes();
+    assert.equal(l.volumen, 20);
+    assert.equal(l.zoom, 'lejos');
+    assert.equal(l.efectos, false);
+    almacen.set('grada.ajustes', JSON.stringify({ volumen: 900, zoom: 'enorme', numeros: 'si' }));
+    const roto = aj.leerAjustes();
+    assert.equal(roto.volumen, 100);
+    assert.equal(roto.zoom, 'normal');
+    assert.equal(roto.numeros, true);
   } finally {
     delete global.localStorage;
   }

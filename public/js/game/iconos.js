@@ -27,6 +27,12 @@ const ICONOS = {
   sonido: `<path d="M4 10v4h3.5L12 18V6L7.5 10z" ${trazo}/><path d="M15.5 9a4 4 0 010 6M18 6.5a7.5 7.5 0 010 11" ${trazo}/>`,
   silencio: `<path d="M4 10v4h3.5L12 18V6L7.5 10z" ${trazo}/><path d="M16 9.5l5 5M21 9.5l-5 5" ${trazo}/>`,
   calavera: `<path d="M12 3a8 8 0 00-5 14.2V20h10v-2.8A8 8 0 0012 3z" ${trazo}/><circle cx="9" cy="11.5" r="1.3" ${trazo}/><circle cx="15" cy="11.5" r="1.3" ${trazo}/>`,
+  jugar: `<path d="M8 5l12 7-12 7z" ${trazo}/>`,
+  camiseta: `<path d="M8 3l-5 3 2 4 3-1v11h8V9l3 1 2-4-5-3a4 4 0 01-8 0z" ${trazo}/>`,
+  trofeo: `<path d="M7 4h10v5a5 5 0 01-10 0zM7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3M12 14v4M8 21h8M9 18h6" ${trazo}/>`,
+  ajustes: `<circle cx="12" cy="12" r="3.2" ${trazo}/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" ${trazo}/>`,
+  ayuda: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M9.5 9.5a2.5 2.5 0 114 2c-1 .8-1.5 1.2-1.5 2.5M12 17.2l.01 0" ${trazo}/>`,
+  volver: `<path d="M10 6l-6 6 6 6M4 12h16" ${trazo}/>`,
   reloj: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M12 7v5l3 2" ${trazo}/>`,
 };
 

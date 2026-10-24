@@ -9,6 +9,45 @@ export const MUNDO = {
   maxEnemigos: 320,
   maxGemas: 450,
   paso: 1 / 60, // tamaño del paso de simulación
+  velRivales: 1.2, // multiplicador global de la velocidad de todos los rivales
+};
+
+// Moverse tiene premio y quedarse quieto, castigo: el «ritmo» sube mientras corres y baja cuando paras.
+export const MOVIMIENTO = {
+  rampa: 1.1, // segundos corriendo seguidos para llegar al ritmo máximo
+  caida: 0.7, // segundos parado para perderlo del todo
+  bonoDano: 0.25, // +25 % de daño con el ritmo al máximo
+  bonoXp: 0.2, // +20 % de experiencia con el ritmo al máximo
+  cargaUlti: 0.005, // puntos de ulti por unidad de mundo recorrida
+  quietoPresion: 1.5, // segundos parado hasta que la grada rival aprieta
+  presionVel: 1.35, // los rivales cercanos corren un 35 % más si estás quieto
+  presionRadio: 440,
+};
+
+// Campo infinito con zonas fijas (siempre las mismas para una partida): barro, lluvia y gradas.
+export const TERRENO = {
+  celda: 640,
+  barro: 0.5, // multiplicador de tu velocidad dentro del barro
+  lluvia: 1.7, // multiplicador de la velocidad de los balones (tuyos y de los rivales) bajo la lluvia
+  probLluvia: 0.2,
+  probBarro: 0.18,
+  probGrada: 0.42,
+  claroInicial: 320, // radio alrededor del inicio sin gradas
+};
+
+// Premios repartidos por el campo: hay que ir a por ellos.
+export const PREMIOS = {
+  cada: 7, // segundos entre apariciones
+  max: 4,
+  distMin: 380,
+  distMax: 640,
+  distBorrado: 1100,
+  tipos: {
+    cura: { nombre: 'Botiquín', peso: 0.28 },
+    xp: { nombre: 'Balón de Oro', peso: 0.34 },
+    energia: { nombre: 'Energía', peso: 0.24 },
+    iman: { nombre: 'Imán', peso: 0.14 },
+  },
 };
 
 export const JUGADOR = {
@@ -36,19 +75,19 @@ export const minutosDeOleada = (oleada) => (oleada - 1) / 2;
 
 export const POSICIONES = {
   portero: {
-    nombre: 'Portero', vida: 170, vel: 138, cuerpo: 1.4, disparo: 0, armaInicial: 'bufanda',
+    nombre: 'Portero', vida: 170, vel: 163, cuerpo: 1.4, disparo: 0, armaInicial: 'bufanda',
     resumen: 'Muy resistente. Solo ataca cuerpo a cuerpo.',
   },
   defensa: {
-    nombre: 'Defensa', vida: 135, vel: 144, cuerpo: 1.25, disparo: 0.7, armaInicial: 'bufanda',
+    nombre: 'Defensa', vida: 135, vel: 170, cuerpo: 1.25, disparo: 0.7, armaInicial: 'bufanda',
     resumen: 'Duro y fuerte de cerca. Dispara algo.',
   },
   medio: {
-    nombre: 'Mediocentro', vida: 110, vel: 150, cuerpo: 1.0, disparo: 1.0, armaInicial: 'balon',
+    nombre: 'Mediocentro', vida: 110, vel: 177, cuerpo: 1.0, disparo: 1.0, armaInicial: 'balon',
     resumen: 'Equilibrado: cuerpo a cuerpo y disparo.',
   },
   delantero: {
-    nombre: 'Delantero', vida: 90, vel: 156, cuerpo: 0.7, disparo: 1.35, armaInicial: 'balon',
+    nombre: 'Delantero', vida: 90, vel: 184, cuerpo: 0.7, disparo: 1.35, armaInicial: 'balon',
     resumen: 'Frágil pero con el mejor disparo.',
   },
 };
@@ -144,33 +183,33 @@ export const EQUIPOS = {
     { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, { pantalon: '#fafafa', medias: '#fafafa', botas: '#222222' }),
   barca: equipo('FC Barcelona', { vida: 8, velocidad: 62, radio: 11, dano: 4, xp: 1, peso: 0.9, desde: 1 },
     { c: '#a50044', c2: '#004d98', p: 'franjas' }, { pantalon: '#004d98', medias: '#a50044', botas: '#222222' }),
-  bayern: equipo('Bayern', { vida: 14, velocidad: 52, radio: 13, dano: 5, xp: 2, peso: 0.6, desde: 2 },
+  bayern: equipo('Bayern', { vida: 14, velocidad: 52, radio: 13, dano: 5, xp: 2, peso: 0.6, desde: 3 , dispara: { cada: 7, vel: 230, rango: 540 } },
     { c: '#dc052d', c2: '#ffffff', p: 'cuello' }, { pantalon: '#ffffff', medias: '#dc052d', botas: '#111111' }),
-  liverpool: equipo('Liverpool', { vida: 7, velocidad: 92, radio: 10, dano: 3, xp: 1, peso: 0.5, desde: 2 },
+  liverpool: equipo('Liverpool', { vida: 7, velocidad: 92, radio: 10, dano: 3, xp: 1, peso: 0.5, desde: 2 , embiste: { cada: 4.5, mult: 2.3, dur: 0.7 } },
     { c: '#d4101e', c2: '#ffffff', p: 'liso' }, { pantalon: '#d4101e', medias: '#d4101e', botas: '#f4f4f4' }),
-  city: equipo('Man. City', { vida: 16, velocidad: 56, radio: 12, dano: 5, xp: 2, peso: 0.55, desde: 3 },
+  city: equipo('Man. City', { vida: 16, velocidad: 56, radio: 12, dano: 5, xp: 2, peso: 0.55, desde: 3 , dispara: { cada: 6, vel: 225, rango: 540 } },
     { c: '#6cabdd', c2: '#ffffff', p: 'liso' }, { pantalon: '#ffffff', medias: '#6cabdd', botas: '#222222' }),
   united: equipo('Man. United', { vida: 55, velocidad: 38, radio: 19, dano: 9, xp: 5, peso: 0.22, desde: 3 },
     { c: '#da291c', c2: '#111111', p: 'mangas' }, { pantalon: '#ffffff', medias: '#111111', botas: '#111111' }),
-  chelsea: equipo('Chelsea', { vida: 16, velocidad: 60, radio: 12, dano: 5, xp: 2, peso: 0.5, desde: 4 },
+  chelsea: equipo('Chelsea', { vida: 16, velocidad: 60, radio: 12, dano: 5, xp: 2, peso: 0.5, desde: 4 , dispara: { cada: 6.5, vel: 215, rango: 520 } },
     { c: '#034694', c2: '#ffffff', p: 'liso' }, { pantalon: '#034694', medias: '#ffffff', botas: '#f4f4f4' }),
-  arsenal: equipo('Arsenal', { vida: 13, velocidad: 72, radio: 11, dano: 4, xp: 2, peso: 0.5, desde: 4 },
+  arsenal: equipo('Arsenal', { vida: 13, velocidad: 72, radio: 11, dano: 4, xp: 2, peso: 0.5, desde: 4 , embiste: { cada: 6, mult: 2.2, dur: 0.6 } },
     { c: '#ef0107', c2: '#ffffff', p: 'mangas' }, { pantalon: '#ffffff', medias: '#ef0107', botas: '#222222' }),
-  juventus: equipo('Juventus', { vida: 24, velocidad: 56, radio: 13, dano: 6, xp: 3, peso: 0.45, desde: 5 },
+  juventus: equipo('Juventus', { vida: 24, velocidad: 56, radio: 13, dano: 6, xp: 3, peso: 0.45, desde: 5 , dispara: { cada: 7.5, vel: 220, rango: 520 } },
     { c: '#111111', c2: '#ffffff', p: 'franjas' }, { pantalon: '#111111', medias: '#ffffff', botas: '#111111' }),
-  milan: equipo('Milan', { vida: 26, velocidad: 54, radio: 13, dano: 6, xp: 3, peso: 0.45, desde: 5 },
+  milan: equipo('Milan', { vida: 26, velocidad: 54, radio: 13, dano: 6, xp: 3, peso: 0.45, desde: 5 , dispara: { cada: 7.5, vel: 220, rango: 520 } },
     { c: '#fb090b', c2: '#111111', p: 'franjas' }, { pantalon: '#111111', medias: '#fb090b', botas: '#222222' }),
-  inter: equipo('Inter', { vida: 26, velocidad: 57, radio: 13, dano: 6, xp: 3, peso: 0.45, desde: 6 },
+  inter: equipo('Inter', { vida: 26, velocidad: 57, radio: 13, dano: 6, xp: 3, peso: 0.45, desde: 6 , dispara: { cada: 6, vel: 235, rango: 540 } },
     { c: '#0068a8', c2: '#111111', p: 'franjas' }, { pantalon: '#111111', medias: '#0068a8', botas: '#f4f4f4' }),
-  psg: equipo('PSG', { vida: 18, velocidad: 96, radio: 10, dano: 5, xp: 3, peso: 0.4, desde: 6 },
+  psg: equipo('PSG', { vida: 18, velocidad: 96, radio: 10, dano: 5, xp: 3, peso: 0.4, desde: 6 , embiste: { cada: 5, mult: 2.2, dur: 0.7 } },
     { c: '#00183f', c2: '#e30613', p: 'banda' }, { pantalon: '#00183f', medias: '#00183f', botas: '#f4f4f4' }),
-  dortmund: equipo('Dortmund', { vida: 12, velocidad: 108, radio: 10, dano: 4, xp: 2, peso: 0.4, desde: 7 },
+  dortmund: equipo('Dortmund', { vida: 12, velocidad: 108, radio: 10, dano: 4, xp: 2, peso: 0.4, desde: 7 , embiste: { cada: 4, mult: 2.4, dur: 0.8 } },
     { c: '#fde100', c2: '#111111', p: 'liso' }, { pantalon: '#111111', medias: '#fde100', botas: '#111111' }),
   ajax: equipo('Ajax', { vida: 22, velocidad: 66, radio: 12, dano: 5, xp: 3, peso: 0.45, desde: 8 },
     { c: '#ffffff', c2: '#d2122e', p: 'banda' }, { pantalon: '#ffffff', medias: '#ffffff', botas: '#222222' }),
   benfica: equipo('Benfica', { vida: 80, velocidad: 36, radio: 21, dano: 11, xp: 7, peso: 0.2, desde: 8 },
     { c: '#e30613', c2: '#ffffff', p: 'cuello' }, { pantalon: '#ffffff', medias: '#e30613', botas: '#111111' }),
-  napoli: equipo('Nápoles', { vida: 34, velocidad: 62, radio: 13, dano: 7, xp: 4, peso: 0.4, desde: 9 },
+  napoli: equipo('Nápoles', { vida: 34, velocidad: 62, radio: 13, dano: 7, xp: 4, peso: 0.4, desde: 9 , dispara: { cada: 5.5, vel: 240, rango: 560 } },
     { c: '#12a0d7', c2: '#ffffff', p: 'aros' }, { pantalon: '#ffffff', medias: '#12a0d7', botas: '#222222' }),
 };
 
@@ -183,7 +222,7 @@ export const ORDEN_JEFES = ['guardiola', 'mourinho', 'cristiano', 'messi'];
 export const JEFES = {
   guardiola: {
     nombre: 'Pep Guardiola', equipo: 'FC Barcelona', vida: 500, velocidad: 46, radio: 24, dano: 12, xp: 40, freno: 0.15,
-    habilidad: 'Rondo: invoca un cerco de rivales', cada: 7,
+    habilidad: 'Rondo, pases en círculo, tiki-taka y espiral de balones', cada: 7,
     aspecto: {
       piel: '#f0c8a6', pelo: { c: '#3a2a20', e: 'calvo' }, gafas: true,
       camiseta: { c: '#1d2a3c', c2: '#a50044', p: 'traje' }, pantalon: '#1d2a3c', medias: '#1d2a3c', botas: '#111111', corbata: '#a50044',
@@ -191,7 +230,7 @@ export const JEFES = {
   },
   mourinho: {
     nombre: 'José Mourinho', equipo: 'Real Madrid', vida: 800, velocidad: 40, radio: 28, dano: 15, xp: 50, freno: 0.1,
-    habilidad: 'Autobús: onda de choque a su alrededor', cada: 6, radioPulso: 210,
+    habilidad: 'Autobús: ondas de choque, muro de defensas y embestida', cada: 6, radioPulso: 210,
     aspecto: {
       piel: '#e0b08a', pelo: { c: '#9a9a9a', e: 'corto' }, barba: 'rgba(90,90,90,0.55)',
       camiseta: { c: '#111111', c2: '#ffffff', p: 'traje' }, pantalon: '#111111', medias: '#111111', botas: '#111111', corbata: '#7b3fa0',
@@ -199,7 +238,7 @@ export const JEFES = {
   },
   cristiano: {
     nombre: 'Cristiano Ronaldo', equipo: 'Real Madrid', vida: 600, velocidad: 58, radio: 24, dano: 14, xp: 45, freno: 0.15,
-    habilidad: 'Cañonazo: abanico de tiros', cada: 2.6,
+    habilidad: 'Cañonazos, ráfagas y el salto «Siuuu»', cada: 2.6,
     aspecto: {
       piel: '#e2b48c', pelo: { c: '#16110d', e: 'tupe' },
       camiseta: { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, pantalon: '#fafafa', medias: '#fafafa', botas: '#f2c94c',
@@ -207,7 +246,7 @@ export const JEFES = {
   },
   messi: {
     nombre: 'Leo Messi', equipo: 'FC Barcelona', vida: 400, velocidad: 78, radio: 20, dano: 13, xp: 45, freno: 0.2,
-    habilidad: 'Regate: embestidas a toda velocidad', cada: 3.2,
+    habilidad: 'Regates: embestidas encadenadas, rosca y extremos', cada: 3.2,
     aspecto: {
       piel: '#ecc09c', pelo: { c: '#5a3a22', e: 'corto' }, barba: '#5a3a22',
       camiseta: { c: '#a50044', c2: '#004d98', p: 'franjas' }, pantalon: '#004d98', medias: '#a50044', botas: '#111111',
