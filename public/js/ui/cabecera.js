@@ -6,7 +6,8 @@ const ENLACES_INVITADO = [['/', 'Inicio'], ['/entrar', 'Entrar'], ['/registro', 
 
 function enlacesPara() {
   if (!estado.usuario) return ENLACES_INVITADO;
-  const enlaces = [['/', 'Inicio'], ['/jugar', 'Jugar'], ['/perfil', 'Mi cuenta']];
+  // Con la sesión iniciada no hace falta «Inicio»: se entra directo al menú del juego
+  const enlaces = [['/jugar', 'Jugar'], ['/perfil', 'Mi cuenta']];
   if (esAdmin()) enlaces.push(['/admin', 'Administración']);
   return enlaces;
 }
@@ -42,6 +43,7 @@ export function montarCabecera(raiz, { alSalir }) {
   nav.addEventListener('click', (ev) => { if (ev.target.closest('a')) abrir(false); });
 
   function pintar() {
+    logo.setAttribute('href', estado.usuario ? '#/jugar' : '#/');
     const lista = h('ul', { class: 'nav__lista' });
     for (const [ruta, texto] of enlacesPara()) {
       const activo = ruta === rutaActual;

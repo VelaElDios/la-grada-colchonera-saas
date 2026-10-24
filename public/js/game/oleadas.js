@@ -26,9 +26,16 @@ export function crearEnemigo(tipo, x, y, oleada) {
     r: base.radio,
     vida,
     vidaMax: vida,
-    vel: base.velocidad * ESCALADO.velocidad(m),
+    vel: base.velocidad * ESCALADO.velocidad(m) * MUNDO.velRivales,
     dano: Math.max(1, Math.round(base.dano * ESCALADO.dano(m))),
     xp: Math.max(1, Math.round(base.xp * ESCALADO.xp(m))),
+    // Reparto estable (sin azar) para que no todos embistan o disparen a la vez
+    cdEmbestida: base.embiste ? base.embiste.cada * (0.3 + ((id * 37) % 100) / 140) : 0,
+    cdDisparo: base.dispara ? base.dispara.cada * (0.3 + ((id * 53) % 100) / 140) : 0,
+    aviso: 0,
+    embestida: 0,
+    dirX: 0,
+    dirY: 0,
     freno: base.radio >= 19 ? 0.5 : 1,
     kx: 0,
     ky: 0,
@@ -37,7 +44,7 @@ export function crearEnemigo(tipo, x, y, oleada) {
     cdBanderin: 0,
     piel: id % PIELES.length,
     pelo: (id * 7) % PELOS.length,
-    fase: Math.random() * 6.28, // solo para animar el dibujo
+    anim: Math.random() * 6.28, // solo para animar el dibujo
     muerto: false,
   };
 }
@@ -59,7 +66,7 @@ export function crearJefe(indice, x, y, oleada) {
     r: def.radio,
     vida,
     vidaMax: vida,
-    vel: def.velocidad * Math.min(1.35, ESCALADO.velocidad(m)),
+    vel: def.velocidad * Math.min(1.35, ESCALADO.velocidad(m)) * MUNDO.velRivales,
     dano: Math.max(1, Math.round(def.dano * ESCALADO.dano(m))),
     xp: Math.round(def.xp * ESCALADO.xp(m)),
     freno: def.freno,
@@ -68,10 +75,14 @@ export function crearJefe(indice, x, y, oleada) {
     flash: 0,
     lento: 0,
     cdBanderin: 0,
-    cd: def.cada * 0.6, // temporizador de su habilidad
+    cd: def.cada * 0.6, // temporizador hasta su siguiente habilidad
     carga: 0,
     estado: 'normal',
-    fase: Math.random() * 6.28,
+    fase: 1, // 1, 2 o 3 según la vida que le queda
+    cola: [], // acciones programadas { t, hacer }
+    rotacion: 0, // por cuál de sus habilidades va
+    pendientes: 0, // embestidas o saltos que quedan en la cadena actual
+    anim: Math.random() * 6.28,
     muerto: false,
   };
 }

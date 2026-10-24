@@ -1,15 +1,17 @@
 // Simulación del juego: sin dibujar nada y sin tocar el DOM, así se puede probar con node:test.
 // Estados: 'jugando' → 'mejora' (elegir mejora al subir de nivel) → 'jugando' ... → 'fin'.
 import {
-  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, xpParaSubir,
+  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, xpParaSubir,
 } from './config.js';
 import { crearRng, crearCuadricula, normalizar } from './util.js';
 import { actualizarArmas } from './armas.js';
-import { curar, danar, crearParticulas } from './combate.js';
+import { curar, danar, crearParticulas, crearTexto } from './combate.js';
 import { generarOpciones, aplicarMejora, recalcular } from './mejoras.js';
 import { oleadaEn, empezarOleada, actualizarApariciones, reciclarLejanos } from './oleadas.js';
 import { actualizarJefe, danarJugador } from './jefes.js';
 import { actualizarUlti, cargarUlti, lanzarUlti } from './ulti.js';
+import { crearTerreno, zonaEn, resolver, tocaGrada } from './terreno.js';
+import { comportamiento } from './rivales.js';
 
 const SIN_ENTRADA = { x: 0, y: 0 };
 
@@ -37,6 +39,8 @@ export function crearMundo({
   Object.keys(EXTRAS).forEach((k) => { extras[k] = 0; });
 
   const mundo = {
+    semilla,
+    terreno: crearTerreno(semilla),
     rng: crearRng(semilla),
     efectosReducidos,
     tiempo: 0,
@@ -56,6 +60,9 @@ export function crearMundo({
       dirX: 1,
       dirY: 0,
       moviendo: false,
+      ritmo: 0, // 0..1: sube corriendo y baja parado
+      quieto: 0, // segundos seguidos sin moverse
+      zona: null, // 'barro' | 'lluvia' | null según dónde pisa
       invul: 0,
       flash: 0,
       xp: 0,
@@ -82,6 +89,8 @@ export function crearMundo({
     disparosEnemigos: [],
     gemas: [],
     curas: [],
+    premios: [],
+    temporizadorPremio: 4,
     tajos: [],
     ondas: [],
     rayos: [],
@@ -125,10 +134,25 @@ function moverJugador(mundo, dt, entrada) {
     j.dirX = dx;
     j.dirY = dy;
   }
+  j.zona = zonaEn(mundo.terreno, j.x, j.y);
   const bonoFuria = j.furia > 0 ? ENTRENADORES.aragones.ulti.bonoVel : 1;
-  const v = j.velBase * j.mult.vel * bonoFuria * fuerza;
+  const barro = j.zona === 'barro' ? TERRENO.barro : 1;
+  const v = j.velBase * j.mult.vel * bonoFuria * barro * fuerza;
+  const x0 = j.x;
+  const y0 = j.y;
   j.x += dx * v * dt;
   j.y += dy * v * dt;
+  resolver(mundo.terreno, j); // las gradas no se atraviesan
+
+  // Moverse tiene premio: el ritmo sube corriendo y se pierde parado
+  if (j.moviendo) {
+    j.ritmo = Math.min(1, j.ritmo + dt / MOVIMIENTO.rampa);
+    j.quieto = 0;
+  } else {
+    j.ritmo = Math.max(0, j.ritmo - dt / MOVIMIENTO.caida);
+    j.quieto += dt;
+  }
+  mundo.cargaPendiente += Math.hypot(j.x - x0, j.y - y0) * MOVIMIENTO.cargaUlti;
 
   j.invul = Math.max(0, j.invul - dt);
   j.flash = Math.max(0, j.flash - dt);
@@ -137,7 +161,7 @@ function moverJugador(mundo, dt, entrada) {
 
 function moverEnemigos(mundo, dt) {
   const j = mundo.jugador;
-  const { cuadricula, enemigos } = mundo;
+  const { cuadricula, enemigos, terreno } = mundo;
   cuadricula.limpiar();
   for (let i = 0; i < enemigos.length; i += 1) cuadricula.insertar(enemigos[i]);
 
@@ -149,10 +173,12 @@ function moverEnemigos(mundo, dt) {
     e.cdBanderin = Math.max(0, e.cdBanderin - dt);
     e.lento = Math.max(0, e.lento - dt);
 
+    const dist = Math.hypot(j.x - e.x, j.y - e.y);
     const habilidadPropia = e.jefe ? actualizarJefe(mundo, e, dt) : false;
     if (!habilidadPropia) {
-      const [dx, dy] = normalizar(j.x - e.x, j.y - e.y);
-      const v = e.lento > 0 ? e.vel * 0.35 : e.vel;
+      const factor = e.jefe ? 1 : comportamiento(mundo, e, dt, dist);
+      const [dx, dy] = e.embestida > 0 ? [e.dirX, e.dirY] : normalizar(j.x - e.x, j.y - e.y);
+      const v = (e.lento > 0 ? e.vel * 0.35 : e.vel) * factor;
       e.x += dx * v * dt;
       e.y += dy * v * dt;
     }
@@ -176,6 +202,9 @@ function moverEnemigos(mundo, dt) {
       }
     });
 
+    // Las gradas también les cierran el paso: la rodean para llegar a ti
+    if (resolver(terreno, e, j.x, j.y, e.vel * dt * 0.9) && e.embestida > 0) e.embestida = 0;
+
     // Contacto con el jugador
     if (j.invul <= 0 && (e.x - j.x) ** 2 + (e.y - j.y) ** 2 < (e.r + j.r * 0.8) ** 2) {
       danarJugador(mundo, e.dano);
@@ -197,10 +226,13 @@ function moverProyectiles(mundo, dt) {
         p.vy = ny * 300;
       }
     }
-    p.x += p.vx * dt;
-    p.y += p.vy * dt;
+    // Bajo la lluvia los balones corren más
+    const k = zonaEn(mundo.terreno, p.x, p.y) === 'lluvia' ? TERRENO.lluvia : 1;
+    p.x += p.vx * dt * k;
+    p.y += p.vy * dt * k;
     p.rot += dt * 14;
     p.vida -= dt;
+    if (p.vida > 0 && tocaGrada(mundo.terreno, p.x, p.y, p.r)) p.vida = 0; // se estrella contra la grada
     if (p.vida > 0) {
       mundo.cuadricula.cerca(p.x, p.y, p.r + 24, (e) => {
         if (p.perfora <= 0 || e.muerto || p.golpeados.has(e.id)) return;
@@ -233,15 +265,76 @@ function moverDisparosEnemigos(mundo, dt) {
   const j = mundo.jugador;
   for (let i = 0; i < mundo.disparosEnemigos.length; i += 1) {
     const d = mundo.disparosEnemigos[i];
-    d.x += d.vx * dt;
-    d.y += d.vy * dt;
+    if (d.giro) { // balones con rosca: giran mientras vuelan
+      const c = Math.cos(d.giro * dt);
+      const s = Math.sin(d.giro * dt);
+      [d.vx, d.vy] = [d.vx * c - d.vy * s, d.vx * s + d.vy * c];
+    }
+    const k = zonaEn(mundo.terreno, d.x, d.y) === 'lluvia' ? TERRENO.lluvia : 1;
+    d.x += d.vx * dt * k;
+    d.y += d.vy * dt * k;
     d.rot += dt * 10;
     d.vida -= dt;
+    if (d.vida > 0 && tocaGrada(mundo.terreno, d.x, d.y, d.r)) d.vida = 0;
     if (d.vida > 0 && j.invul <= 0 && (d.x - j.x) ** 2 + (d.y - j.y) ** 2 < (d.r + j.r * 0.8) ** 2) {
       danarJugador(mundo, d.dano);
       d.vida = 0;
     }
   }
+}
+
+/** Premios por el campo: aparecen casi siempre por delante de ti, para que haya que ir a por ellos. */
+function actualizarPremios(mundo, dt) {
+  const j = mundo.jugador;
+  mundo.temporizadorPremio -= dt;
+  if (mundo.temporizadorPremio <= 0 && mundo.premios.length < PREMIOS.max) {
+    mundo.temporizadorPremio = PREMIOS.cada;
+    const ang = Math.atan2(j.dirY, j.dirX) + mundo.rng.rango(-1.3, 1.3);
+    const d = mundo.rng.rango(PREMIOS.distMin, PREMIOS.distMax);
+    const x = j.x + Math.cos(ang) * d;
+    const y = j.y + Math.sin(ang) * d;
+    if (!tocaGrada(mundo.terreno, x, y, 30)) {
+      const tipos = Object.entries(PREMIOS.tipos);
+      let punto = mundo.rng.siguiente() * tipos.reduce((suma, [, t]) => suma + t.peso, 0);
+      let tipo = tipos[0][0];
+      for (const [clave, t] of tipos) {
+        punto -= t.peso;
+        if (punto <= 0) { tipo = clave; break; }
+      }
+      mundo.premios.push({ tipo, x, y, recogido: false });
+    }
+  }
+  for (let i = 0; i < mundo.premios.length; i += 1) {
+    const p = mundo.premios[i];
+    const d2 = (p.x - j.x) ** 2 + (p.y - j.y) ** 2;
+    if (d2 > PREMIOS.distBorrado ** 2) { p.recogido = true; continue; }
+    if (d2 < (j.r + 18) ** 2) {
+      p.recogido = true;
+      cobrarPremio(mundo, p);
+    }
+  }
+}
+
+function cobrarPremio(mundo, p) {
+  const j = mundo.jugador;
+  if (p.tipo === 'cura') {
+    curar(mundo, j.vidaMax * 0.25);
+    crearTexto(mundo, p.x, p.y - 12, '+vida', '#4ade80');
+    mundo.eventos.push({ tipo: 'cura' });
+  } else if (p.tipo === 'xp') {
+    ganarExperiencia(mundo, xpParaSubir(j.nivel) * 0.35);
+    crearTexto(mundo, p.x, p.y - 12, '+experiencia', '#5cc8ff');
+    mundo.eventos.push({ tipo: 'gema' });
+  } else if (p.tipo === 'energia') {
+    cargarUlti(mundo, j.ulti.max * 0.3);
+    crearTexto(mundo, p.x, p.y - 12, '+ulti', '#ffd166');
+    mundo.eventos.push({ tipo: 'gema' });
+  } else {
+    mundo.gemas.forEach((g) => { g.atraida = true; });
+    crearTexto(mundo, p.x, p.y - 12, '¡imán!', '#ff7b8b');
+    mundo.eventos.push({ tipo: 'gema' });
+  }
+  crearParticulas(mundo, p.x, p.y, '#ffd166', 10, 160);
 }
 
 function recogerObjetos(mundo, dt) {
@@ -261,7 +354,7 @@ function recogerObjetos(mundo, dt) {
     }
     if (d2 < (j.r + 10) ** 2) {
       g.recogida = true;
-      ganarExperiencia(mundo, g.valor * j.mult.xp);
+      ganarExperiencia(mundo, g.valor * j.mult.xp * (1 + MOVIMIENTO.bonoXp * j.ritmo));
       mundo.eventos.push({ tipo: 'gema' });
     }
   }
@@ -327,6 +420,7 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   moverProyectiles(mundo, dt);
   moverDisparosEnemigos(mundo, dt);
   recogerObjetos(mundo, dt);
+  actualizarPremios(mundo, dt);
   actualizarEfectos(mundo, dt);
   reciclarLejanos(mundo);
 
@@ -335,6 +429,7 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   compactar(mundo.disparosEnemigos, (d) => d.vida > 0);
   compactar(mundo.gemas, (g) => !g.recogida);
   compactar(mundo.curas, (c) => !c.recogida);
+  compactar(mundo.premios, (p) => !p.recogido);
   compactar(mundo.tajos, (t) => t.vida > 0);
   compactar(mundo.ondas, (o) => o.vida > 0);
   compactar(mundo.rayos, (r) => r.vida > 0);

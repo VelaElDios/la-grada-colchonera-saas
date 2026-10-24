@@ -1,6 +1,6 @@
 // Interfaz que se superpone al juego (vida, experiencia, tiempo, oleada, armas, ulti y barra de jefe...).
 // Solo toca el DOM cuando un valor cambia, para no gastar rendimiento en cada fotograma.
-import { ARMAS, PASIVAS, EXTRAS, ENTRENADORES } from './config.js';
+import { ARMAS, PASIVAS, EXTRAS, ENTRENADORES, MOVIMIENTO } from './config.js';
 import { xpSiguiente } from './mundo.js';
 import { formatearTiempo } from './util.js';
 import { icono } from './iconos.js';
@@ -23,6 +23,10 @@ export function crearHud(raiz) {
     jefe: q('jefe'),
     jefeNombre: q('jefe-nombre'),
     jefeBarra: q('jefe-barra'),
+    ritmo: q('ritmo'),
+    ritmoBarra: q('ritmo-barra'),
+    ritmoTexto: q('ritmo-texto'),
+    zona: q('zona'),
   };
   const ultimo = {};
   let temporizadorAviso = 0;
@@ -81,6 +85,29 @@ export function crearHud(raiz) {
     poner('ultiNombre', el.ultiNombre, lista ? '¡LISTA!' : `${Math.floor(pct)} %`);
   }
 
+  function pintarRitmo(mundo) {
+    const j = mundo.jugador;
+    const pct = Math.round(j.ritmo * 100);
+    if (ultimo.ritmoPct !== pct) {
+      ultimo.ritmoPct = pct;
+      el.ritmoBarra.style.width = `${pct}%`;
+    }
+    const estado = j.quieto >= MOVIMIENTO.quietoPresion ? 'quieto' : j.ritmo >= 0.98 ? 'maximo' : 'normal';
+    if (ultimo.ritmoEstado !== estado) {
+      ultimo.ritmoEstado = estado;
+      el.ritmo.dataset.estado = estado;
+    }
+    poner('ritmoTexto', el.ritmoTexto,
+      estado === 'quieto' ? '¡Muévete! Te aprietan' : estado === 'maximo' ? `¡A tope! +${Math.round(MOVIMIENTO.bonoDano * 100)} % daño` : 'Ritmo');
+    const zona = j.zona ?? '';
+    if (ultimo.zona !== zona) {
+      ultimo.zona = zona;
+      el.zona.hidden = !zona;
+      el.zona.dataset.zona = zona;
+      el.zona.textContent = zona === 'barro' ? 'Barro: vas más lento' : zona === 'lluvia' ? 'Lluvia: los balones corren más' : '';
+    }
+  }
+
   function pintarJefe(mundo) {
     let jefe = null;
     for (let i = 0; i < mundo.enemigos.length; i += 1) {
@@ -97,7 +124,7 @@ export function crearHud(raiz) {
       ultimo.jefeVisible = true;
       el.jefe.hidden = false;
     }
-    poner('jefeNombre', el.jefeNombre, jefe.nombre);
+    poner('jefeNombre', el.jefeNombre, jefe.fase > 1 ? `${jefe.nombre} · fase ${jefe.fase}` : jefe.nombre);
     const pct = Math.max(0, (jefe.vida / jefe.vidaMax) * 100);
     if (ultimo.jefePct !== Math.round(pct * 2)) {
       ultimo.jefePct = Math.round(pct * 2);
@@ -127,6 +154,7 @@ export function crearHud(raiz) {
       }
       pintarEquipo(mundo);
       pintarUlti(mundo);
+      pintarRitmo(mundo);
       pintarJefe(mundo);
     },
     /** Muestra un cartel grande durante un par de segundos. */

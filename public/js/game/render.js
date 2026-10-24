@@ -1,6 +1,7 @@
 // Dibujo del juego en un <canvas> 2D con estética de píxeles (césped, muñecos «chibi» y rivales).
 // Solo lee el estado del mundo: no cambia nada de la simulación.
 import { obtenerSprite, dibujarSprite, aspectoDe } from './sprites.js';
+import { visibles as terrenoVisible } from './terreno.js';
 
 const ROJO = '#c8102e';
 const ROJO_CLARO = '#ff4d63';
@@ -241,6 +242,19 @@ function dibujarAvisoJefe(ctx, a) {
     ctx.beginPath();
     ctx.arc(a.x, a.y, a.radio, 0, Math.PI * 2);
     ctx.stroke();
+  } else if (a.tipo === 'impacto') {
+    ctx.globalAlpha = 0.16 + 0.3 * k;
+    ctx.fillStyle = '#ff3b3b';
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, a.radio * (0.3 + 0.7 * k), 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.9;
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.setLineDash([6, 6]);
+    ctx.beginPath();
+    ctx.arc(a.x, a.y, a.radio, 0, Math.PI * 2);
+    ctx.stroke();
   } else {
     ctx.globalAlpha = (1 - k) * 0.8;
     ctx.strokeStyle = '#ffd166';
@@ -257,6 +271,250 @@ function dibujarDisparoEnemigo(ctx, d) {
   dibujarBalon(ctx, d.x, d.y, d.r, true);
 }
 
+
+// ---------------------------------------------------------------------------------------------
+// Terreno: zonas de barro y de lluvia, y gradas (se dibujan una vez y se reutilizan)
+// ---------------------------------------------------------------------------------------------
+
+const cacheTerreno = new Map();
+const lienzoPx = (w, h) => {
+  const c = document.createElement('canvas');
+  c.width = w;
+  c.height = h;
+  return c;
+};
+
+function guardar(clave, lienzo) {
+  if (cacheTerreno.size > 160) cacheTerreno.delete(cacheTerreno.keys().next().value);
+  cacheTerreno.set(clave, lienzo);
+  return lienzo;
+}
+
+function spriteZona(z) {
+  const clave = `z:${z.id}:${z.tipo}`;
+  const hecho = cacheTerreno.get(clave);
+  if (hecho) return hecho;
+  const px = Math.ceil((z.r * 2) / TAM_CELDA) + 2;
+  const c = lienzoPx(px, px);
+  const cx = c.getContext('2d');
+  const mid = px / 2;
+  const barro = z.tipo === 'barro';
+  const semilla = Math.floor(z.x + z.y);
+  const paleta = barro ? ['#6e4b2a', '#5f4023', '#7a5532', '#523619'] : ['#3a78a8', '#4688b8', '#3270a0', '#4d92c4'];
+  for (let y = 0; y < px; y += 1) {
+    for (let x = 0; x < px; x += 1) {
+      const dx = x + 0.5 - mid;
+      const dy = y + 0.5 - mid;
+      const d = Math.hypot(dx, dy);
+      const ang = Math.atan2(dy, dx);
+      // borde irregular: el radio varía con el ángulo y con un poco de ruido
+      const limite = (mid - 1) * (0.88 + 0.08 * Math.sin(ang * 5 + semilla) + 0.04 * Math.sin(ang * 11 - semilla)) - hash(x + semilla, y) * 1.5;
+      if (d > limite) continue;
+      const h = hash(x * 3 + semilla, y * 7);
+      cx.globalAlpha = barro ? 0.92 : 0.55;
+      cx.fillStyle = d > limite - 1.6 ? (barro ? '#8a6439' : '#79b4dc') : paleta[Math.floor(h * paleta.length)];
+      cx.fillRect(x, y, 1, 1);
+    }
+  }
+  // Detalles: burbujas y brillos en el barro, reflejos en los charcos
+  cx.globalAlpha = 1;
+  for (let i = 0; i < Math.floor(px * 0.7); i += 1) {
+    const x = Math.floor(hash(i, semilla) * px);
+    const y = Math.floor(hash(semilla, i * 5) * px);
+    if (Math.hypot(x - mid, y - mid) > mid * 0.78) continue;
+    cx.fillStyle = barro ? (i % 2 ? '#3d2812' : '#9b7345') : '#cfe9ff';
+    cx.fillRect(x, y, barro ? 2 : 1, 1);
+  }
+  return guardar(clave, c);
+}
+
+function dibujarZona(ctx, z, t) {
+  const c = spriteZona(z);
+  const lado = c.width * TAM_CELDA;
+  ctx.drawImage(c, z.x - lado / 2, z.y - lado / 2, lado, lado);
+  if (z.tipo === 'lluvia') {
+    // Gotas que caen y ondas en los charcos
+    const base = Math.floor(z.x);
+    ctx.fillStyle = 'rgba(200,230,255,.75)';
+    for (let i = 0; i < 16; i += 1) {
+      const gx = z.x + (hash(i, base) * 2 - 1) * z.r * 0.85;
+      const recorrido = (t * 220 + hash(i, base + 3) * 300) % 300;
+      const gy = z.y + (hash(i, base + 9) * 2 - 1) * z.r * 0.6 - 150 + recorrido;
+      if (Math.hypot(gx - z.x, gy - z.y) < z.r * 0.92) ctx.fillRect(Math.round(gx), Math.round(gy), 2, 7);
+    }
+    ctx.strokeStyle = 'rgba(220,240,255,.5)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 4; i += 1) {
+      const fase = (t * 0.9 + hash(i, base + 1)) % 1;
+      const ox = (hash(i, base + 21) * 2 - 1) * z.r * 0.6;
+      const oy = (hash(i, base + 31) * 2 - 1) * z.r * 0.6;
+      ctx.globalAlpha = 1 - fase;
+      ctx.beginPath();
+      ctx.ellipse(z.x + ox, z.y + oy, 4 + fase * 16, 2 + fase * 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.globalAlpha = 1;
+  }
+}
+
+function spriteGrada(g) {
+  const clave = `g:${g.id}`;
+  const hecho = cacheTerreno.get(clave);
+  if (hecho) return hecho;
+  const pw = Math.max(8, Math.round(g.w / TAM_CELDA));
+  const ph = Math.max(8, Math.round(g.h / TAM_CELDA));
+  const c = lienzoPx(pw, ph);
+  const cx = c.getContext('2d');
+  const CONTORNO = '#14102a';
+  cx.fillStyle = CONTORNO;
+  cx.fillRect(0, 0, pw, ph);
+  // Tejadillo claro arriba y muro con bufandas rojiblancas abajo
+  cx.fillStyle = '#c9ced9';
+  cx.fillRect(1, 1, pw - 2, 2);
+  cx.fillStyle = '#8f95aa';
+  cx.fillRect(1, 3, pw - 2, 1);
+  cx.fillStyle = '#4a4f6b';
+  cx.fillRect(1, ph - 5, pw - 2, 4);
+  for (let x = 1; x < pw - 1; x += 1) {
+    cx.fillStyle = Math.floor(x / 2) % 2 ? '#ffffff' : '#c8102e';
+    cx.fillRect(x, ph - 4, 1, 2);
+  }
+  // Filas de aficionados: cabeza (1 px) y camiseta (2 px) en bloques de 3 px
+  const camisetas = ['#c8102e', '#ffffff', '#a50f28', '#e8e8f0', '#c8102e', '#1b2a5c'];
+  const pieles = ['#f2c6a0', '#e0ac84', '#c68642', '#8d5524'];
+  for (let y = 4; y + 3 <= ph - 5; y += 4) {
+    cx.fillStyle = '#272c4a';
+    cx.fillRect(1, y + 3, pw - 2, 1); // escalón
+    for (let x = 1; x + 3 <= pw - 1; x += 3) {
+      const a = hash(x + g.semilla, y);
+      if (a < 0.12) continue; // asiento vacío
+      cx.fillStyle = pieles[Math.floor(hash(x, y + g.semilla) * pieles.length)];
+      cx.fillRect(x + 1, y, 1, 1);
+      cx.fillStyle = camisetas[Math.floor(a * camisetas.length)];
+      cx.fillRect(x, y + 1, 3, 2);
+    }
+  }
+  return guardar(clave, c);
+}
+
+function dibujarGrada(ctx, g) {
+  const c = spriteGrada(g);
+  sombra(ctx, g.x, g.y + g.h / 2 - 2, g.w * 0.5, 7);
+  ctx.drawImage(c, g.x - g.w / 2, g.y - g.h / 2, g.w, g.h);
+}
+
+// Premios del campo
+const COLOR_PREMIO = { cura: '#4ade80', xp: '#5cc8ff', energia: '#ffd166', iman: '#ff7b8b' };
+
+function dibujarPremio(ctx, p, t) {
+  const bote = Math.sin(t * 4 + p.x) * 3;
+  const y = p.y + bote;
+  sombra(ctx, p.x, p.y + 14, 11, 3.5);
+  ctx.globalAlpha = 0.22 + 0.1 * Math.sin(t * 6 + p.y);
+  ctx.fillStyle = COLOR_PREMIO[p.tipo];
+  ctx.beginPath();
+  ctx.arc(p.x, y, 26, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.globalAlpha = 1;
+  if (p.tipo === 'cura') {
+    dibujarCura(ctx, { x: p.x, y }, t);
+  } else if (p.tipo === 'xp') {
+    ctx.fillStyle = '#5a3d00';
+    ctx.fillRect(p.x - 11, y - 11, 22, 22);
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(p.x - 9, y - 9, 18, 18);
+    ctx.fillRect(p.x - 12, y - 4, 24, 8);
+    ctx.fillRect(p.x - 4, y - 12, 8, 24);
+    ctx.fillStyle = '#fff3b0';
+    ctx.fillRect(p.x - 6, y - 7, 6, 5);
+    ctx.fillStyle = '#b57a00';
+    ctx.fillRect(p.x - 3, y + 1, 6, 6);
+  } else if (p.tipo === 'energia') {
+    ctx.fillStyle = '#4a2c00';
+    ctx.fillRect(p.x - 9, y - 14, 18, 28);
+    ctx.fillStyle = '#ffd166';
+    ctx.fillRect(p.x - 3, y - 13, 10, 8);
+    ctx.fillRect(p.x - 6, y - 6, 12, 6);
+    ctx.fillRect(p.x - 7, y - 1, 10, 7);
+    ctx.fillRect(p.x - 4, y + 5, 8, 8);
+    ctx.fillStyle = '#fff3b0';
+    ctx.fillRect(p.x - 1, y - 12, 4, 4);
+  } else {
+    ctx.fillStyle = '#10254a';
+    ctx.fillRect(p.x - 12, y - 12, 24, 24);
+    ctx.fillStyle = '#c8102e';
+    ctx.fillRect(p.x - 10, y - 10, 7, 20);
+    ctx.fillRect(p.x + 3, y - 10, 7, 20);
+    ctx.fillRect(p.x - 10, y + 3, 20, 7);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(p.x - 10, y - 10, 7, 5);
+    ctx.fillRect(p.x + 3, y - 10, 7, 5);
+  }
+}
+
+/** Flechas en el borde de la pantalla que señalan los premios que quedan fuera de vista. */
+function dibujarFlechasPremios(ctx, mundo, cam, ancho, alto, escala, t) {
+  const m = 26;
+  mundo.premios.forEach((p) => {
+    const sx = ancho / 2 + (p.x - cam.x) * escala;
+    const sy = alto / 2 + (p.y - cam.y) * escala;
+    if (sx > 0 && sx < ancho && sy > 0 && sy < alto) return;
+    const dx = sx - ancho / 2;
+    const dy = sy - alto / 2;
+    const k = Math.min((ancho / 2 - m) / Math.abs(dx || 1e-6), (alto / 2 - m) / Math.abs(dy || 1e-6));
+    const x = ancho / 2 + dx * k;
+    const y = alto / 2 + dy * k;
+    const ang = Math.atan2(dy, dx);
+    ctx.save();
+    ctx.translate(Math.round(x), Math.round(y));
+    ctx.rotate(ang);
+    ctx.globalAlpha = 0.65 + 0.3 * Math.sin(t * 6);
+    ctx.fillStyle = '#10142d';
+    ctx.beginPath();
+    ctx.moveTo(14, 0);
+    ctx.lineTo(-9, -11);
+    ctx.lineTo(-9, 11);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = COLOR_PREMIO[p.tipo];
+    ctx.beginPath();
+    ctx.moveTo(10, 0);
+    ctx.lineTo(-6, -7);
+    ctx.lineTo(-6, 7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+let mojado = 0; // 0..1: cuánto se nota la lluvia en pantalla (se suaviza al entrar y salir)
+let embarrado = 0;
+
+/** Efectos de pantalla de la zona que pisas: gotas por toda la pantalla y tono marrón en el barro. */
+function dibujarAmbiente(ctx, j, ancho, alto, t) {
+  mojado += ((j.zona === 'lluvia' ? 1 : 0) - mojado) * 0.08;
+  embarrado += ((j.zona === 'barro' ? 1 : 0) - embarrado) * 0.08;
+  if (mojado > 0.02) {
+    ctx.fillStyle = `rgba(30,70,120,${0.16 * mojado})`;
+    ctx.fillRect(0, 0, ancho, alto);
+    ctx.strokeStyle = `rgba(200,230,255,${0.5 * mojado})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < 70; i += 1) {
+      const x = (hash(i, 11) * (ancho + 80) - t * 90) % (ancho + 80);
+      const y = (hash(i, 12) * (alto + 60) + t * 760) % (alto + 60) - 30;
+      const px = x < 0 ? x + ancho + 80 : x;
+      ctx.moveTo(Math.round(px), Math.round(y));
+      ctx.lineTo(Math.round(px - 3), Math.round(y + 14));
+    }
+    ctx.stroke();
+  }
+  if (embarrado > 0.02) {
+    ctx.fillStyle = `rgba(90,56,22,${0.14 * embarrado})`;
+    ctx.fillRect(0, 0, ancho, alto);
+  }
+}
+
 // ---------------------------------------------------------------------------------------------
 // Personajes
 // ---------------------------------------------------------------------------------------------
@@ -267,17 +525,25 @@ function dibujarEnemigo(ctx, e, t) {
     ? obtenerSprite(`j:${e.jefe}`, aspectoDe('jefe', e.jefe))
     : obtenerSprite(`r:${e.tipo}:${e.piel}:${e.pelo}`, aspectoDe('rival', e.tipo, e.piel, e.pelo));
   const quieto = e.jefe && e.estado === 'preparar';
-  const frame = quieto ? 0 : Math.floor(t * 8 + e.fase) % 2;
-  const bote = quieto ? 0 : Math.abs(Math.sin(t * 9 + e.fase)) * 1.5;
-  sombra(ctx, e.x, e.y + alto * 0.46, alto * 0.26, alto * 0.07);
+  const frame = quieto ? 0 : Math.floor(t * 8 + e.anim) % 2;
+  const bote = quieto ? 0 : Math.abs(Math.sin(t * 9 + e.anim)) * 1.5;
+  const altura = (e.altura || 0) * 70;
+  sombra(ctx, e.x, e.y + alto * 0.46, alto * 0.26 * (1 - altura / 160), alto * 0.07);
 
   if (e.lento > 0) {
     ctx.fillStyle = 'rgba(143,216,255,.35)';
     ctx.fillRect(e.x - alto * 0.3, e.y + alto * 0.38, alto * 0.6, alto * 0.1);
   }
-  dibujarSprite(ctx, sprite, e.x, e.y - bote, alto, frame, (e.mx || 0) < 0, e.flash > 0);
+  dibujarSprite(ctx, sprite, e.x, e.y - bote - altura, alto, frame, (e.mx || 0) < 0, e.flash > 0);
 
-  // Aviso de embestida de Messi: línea roja hacia donde va a salir
+  // Rival normal que va a embestir: se agacha y aparece un «!»
+  if (e.aviso > 0) {
+    ctx.fillStyle = '#ff3b3b';
+    ctx.fillRect(e.x - 2, e.y - alto / 2 - 16, 4, 9);
+    ctx.fillRect(e.x - 2, e.y - alto / 2 - 5, 4, 4);
+  }
+
+  // Aviso de embestida (Messi, el autobús de Mourinho): línea roja hacia donde va a salir
   if (quieto) {
     ctx.save();
     ctx.globalAlpha = 0.55;
@@ -286,7 +552,7 @@ function dibujarEnemigo(ctx, e, t) {
     ctx.setLineDash([12, 10]);
     ctx.beginPath();
     ctx.moveTo(e.x, e.y);
-    ctx.lineTo(e.x + e.dirX * 340, e.y + e.dirY * 340);
+    ctx.lineTo(e.x + e.dirX * (e.largoAviso || 340), e.y + e.dirY * (e.largoAviso || 340));
     ctx.stroke();
     ctx.restore();
   }
@@ -356,7 +622,12 @@ export function dibujar(ctx, mundo, vista) {
   const my = alto / escala / 2 + 80;
   const visible = (o) => Math.abs(o.x - cam.x) < mx && Math.abs(o.y - cam.y) < my;
 
+  const area = terrenoVisible(mundo.terreno, cam.x - mx, cam.y - my, cam.x + mx, cam.y + my);
+  area.zonas.forEach((z) => dibujarZona(ctx, z, t));
+  area.gradas.forEach((g) => dibujarGrada(ctx, g));
+
   mundo.avisosJefe.forEach((a) => dibujarAvisoJefe(ctx, a));
+  mundo.premios.forEach((p) => visible(p) && dibujarPremio(ctx, p, t));
   mundo.gemas.forEach((g) => visible(g) && dibujarGema(ctx, g, t));
   mundo.curas.forEach((c) => visible(c) && dibujarCura(ctx, c, t));
   mundo.ondas.forEach((o) => dibujarOnda(ctx, o));
@@ -397,4 +668,7 @@ export function dibujar(ctx, mundo, vista) {
   });
   ctx.globalAlpha = 1;
   ctx.restore();
+
+  dibujarAmbiente(ctx, j, ancho, alto, t);
+  dibujarFlechasPremios(ctx, mundo, cam, ancho, alto, escala, t);
 }

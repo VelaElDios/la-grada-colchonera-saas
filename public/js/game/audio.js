@@ -25,6 +25,7 @@ const SONIDOS = {
 export function crearAudio() {
   let ctx = null;
   let silenciado = leerSilencio();
+  let volumen = 0.7; // 0..1
   const ultimo = {};
 
   function asegurarContexto() {
@@ -39,6 +40,8 @@ export function crearAudio() {
 
   return {
     get silenciado() { return silenciado; },
+    get volumen() { return volumen; },
+    set volumen(v) { volumen = Math.max(0, Math.min(1, v)); },
     /** Debe llamarse tras un gesto del usuario (el navegador no deja sonar antes). */
     activar: asegurarContexto,
     alternar() {
@@ -59,7 +62,7 @@ export function crearAudio() {
       osc.type = s.onda;
       osc.frequency.setValueAtTime(s.de, c.currentTime);
       osc.frequency.exponentialRampToValueAtTime(Math.max(20, s.a), c.currentTime + s.dur);
-      ganancia.gain.setValueAtTime(s.vol, c.currentTime);
+      ganancia.gain.setValueAtTime(Math.max(0.0002, s.vol * volumen * 1.4), c.currentTime);
       ganancia.gain.exponentialRampToValueAtTime(0.0001, c.currentTime + s.dur);
       osc.connect(ganancia).connect(c.destination);
       osc.start();

@@ -15,6 +15,7 @@ const TECLAS = {
  */
 export function crearEntrada(zona, { alPausar, activo }) {
   const pulsadas = new Set();
+  let joystickActivo = true;
   const joystick = { id: null, x0: 0, y0: 0, x: 0, y: 0 };
 
   const base = document.createElement('div');
@@ -42,7 +43,7 @@ export function crearEntrada(zona, { alPausar, activo }) {
   };
 
   function alTocar(ev) {
-    if (ev.pointerType === 'mouse' || joystick.id !== null || !activo()) return;
+    if (ev.pointerType === 'mouse' || !joystickActivo || joystick.id !== null || !activo()) return;
     joystick.id = ev.pointerId;
     joystick.x0 = ev.clientX;
     joystick.y0 = ev.clientY;
@@ -97,6 +98,7 @@ export function crearEntrada(zona, { alPausar, activo }) {
       return { x: joystick.x, y: joystick.y };
     },
     soltarTodo,
+    ponerJoystick(valor) { joystickActivo = valor; if (!valor) soltarTodo(); },
     destruir() {
       window.removeEventListener('keydown', alBajarTecla);
       window.removeEventListener('keyup', alSubirTecla);

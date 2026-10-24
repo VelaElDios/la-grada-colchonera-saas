@@ -102,3 +102,23 @@ test('la política de privacidad existe, se sirve y está enlazada desde el pie'
   assert.match(html, /RGPD/);
   assert.match(fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8'), /href="\/privacidad\.html"/);
 });
+
+test('con la sesión iniciada la cabecera solo ofrece Jugar y Mi cuenta, y el inicio lleva directo al menú del juego', () => {
+  const cabecera = fs.readFileSync(path.join(PUBLIC, 'js', 'ui', 'cabecera.js'), 'utf8');
+  const ui = fs.readFileSync(path.join(PUBLIC, 'js', 'ui.js'), 'utf8');
+  const logueado = cabecera.match(/const enlaces = \[(.*?)\];/)[1];
+  assert.match(logueado, /Jugar/);
+  assert.match(logueado, /Mi cuenta/);
+  assert.doesNotMatch(logueado, /Inicio/);
+  assert.match(ui, /ruta === '\/' && estado\.usuario/);
+});
+
+test('el menú del juego tiene tus tiempos, vestuario, dirección, ranking y ajustes', () => {
+  const juego = fs.readFileSync(path.join(PUBLIC, 'js', 'game', 'juego.js'), 'utf8');
+  for (const accion of ['jugar', 'vestuario', 'direccion', 'ranking', 'ajustes']) {
+    assert.match(juego, new RegExp(`data-accion="${accion}"`), accion);
+  }
+  assert.match(juego, /Tus tiempos/);
+  for (const panel of ['vestuario', 'direccion', 'ranking', 'ajustes']) assert.match(juego, new RegExp(`data-pantalla="${panel}"`));
+  for (const ajuste of ['volumen', 'efectos', 'numeros', 'zoom', 'joystick']) assert.match(juego, new RegExp(`data-ajuste="${ajuste}"`));
+});
