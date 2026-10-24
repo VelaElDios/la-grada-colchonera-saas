@@ -29,6 +29,11 @@ function createJuegoRouter({ juegoService }) {
     res.json(await juegoService.entrenar(req.user, req.body));
   });
 
+  // Modo pruebas (solo administradores): todos los jugadores y puntos de sobra
+  router.post('/desbloquear', async (req, res) => {
+    res.json(await juegoService.desbloquearTodo(req.user));
+  });
+
   // Clasificación multijugador
   router.get('/ranking', async (req, res) => {
     res.json(await juegoService.ranking(req.user, Number(req.query.limite) || 20));

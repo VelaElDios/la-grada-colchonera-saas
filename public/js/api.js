@@ -79,6 +79,7 @@ export const api = {
   getJuegoPerfil: () => peticion('GET', '/juego/perfil'),
   iniciarPartida: (personaje, entrenador) => peticion('POST', '/juego/partidas', { personaje, entrenador }),
   finalizarPartida: (partidaId, resultado) => peticion('POST', `/juego/partidas/${encodeURIComponent(partidaId)}/fin`, resultado),
+  desbloquearJuego: () => peticion('POST', '/juego/desbloquear'),
   contratarJugador: () => peticion('POST', '/juego/contratar'),
   entrenarJugador: (personaje, estadistica) => peticion('POST', '/juego/entrenar', { personaje, estadistica }),
   getRankingJuego: (limite = 20) => peticion('GET', `/juego/ranking?limite=${encodeURIComponent(limite)}`),

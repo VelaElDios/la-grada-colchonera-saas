@@ -1,7 +1,8 @@
 // Daño, muertes, recompensas y efectos visuales sencillos (números flotantes y partículas).
 import {
-  MUNDO, EQUIPOS, JEFES, MOVIMIENTO, CURAS, ELITES,
+  MUNDO, EQUIPOS, JEFES, MOVIMIENTO, CURAS, ELITES, AYUDA_INICIAL, resistenciaCurtidos,
 } from './config.js';
+import { explosionDeFuego } from './ultras.js';
 
 const MAX_TEXTOS = 40;
 const MAX_PARTICULAS = 260;
@@ -43,8 +44,9 @@ export function curar(mundo, cantidad) {
 export function multiplicadorDano(jugador, tipo) {
   const porTipo = tipo === 'disparo' ? jugador.mult.disparo : tipo === 'cuerpo' ? jugador.mult.cuerpo : 1;
   const ritmo = 1 + MOVIMIENTO.bonoDano * (jugador.ritmo ?? 0); // correr da más daño
+  const novato = 1 + AYUDA_INICIAL.dano * (jugador.ayuda ?? 0); // ayuda de los primeros minutos
   const contra = jugador.contra && jugador.contra.t > 0 ? 1 + jugador.contra.dano : 1; // contragolpe
-  return jugador.mult.dano * porTipo * ritmo * contra * (jugador.animo > 0 ? jugador.bonoAnimo : 1);
+  return jugador.mult.dano * porTipo * ritmo * novato * contra * (jugador.animo > 0 ? jugador.bonoAnimo : 1);
 }
 
 /**
@@ -53,7 +55,7 @@ export function multiplicadorDano(jugador, tipo) {
  */
 export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo = 'cuerpo') {
   if (enemigo.muerto) return;
-  let cantidad = Math.max(1, Math.round(base * multiplicadorDano(mundo.jugador, tipo)));
+  let cantidad = Math.max(1, Math.round(base * multiplicadorDano(mundo.jugador, tipo) * resistenciaCurtidos(mundo.tiempo / 60)));
   // Golpe crítico (Trébol y suerte): el doble de daño
   const critico = (mundo.jugador.mult.critico ?? 0) > 0 && mundo.rng.siguiente() < mundo.jugador.mult.critico;
   if (critico) cantidad *= 2;
@@ -113,6 +115,7 @@ function colorDe(enemigo) {
 function matar(mundo, enemigo) {
   enemigo.muerto = true;
   mundo.jugador.bajas += 1;
+  if (enemigo.quemado && mundo.jugador.ultras.includes('botaOro')) explosionDeFuego(mundo, enemigo);
   mundo.cargaPendiente += enemigo.jefe ? 12 : 1;
   soltarGema(mundo, enemigo.x, enemigo.y, enemigo.xp);
   crearParticulas(mundo, enemigo.x, enemigo.y, colorDe(enemigo), enemigo.jefe ? 30 : 7, enemigo.jefe ? 260 : 130);

@@ -83,19 +83,34 @@ export const JUGADOR = {
  * Dificultad objetivo: a los 20 minutos sobrevivir es muy difícil y a los 30 casi imposible
  * (antes eran 30 y 40). Para eso el tiempo se «comprime»: el minuto m de ahora pesa como el minuto 1,45·m + 1 de antes.
  */
+/** Ayuda de novato: al empezar pegas y subes más rápido, y se va apagando hasta desaparecer (así el primer jefe es asequible con un jugador base). */
+export const AYUDA_INICIAL = { duracion: 480, dano: 0.7, xp: 0.5 };
 export const COMPRESION = { factor: 1.3, base: 0.8 };
 const comprimido = (m) => COMPRESION.factor * m + COMPRESION.base;
+/** Tramo final: desde el minuto 9 los rivales crecen mucho más rápido. Sin ULTRAS no hay quien lo aguante. */
+export const TRAMO_FINAL = { desde: 9, vida: 0.1, dano: 0.1, expVida: 2.3, expDano: 1.8 };
+
+/**
+ * Rivales «curtidos»: desde el minuto `desde` los golpes normales de tus armas pegan cada vez menos (se adaptan a ti).
+ * Solo lo que va en % de su vida (las ULTRAS, ver ultras.js) y los daños de fuego atraviesan esa resistencia.
+ */
+export const CURTIDOS = { desde: 11, k: 0.10, exp: 1.4 };
+export const resistenciaCurtidos = (minutos) => 1 / (1 + CURTIDOS.k * Math.max(0, minutos - CURTIDOS.desde) ** CURTIDOS.exp);
+const tarde = (m, k, exp) => 1 + k * Math.max(0, m - TRAMO_FINAL.desde) ** exp;
 export const ESCALADO = {
-  vida: (m) => { const t = comprimido(m); return 1 + 0.45 * t + 0.02 * t * t; },
-  dano: (m) => { const t = comprimido(m); return 1 + 0.12 * t + 0.008 * t * t; },
-  velocidad: (m) => Math.min(2.2, 1 + 0.026 * comprimido(m)),
+  vida: (m) => { const t = comprimido(m); return (1 + 0.30 * t + 0.014 * t * t) * tarde(m, TRAMO_FINAL.vida, TRAMO_FINAL.expVida); },
+  dano: (m) => { const t = comprimido(m); return (1 + 0.09 * t + 0.006 * t * t) * tarde(m, TRAMO_FINAL.dano, TRAMO_FINAL.expDano); },
+  velocidad: (m) => Math.min(2.2, 1 + 0.024 * comprimido(m)),
   xp: (m) => 1 + 0.08 * m,
 };
-/** Los jefes crecen aparte: más con el tiempo y con cada jefe vencido, para seguir siendo un reto aunque vayas fuerte. */
+/** Los jefes crecen aparte: asequibles al principio y cada vez más duros con cada jefe vencido. */
 export const ESCALADO_JEFE = {
-  vida: (m, indice) => ESCALADO.vida(m) * (0.7 + 0.4 * indice) * (1 + 0.035 * m), // el primero es asequible; luego crecen más que tú
-  dano: (m, indice) => ESCALADO.dano(m) * (1 + 0.04 * indice),
+  vida: (m, indice) => ESCALADO.vida(m) * (0.45 + 0.22 * indice) * (1 + 0.03 * m),
+  dano: (m, indice) => ESCALADO.dano(m) * (0.8 + 0.04 * indice),
 };
+
+/** Los efectos en % de la vida de ULTRAS pegan solo esta fracción a los jefes (si no, los fundirían). */
+export const ULTRA_PCT_JEFE = 0.12;
 
 /** Rivales élite: aparecen desde la oleada `desde`, cada vez más a menudo, y son más duros que los normales. */
 export const ELITES = {
@@ -1018,6 +1033,18 @@ export const SINERGIAS = {
     nombre: 'Leyenda rojiblanca', icono: 'estrella', distintas: { cuantas: 6, nivel: 3 },
     requiere: {}, descripcion: '+10 % de daño, +10 % de experiencia y +5 % de resistencia.', bonus: { dano: 0.10, xp: 0.10, armadura: 0.05 },
   },
+  golazo: {
+    nombre: 'Golazo de otro planeta', icono: 'chilena', requiere: { chilena: 3, efecto: 3, vaselina: 2 },
+    descripcion: '+22 % de daño de disparo y tus balones atraviesan a un rival más.', bonus: { disparo: 0.22, perfora: 1 },
+  },
+  remontada: {
+    nombre: 'Remontada épica', icono: 'reloj', requiere: { prorroga: 2, guanteOro: 2, brazalete: 2 },
+    descripcion: '+10 % de resistencia y recuperas 1,5 de vida por segundo.', bonus: { armadura: 0.10, regen: 1.5 },
+  },
+  maquina: {
+    nombre: 'Máquina de goles', icono: 'canon', requiere: { balon: 4, canonazo: 3, corner: 3 },
+    descripcion: '+18 % de daño de disparo y las armas recargan un 8 % más rápido.', bonus: { disparo: 0.18, cd: 0.08 },
+  },
   triplete: {
     nombre: 'Triple Corona', icono: 'balonOro', requiere: { balonOro: 3, botaOro: 3, guanteOro: 3 },
     descripcion: '+20 % de daño, +10 % de crítico y +8 % de resistencia.', bonus: { dano: 0.20, critico: 0.10, armadura: 0.08 },
@@ -1044,9 +1071,47 @@ export const SINERGIAS = {
   },
 };
 
+/**
+ * ULTRAS: poderes de leyenda. Se consiguen solos al juntar `cuantas` de las combinaciones de la lista `de`
+ * (`minArmas` = cuántas de ellas deben ser combinaciones con armas, para que no salgan solo con pasivas;
+ * `maestria` = suma mínima de niveles de armas: hay que dominar tu juego, no tocar de todo). Sin ellas, el tramo final de la partida es casi imposible.
+ */
+export const ULTRAS = {
+  puskas: {
+    nombre: 'Premio Puskás', titulo: 'El gol más bello del año', icono: 'puskas', color: '#ff5ec8', de: ['golazo', 'balonParado', 'doblete', 'tikitaka'], cuantas: 3, maestria: 28,
+    descripcion: 'Cada pocos segundos lanzas dos cometas que dibujan una curva imposible, lo atraviesan todo y explotan al final.',
+    cd: 5.5, dano: 70, pct: 0.04, explosion: 190, explosionPct: 0.18, radioExplosion: 150,
+  },
+  balonOro: {
+    nombre: 'Ganador del Balón de Oro', titulo: 'El mejor del mundo', icono: 'balonOro', color: '#ffd24a', de: ['triplete', 'pichichi', 'doblete', 'maquina'], cuantas: 3, maestria: 36,
+    descripcion: 'Una lluvia continua de balones de oro cae sobre los rivales y se lleva por delante todo lo que pisa.',
+    cada: 0.33, dano: 75, pct: 0.07, radio: 78, disparo: 0.25,
+  },
+  champions: {
+    nombre: 'MVP de la Champions', titulo: 'Mejor jugador de la final', icono: 'champions', color: '#6ea8ff', de: ['nocheEuropea', 'bombardeo', 'arbitro', 'aereo', 'remontada'], cuantas: 3, minArmas: 2, maestria: 36,
+    descripcion: 'Seis estrellas de la copa giran a tu alrededor destrozando todo y cada pocos segundos estalla una supernova.',
+    estrellas: 6, radio: 150, dano: 38, pct: 0.025, supernovaCada: 9, supernova: 150, supernovaPct: 0.25, supernovaRadio: 340,
+  },
+  zamora: {
+    nombre: 'Trofeo Zamora', titulo: 'El portero menos goleado', icono: 'zamora', color: '#8fe3ff', de: ['muro', 'catenaccio', 'lineaDura', 'aereo', 'capitan', 'remontada'], cuantas: 2, minArmas: 1, maestria: 30,
+    descripcion: 'Una cúpula te protege y quema a quien se acerca; cada pocos segundos el «muro infranqueable» lo empuja todo y borra los balones rivales.',
+    radio: 118, tick: 0.5, dano: 22, pct: 0.03, armadura: 0.25, muroCada: 8, muroDano: 150, muroPct: 0.35, muroRadio: 360,
+  },
+  botaOro: {
+    nombre: 'Bota de Oro histórica', titulo: 'Máximo goleador de Europa', icono: 'botaOro', color: '#ff7a1a', de: ['infierno', 'contra', 'balonParado', 'maquina', 'bombardeo'], cuantas: 3, maestria: 30,
+    descripcion: 'Dejas un rastro de fuego a tu paso y todo rival que muere ardiendo explota en cadena.',
+    cada: 0.16, radio: 50, dano: 16, pct: 0.012, dur: 2.6, explosion: 52, explosionDano: 28, explosionPct: 0.2,
+  },
+  mundial: {
+    nombre: 'Mejor jugador del Mundial', titulo: 'Cuando el mundo se detiene', icono: 'mundial', color: '#b784ff', de: ['tikitaka', 'jugon', 'contra', 'fisico', 'leyenda'], cuantas: 2, minArmas: 1, maestria: 34,
+    descripcion: 'Cada pocos segundos el tiempo se para: los rivales quedan helados, tú vas más rápido y pegas el doble, dejando estelas de ti mismo.',
+    cada: 13, dur: 3.2, vel: 0.45, dano: 0.8, pctTick: 0.05,
+  },
+};
+
 export const NIVEL_MAXIMO = 5;
 
 /** Experiencia necesaria para pasar del nivel `n` al siguiente. */
 export function xpParaSubir(n) {
-  return Math.round(5 + (n - 1) * 4.5 + 0.9 * (n - 1) ** 1.7);
+  return Math.round(6 + (n - 1) * 5.5 + 0.34 * (n - 1) ** 2.1);
 }

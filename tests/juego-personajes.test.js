@@ -222,7 +222,7 @@ test('el juego es infinito: 400 subidas de nivel seguidas y siempre hay mejoras 
     for (let i = 0; i < 400; i++) {
       mundo.pendientes = 1;
       mundo.estado = 'jugando';
-      m.avanzar(mundo, PASO);
+      for (let k = 0; k < 20 && mundo.estado === 'jugando'; k++) m.avanzar(mundo, PASO); // (una pausa de golpe fuerte puede retrasarlo unos fotogramas)
       assert.equal(mundo.estado, 'mejora', `nivel ${i}: debe abrirse la elección`);
       assert.ok(mundo.opciones.length >= 1, `nivel ${i}: sin opciones`);
       assert.ok(m.elegirMejora(mundo, mundo.opciones[mundo.opciones.length - 1].id));

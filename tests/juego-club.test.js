@@ -67,7 +67,28 @@ test('el equipo inicial es un portero, un defensa, un medio y un delantero de lo
   ['oblak', 'courtois', 'griezmann', 'kun', 'godin'].forEach((k) => assert.ok(!vistos.has(k), `${k} no debe salir al empezar`));
 });
 
-test('un punto de entrenamiento por cada 3 jefes de ese jugador y una ficha por cada 5 jefes en total', async () => {
+test('el entrenamiento da puntos por rivales eliminados (los primeros baratos, los últimos caros) y por cada 3 jefes', async () => {
+  const club = await cargar('club.js');
+  assert.equal(club.puntosPorBajas(0), 0);
+  assert.equal(club.puntosPorBajas(club.costePunto(1) - 1), 0);
+  assert.equal(club.puntosPorBajas(club.costePunto(1)), 1);
+  // cada punto cuesta más que el anterior
+  for (let k = 2; k <= club.PUNTOS_BAJAS_MAX; k += 1) assert.ok(club.costePunto(k) > club.costePunto(k - 1));
+  assert.ok(club.costePunto(club.PUNTOS_BAJAS_MAX) > club.costePunto(1) * 10);
+  // tope de puntos por bajas
+  assert.equal(club.puntosPorBajas(10_000_000), club.PUNTOS_BAJAS_MAX);
+  // próximo punto
+  const sig = club.proximoPuntoPorBajas(10);
+  assert.equal(sig.faltan, club.costePunto(1) - 10);
+  assert.equal(club.proximoPuntoPorBajas(10_000_000), null);
+  // bajas y jefes suman
+  const ficha = club.fichaNueva();
+  ficha.bajas = club.costePunto(1);
+  ficha.jefes = 3;
+  assert.equal(club.puntosLibres(ficha), 2);
+});
+
+test('un punto de entrenamiento por cada 3 jefes de ese jugador y una ficha por cada 3 jefes en total', async () => {
   const club = await cargar('club.js');
   const ficha = club.fichaNueva();
   assert.equal(club.puntosLibres(ficha), 0);
@@ -75,10 +96,11 @@ test('un punto de entrenamiento por cada 3 jefes de ese jugador y una ficha por 
   assert.equal(club.puntosLibres(ficha), 2);
   ficha.stats.vida = 1;
   assert.equal(club.puntosLibres(ficha), 1);
-  const perfil = { jefesTotal: 14, fichasUsadas: 1, jugadores: {} };
+  const perfil = { jefesTotal: 7, fichasUsadas: 1, jugadores: {} };
   assert.equal(club.fichasGanadas(perfil), 2);
   assert.equal(club.fichasDisponibles(perfil), 1);
-  assert.equal(club.fichasDisponibles({ jefesTotal: 3, fichasUsadas: 0, jugadores: {} }), 0);
+  assert.equal(club.fichasDisponibles({ jefesTotal: 2, fichasUsadas: 0, jugadores: {} }), 0);
+  assert.equal(club.fichasDisponibles({ jefesTotal: 3, fichasUsadas: 0, jugadores: {} }), 1);
 });
 
 test('el contrato nunca repite jugador, da a todos y los de más habilidades salen menos', async () => {
@@ -331,7 +353,7 @@ test('el primer jefe sale a los 1:30 (oleada 4), luego cada 2 minutos, y los jef
   assert.ok(primero.vida < JEFES.guardiola.vida * ESCALADO.vida(1.5), 'el primero cuesta menos que antes');
   assert.ok(quinto.vida > primero.vida * 2.5);
   // Mitad de partida: pesan bastante más que el crecimiento normal
-  assert.ok(ESCALADO_JEFE.vida(10, 5) > ESCALADO.vida(10) * 2.5);
+  assert.ok(ESCALADO_JEFE.vida(10, 5) > ESCALADO.vida(10) * 1.8);
 });
 
 test('los botiquines escasean: pocos por el campo y curan según tu vida máxima', async () => {

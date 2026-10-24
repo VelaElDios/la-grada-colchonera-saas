@@ -56,6 +56,9 @@ const ICONOS = {
   trebol: `<circle cx="9" cy="8.5" r="3.2" ${trazo}/><circle cx="15" cy="8.5" r="3.2" ${trazo}/><circle cx="9" cy="14" r="3.2" ${trazo}/><circle cx="15" cy="14" r="3.2" ${trazo}/><path d="M12 14l1.5 7" ${trazo}/>`,
   champions: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M12 7l1.4 3 3.2.4-2.4 2.2.6 3.2-2.8-1.7-2.8 1.7.6-3.2-2.4-2.2 3.2-.4z" ${trazo}/>`,
   bengala: `<path d="M4.5 20.5L12 13" ${trazo}/><path d="M13 4c3.2 1 5.4 4.2 4.4 8.2-2-.5-3.2-2-3.2-3.2-1.2 1.2-3 2.2-3 2.2-1.2-3.2 0-5.2 1.8-7.2z" ${trazo}/>`,
+  puskas: `<path d="M3 20C6 6 16 3 21 5" ${trazo}/><circle cx="18" cy="6.5" r="3.2" ${trazo}/><path d="M4 14c3-5 7-7 10-7M6 20c3-3 5-4 8-5" ${trazo}/>`,
+  zamora: `<path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z" ${trazo}/><path d="M9 9.5h6l-6 5h6" ${trazo}/>`,
+  mundial: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" ${trazo}/>`,
   reloj: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M12 7v5l3 2" ${trazo}/>`,
 };
 
