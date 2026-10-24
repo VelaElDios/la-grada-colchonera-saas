@@ -12,6 +12,7 @@ function toRecord(row) {
     nivel: row.nivel,
     jefes: row.jefes,
     bajas: row.bajas,
+    avatar: row.avatar ?? null,
     createdAt: toIso(row.created_at),
   };
 }
@@ -49,19 +50,24 @@ function createPostgresJuegoRepository(pool) {
     },
 
     async guardarRecord(userId, r) {
-      const valores = [userId, r.alias, r.personaje, r.entrenador, r.tiempo, r.nivel, r.jefes, r.bajas];
+      const valores = [userId, r.alias, r.personaje, r.entrenador, r.tiempo, r.nivel, r.jefes, r.bajas, r.avatar ?? null];
       const res = await pool.query(
-        `UPDATE juego_records SET alias = $2, personaje = $3, entrenador = $4, tiempo = $5, nivel = $6, jefes = $7, bajas = $8, created_at = now()
+        `UPDATE juego_records SET alias = $2, personaje = $3, entrenador = $4, tiempo = $5, nivel = $6, jefes = $7, bajas = $8, avatar = $9, created_at = now()
          WHERE user_id = $1`,
         valores,
       );
       if (res.rowCount === 0) {
         await pool.query(
-          `INSERT INTO juego_records (user_id, alias, personaje, entrenador, tiempo, nivel, jefes, bajas)
-           VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+          `INSERT INTO juego_records (user_id, alias, personaje, entrenador, tiempo, nivel, jefes, bajas, avatar)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
           valores,
         );
       }
+    },
+
+    /** Cambia el mote y el avatar con los que sale en el ranking (si tiene récord). */
+    async actualizarIdentidad(userId, { alias, avatar }) {
+      await pool.query('UPDATE juego_records SET alias = $2, avatar = $3 WHERE user_id = $1', [userId, alias, avatar ?? null]);
     },
 
     async mejoresRecords(limite) {

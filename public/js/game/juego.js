@@ -4,7 +4,7 @@ import {
   MUNDO, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, SINERGIAS, ULTRAS,
 } from './config.js';
 import { crearMundo, avanzar, elegirMejora, resumen, usarUlti } from './mundo.js';
-import { retratoUrl, aspectoDe } from './sprites.js';
+import { retratoUrl, aspectoDe, avatarUrl } from './sprites.js';
 import { dibujar, actualizarCamara } from './render.js';
 import { crearEntrada } from './entrada.js';
 import { crearAudio } from './audio.js';
@@ -33,6 +33,7 @@ const PLANTILLA = `
       <div class="hud__bloque hud__bloque--centro">
         <span class="hud__dato">${icono('reloj', 16)}<span data-hud="tiempo">0:00</span></span>
         <span class="hud__dato hud__dato--oleada">Oleada <strong data-hud="oleada">1</strong></span>
+        <span class="hud__dato hud__dato--ambiente" data-hud="ambiente" data-ambiente="inicio">Pretemporada</span>
       </div>
       <div class="hud__bloque hud__bloque--der">
         <span class="hud__dato" title="Rivales eliminados">${icono('calavera', 16)}<span data-hud="bajas">0</span></span>
@@ -66,6 +67,7 @@ const PLANTILLA = `
   <section class="hub" data-pantalla="hub" aria-labelledby="juego-t-hub">
     <h2 id="juego-t-hub" class="sr-only">Menú principal</h2>
     <aside class="panel hub__tiempos" aria-labelledby="juego-t-tiempos">
+      <button type="button" class="ficha-fan" data-accion="identidad" data-campo="ficha-fan" aria-label="Tu ficha: mote y avatar"></button>
       <h3 id="juego-t-tiempos" class="panel__titulo">Tus tiempos</h3>
       <p class="club-estado" data-campo="club-estado" hidden></p>
       <div data-campo="tiempos"></div>
@@ -138,6 +140,30 @@ const PLANTILLA = `
     </div>
   </section>
 
+  <section class="pantalla" data-pantalla="identidad" role="dialog" aria-modal="true" aria-labelledby="juego-t-ident" hidden>
+    <div class="pantalla__caja pantalla__caja--ancha">
+      <p class="pantalla__sobretitulo">Tu ficha de aficionado</p>
+      <h2 id="juego-t-ident" class="pantalla__titulo">Ponte un mote y una cara</h2>
+      <p class="pantalla__texto">Tu mote sale en el ranking de la grada y arriba, en la web, en vez de tu correo. La cara la eliges entre los jugadores que tienes fichados y los entrenadores.</p>
+      <form class="identidad" data-campo="form-identidad" novalidate>
+        <div class="identidad__vista">
+          <img class="identidad__avatar" data-campo="ident-vista" alt="" width="96" height="96">
+          <label class="identidad__campo">
+            <span>Mote (3 a 16 caracteres)</span>
+            <input type="text" name="apodo" data-campo="ident-apodo" maxlength="16" minlength="3" autocomplete="nickname" spellcheck="false" required>
+          </label>
+        </div>
+        <p class="identidad__error" data-campo="ident-error" role="alert" hidden></p>
+        <h3 class="combos__subtitulo">Elige tu cara</h3>
+        <ul class="identidad__caras" data-campo="ident-caras" aria-label="Caras disponibles"></ul>
+        <div class="pantalla__acciones">
+          <button type="button" class="btn btn--secundario" data-accion="hub">Ahora no</button>
+          <button type="submit" class="btn btn--primario" data-campo="ident-guardar">Guardar mi ficha</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
   <section class="pantalla" data-pantalla="direccion" role="dialog" aria-modal="true" aria-labelledby="juego-t-dir" hidden>
     <div class="pantalla__caja pantalla__caja--ancha">
       <p class="pantalla__sobretitulo">Dirección deportiva</p>
@@ -159,7 +185,7 @@ const PLANTILLA = `
         <button type="button" class="btn btn--secundario" data-accion="desbloquear" data-campo="boton-pruebas" hidden>Modo pruebas: desbloquearlo todo</button>
       </div>
       <div class="vest vest--entrena">
-        <ul class="plantilla" data-campo="entrena-lista" aria-label="Tu plantilla"></ul>
+        <ul class="plantilla plantilla--uno" data-campo="entrena-lista" aria-label="Jugador elegido"></ul>
         <aside class="vest__detalle" data-campo="entrena-panel" aria-live="polite"></aside>
       </div>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Listo</button></div>
@@ -226,7 +252,8 @@ const PLANTILLA = `
       <ul class="instrucciones">
         <li><strong>Muévete siempre.</strong> Corriendo sube tu <em>ritmo</em>: más daño, más experiencia y la ulti se carga sola. Si te quedas quieto, los rivales aprietan.</li>
         <li>Las armas atacan solas. Los diamantes azules dan experiencia y los <strong>premios</strong> del campo (flechas en el borde) te curan, suben de nivel o cargan la ulti.</li>
-        <li><strong>Barro</strong>: te frena. <strong>Lluvia</strong>: los balones, tuyos y rivales, corren más. El campo cambia por tramos (estadio, cantera, campo de entrenamiento): <strong>gradas, corrales, pasillos, carteles, porterías y focos</strong> no se atraviesan, ni tú, ni los rivales, ni los balones. Hay que dar rodeos.</li>
+        <li><strong>Cada partida es un mundo distinto</strong>: barrios de estadios con sus gradas, plazas con tiendas, campos de entrenamiento, parques y prados con <strong>mesetas</strong> (los taludes no se suben: busca las escaleras). <strong>Barro</strong>: te frena. <strong>Lluvia</strong>: los balones, tuyos y rivales, corren más. Gradas, tiendas, árboles y porterías no se atraviesan; los balones pasan por encima de taludes, vallas y bancos.</li>
+        <li><strong>Cada 5 minutos cambia la pantalla</strong>: de la pretemporada a la final de la Copa del Rey, la final de Liga, la final de la Champions y, por último, la final del Mundial con la camiseta de tu selección. Cambian la luz y la decoración, y los rivales salen más fuertes.</li>
         <li>Algunos rivales embisten (se agachan antes) y otros disparan balones. Cada 4 oleadas (cada 2 minutos) llega un <strong>jefe</strong> con tres fases; salen al azar entre todos y cada vez son más duros. También aparecen <strong>rivales élite</strong> con aro de color. Los rivales que elimines te dan puntos de <strong>entrenamiento</strong> (más baratos al principio), cada 3 jefes dan 1 punto más y <strong>fichas de contrato</strong> (1 por cada 3). Al juntar varias combinaciones consigues <strong>ULTRAS</strong>, los poderes de leyenda que hacen falta para llegar a los minutos altos.</li>
         <li>Cada jugador solo aprende <strong>las habilidades de su estilo</strong> (un portero no chuta, un defensa mete cabezazos y entradas…). Al juntar ciertas habilidades se activan <strong>combinaciones</strong> con bonus: mira las metas en el menú.</li>
       </ul>
@@ -272,18 +299,20 @@ const PLANTILLA = `
   <p class="sr-only" data-campo="anuncio" role="status" aria-live="polite"></p>
 `;
 
-const PANTALLAS = ['hub', 'vestuario', 'entrenamiento', 'contratar', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda', 'pausa', 'mejora', 'fin'];
-const PANELES_DEL_HUB = new Set(['vestuario', 'entrenamiento', 'contratar', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda']);
+const PANTALLAS = ['hub', 'identidad', 'vestuario', 'entrenamiento', 'contratar', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda', 'pausa', 'mejora', 'fin'];
+const PANELES_DEL_HUB = new Set(['identidad', 'vestuario', 'entrenamiento', 'contratar', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda']);
 
 const textoPartida = (f) => `${formatearTiempo(f.tiempo)} · ${PERSONAJES[f.personaje]?.nombre ?? '—'} · oleada ${f.oleada}`;
 
 /**
  * Monta el juego dentro de `contenedor`.
  * @param {HTMLElement} contenedor
- * @param {{ usuario: object, alSalir: () => void }} opciones
+ * @param {{ usuario: object, alSalir: () => void, alCambiarUsuario?: (u: object) => void }} opciones
  * @returns {{ destruir: () => void }}
  */
-export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
+export function montarJuego(contenedor, {
+  usuario, alSalir, servidor = null, alCambiarUsuario = () => {},
+}) {
   contenedor.classList.add('juego');
   contenedor.innerHTML = PLANTILLA;
   const botonPruebas = contenedor.querySelector('[data-campo="boton-pruebas"]');
@@ -350,6 +379,67 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
     pintarAvisosClub();
   }
 
+  // --- Tu ficha: mote y avatar ------------------------------------------------------------------
+
+  let avatarElegido = null;
+  let preguntadoMote = false;
+
+  /** Caras que puedes ponerte: los jugadores que tienes y los entrenadores. */
+  function carasDisponibles() {
+    const jugadores = club ? propios() : [eleccion.personaje];
+    return [...jugadores.map((k) => `p:${k}`), ...Object.keys(ENTRENADORES).map((k) => `e:${k}`)];
+  }
+  const nombreDeCara = (a) => {
+    const [tipo, clave] = a.split(':');
+    return tipo === 'p' ? PERSONAJES[clave]?.nombre : ENTRENADORES[clave]?.nombre;
+  };
+
+  function pintarFichaFan() {
+    const boton = q('[data-campo="ficha-fan"]');
+    const url = usuario?.avatar ? avatarUrl(usuario.avatar, 64) : null;
+    const nombre = usuario?.apodo || 'Ponte un mote';
+    boton.innerHTML = `${url ? `<img src="${url}" alt="" width="44" height="44">` : '<span class="ficha-fan__vacia" aria-hidden="true">?</span>'}
+      <span><strong>${esc(nombre)}</strong><small>${usuario?.apodo ? 'Tu ficha · cambiar' : 'Saldrá en el ranking'}</small></span>`;
+  }
+
+  function pintarIdentidad() {
+    const caras = carasDisponibles();
+    if (!avatarElegido || !caras.includes(avatarElegido)) avatarElegido = usuario?.avatar && caras.includes(usuario.avatar) ? usuario.avatar : caras[0];
+    const input = q('[data-campo="ident-apodo"]');
+    if (!input.value) input.value = usuario?.apodo ?? '';
+    q('[data-campo="ident-vista"]').src = avatarUrl(avatarElegido, 96) ?? '';
+    q('[data-campo="ident-caras"]').innerHTML = caras.map((a) => `<li><button type="button" class="cara" data-avatar="${a}" aria-pressed="${a === avatarElegido}" title="${esc(nombreDeCara(a) ?? a)}">
+        <img src="${avatarUrl(a, 56)}" alt="" width="56" height="56"><span class="sr-only">${esc(nombreDeCara(a) ?? a)}</span></button></li>`).join('');
+    q('[data-campo="ident-error"]').hidden = true;
+  }
+
+  async function guardarIdentidad() {
+    if (ocupado || !servidor?.identidad) return;
+    const apodo = q('[data-campo="ident-apodo"]').value.trim();
+    const error = q('[data-campo="ident-error"]');
+    if (apodo.length < 3) {
+      error.textContent = 'El mote tiene que tener al menos 3 caracteres.';
+      error.hidden = false;
+      return;
+    }
+    ocupado = true;
+    q('[data-campo="ident-guardar"]').disabled = true;
+    try {
+      const nuevo = await servidor.identidad({ apodo, avatar: avatarElegido });
+      Object.assign(usuario, nuevo);
+      alCambiarUsuario({ ...usuario });
+      anunciar(`Guardado: ahora eres ${nuevo.apodo}`);
+      pintarFichaFan();
+      irAlHub('hub');
+    } catch (e) {
+      error.textContent = e.message || 'No se ha podido guardar. Inténtalo de nuevo.';
+      error.hidden = false;
+    } finally {
+      ocupado = false;
+      q('[data-campo="ident-guardar"]').disabled = false;
+    }
+  }
+
   async function cargarClub() {
     if (!servidor) return;
     estadoClub = 'cargando';
@@ -357,6 +447,11 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
     try {
       aplicarClub(await servidor.perfil());
       if (fase === 'hub') { mundo = nuevoMundo(true); pintarCartelJugador(); }
+      // La primera vez (sin mote todavía) se ofrece ponerse uno
+      if (fase === 'hub' && pantallaActual === 'hub' && !usuario?.apodo && servidor.identidad && !preguntadoMote) {
+        preguntadoMote = true;
+        irAlHub('identidad');
+      }
     } catch (error) {
       console.error('[grada] no se pudo cargar el club', error);
       estadoClub = 'error';
@@ -475,7 +570,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
       caja.innerHTML = '<p class="panel__vacio">Cargando la clasificación…</p>';
       try {
         const datos = await servidor.ranking();
-        if (pestanaRanking === 'grada' && pantallaActual === 'ranking') caja.innerHTML = htmlRankingGrada(datos);
+        if (pestanaRanking === 'grada' && pantallaActual === 'ranking') caja.innerHTML = htmlRankingGrada(datos, (a) => avatarUrl(a, 40));
       } catch (error) {
         console.error('[grada] ranking', error);
         caja.innerHTML = '<p class="panel__vacio">No se ha podido cargar el ranking de la grada. Inténtalo de nuevo en un rato.</p>';
@@ -581,6 +676,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
       q('[data-campo="entrena-panel"]').innerHTML = `<p class="panel__vacio">${estadoClub === 'cargando' ? 'Cargando tu club…' : 'Tu club no está disponible ahora mismo. Vuelve a entrar al juego para reintentarlo.'}</p>`;
       return;
     }
+    seleccionEntrena = eleccion.personaje; // solo se entrena al jugador elegido (se cambia en el Vestuario)
     const { lista, panel } = htmlEntrenamiento(club, seleccionEntrena, (c) => retratoUrl(`p:${c}`, aspectoDe('personaje', c)));
     const caja = q('[data-campo="entrena-lista"]');
     const scroll = caja.scrollTop;
@@ -765,6 +861,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
     }
     if (panel === 'hub') {
       previa = null;
+      pintarFichaFan();
       pintarTiempos();
       pintarCartelJugador();
       pintarAvisosClub();
@@ -785,6 +882,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
       pintarRanking();
     }
     else if (panel === 'ajustes') pintarAjustes();
+    else if (panel === 'identidad') pintarIdentidad();
     mostrar(panel);
   }
 
@@ -977,6 +1075,8 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
         anunciar(`Ultra conseguida: ${ev.nombre}. ${ev.descripcion}`);
       } else if (ev.tipo === 'jefe-derrotado') {
         hud.aviso(`¡${ev.nombre} eliminado!`, 'exito');
+      } else if (ev.tipo === 'ambiente' && ev.indice > 0) {
+        anunciar(`Cambio de pantalla: ${ev.nombre}. Los rivales salen más fuertes.`);
       }
     }
   }
@@ -1056,6 +1156,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
     canjear: canjearFicha,
     desbloquear: desbloquearTodo,
     combos: () => irAlHub('combos'),
+    identidad: () => irAlHub('identidad'),
     direccion: () => irAlHub('direccion'),
     ranking: () => irAlHub('ranking'),
     ajustes: () => irAlHub('ajustes'),
@@ -1075,6 +1176,13 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
     const mejora = ev.target.closest('[data-mejora]');
     if (mejora) {
       elegir(mejora.dataset.mejora);
+      return;
+    }
+    const cara = ev.target.closest('[data-avatar]');
+    if (cara) {
+      avatarElegido = cara.dataset.avatar;
+      q('[data-campo="ident-vista"]').src = avatarUrl(avatarElegido, 96) ?? '';
+      contenedor.querySelectorAll('[data-avatar]').forEach((b) => b.setAttribute('aria-pressed', String(b === cara)));
       return;
     }
     const entrenaJugador = ev.target.closest('[data-entrena-jugador]');
@@ -1115,6 +1223,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
   }
 
   function alPulsarTecla(ev) {
+    if (ev.code !== 'Escape' && ev.target?.closest?.('input, textarea, select')) return; // escribiendo el mote
     if (ev.code === 'KeyF' && !ev.repeat && !ev.ctrlKey && !ev.metaKey && fase !== 'hub') {
       alternarPantallaCompleta();
       return;
@@ -1139,6 +1248,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
   window.addEventListener('pagehide', alCerrarPagina);
 
   contenedor.addEventListener('click', alHacerClic);
+  q('[data-campo="form-identidad"]').addEventListener('submit', (ev) => { ev.preventDefault(); guardarIdentidad(); });
   contenedor.addEventListener('input', alCambiarAjuste);
   contenedor.addEventListener('change', alCambiarAjuste);
   window.addEventListener('keydown', alPulsarTecla);

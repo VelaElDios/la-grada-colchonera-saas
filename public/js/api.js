@@ -82,6 +82,7 @@ export const api = {
   desbloquearJuego: () => peticion('POST', '/juego/desbloquear'),
   contratarJugador: () => peticion('POST', '/juego/contratar'),
   entrenarJugador: (personaje, estadistica) => peticion('POST', '/juego/entrenar', { personaje, estadistica }),
+  ponerIdentidad: (cambios) => peticion('PUT', '/juego/identidad', cambios),
   getRankingJuego: (limite = 20) => peticion('GET', `/juego/ranking?limite=${encodeURIComponent(limite)}`),
   /** Al cerrar la pestaña en plena partida: envía el resultado sin esperar respuesta (el navegador lo completa solo). */
   finalizarPartidaAlCerrar: (partidaId, resultado) => {

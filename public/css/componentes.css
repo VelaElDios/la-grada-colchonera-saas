@@ -103,6 +103,11 @@
 }
 .avatar--pequeno { width: 32px; height: 32px; font-size: var(--t-xs); }
 .avatar--grande { width: 80px; height: 80px; font-size: 2rem; }
+.avatar__img { width: 100%; height: 100%; border-radius: inherit; object-fit: cover; image-rendering: pixelated; display: block; }
+.avatar:has(.avatar__img) { overflow: hidden; padding: 0; }
+.nav__email--mote { font-weight: 800; }
+.perfil__mote { font-weight: 800; font-size: var(--t-lg, 1.25rem); margin: 0; }
+.perfil__cambiar { font-size: var(--t-sm); }
 
 /* ---------- Formularios ---------- */
 .formulario { display: grid; gap: var(--s-4); }

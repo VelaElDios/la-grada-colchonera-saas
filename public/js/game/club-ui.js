@@ -38,18 +38,19 @@ const miniatura = (clave, retrato) => `<img class="ficha__retrato" alt="" width=
 // Entrenamiento
 // ---------------------------------------------------------------------------------------------
 
+/**
+ * Entrenamiento del jugador elegido para jugar (solo ese: para entrenar a otro, se cambia en el Vestuario).
+ */
 export function htmlEntrenamiento(club, seleccionado, retrato) {
-  const propios = Object.keys(club.jugadores).filter((k) => PERSONAJES[k]).sort(porPosicion);
-  const lista = propios.map((clave) => {
-    const f = club.jugadores[clave];
-    return `<li><button type="button" class="ficha" data-entrena-jugador="${clave}" aria-pressed="${clave === seleccionado}">
-      ${miniatura(clave, retrato)}
-      <span class="ficha__texto"><span class="ficha__nombre">${esc(PERSONAJES[clave].nombre)}</span>
-      <span class="ficha__posicion">${POSICIONES[PERSONAJES[clave].posicion].nombre} · ${f.jefes} jefes</span></span>
-      ${f.puntosLibres > 0 ? `<span class="insignia-puntos" title="Puntos por gastar">${f.puntosLibres}</span>` : ''}
-    </button></li>`;
-  }).join('');
-
+  const fj = club.jugadores[seleccionado];
+  const lista = fj ? `<li><div class="ficha ficha--elegida" aria-current="true">
+      ${miniatura(seleccionado, retrato)}
+      <span class="ficha__texto"><span class="ficha__nombre">${esc(PERSONAJES[seleccionado].nombre)}</span>
+      <span class="ficha__posicion">${POSICIONES[PERSONAJES[seleccionado].posicion].nombre} · ${fj.jefes} jefes</span></span>
+      ${fj.puntosLibres > 0 ? `<span class="insignia-puntos" title="Puntos por gastar">${fj.puntosLibres}</span>` : ''}
+    </div></li>
+    <li class="entrena__cambiar"><p>Entrenas al jugador con el que vas a jugar. ¿Quieres entrenar a otro?</p>
+      <button type="button" class="btn btn--secundario" data-accion="vestuario">Cambiar en el Vestuario</button></li>` : '';
   const f = club.jugadores[seleccionado];
   if (!f) return { lista, panel: '<p class="panel__vacio">Elige un jugador de tu plantilla.</p>' };
   const p = PERSONAJES[seleccionado];
@@ -158,11 +159,13 @@ const fechaCorta = (iso) => {
   return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' });
 };
 
-export function htmlRankingGrada(datos) {
+/** `avatar(a)`: URL de la imagen de un avatar ('p:koke'…) o null. */
+export function htmlRankingGrada(datos, avatar = () => null) {
   if (!datos.filas.length) return '<p class="panel__vacio">Todavía no hay marcas. ¡Sé el primero en poner un tiempo!</p>';
   const filas = datos.filas.map((f) => `
     <li class="${f.esTuyo ? 'ranking__tuyo' : ''}">
       <span class="ranking__puesto">${f.posicion}</span>
+      ${(() => { const url = f.avatar && /^[pe]:[a-z0-9]+$/.test(f.avatar) ? avatar(f.avatar) : null; return url ? `<img class="ranking__avatar" src="${url}" alt="" width="32" height="32">` : `<span class="ranking__avatar ranking__avatar--vacio" aria-hidden="true">${esc((f.alias || '?').slice(0, 1).toUpperCase())}</span>`; })()}
       <span class="ranking__datos"><strong>${esc(f.alias)}${f.esTuyo ? ' (tú)' : ''}</strong>
         <small>${esc(PERSONAJES[f.personaje]?.nombre ?? f.personaje)} · nivel ${f.nivel} · ${f.jefes} jefes${f.fecha ? ` · ${fechaCorta(f.fecha)}` : ''}</small></span>
       <span class="ranking__tiempo">${formatearTiempo(f.tiempo)}</span>

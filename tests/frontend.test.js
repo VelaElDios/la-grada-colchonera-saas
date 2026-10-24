@@ -122,3 +122,20 @@ test('el menú del juego tiene tus tiempos, vestuario, dirección, ranking y aju
   for (const panel of ['vestuario', 'direccion', 'ranking', 'ajustes']) assert.match(juego, new RegExp(`data-pantalla="${panel}"`));
   for (const ajuste of ['volumen', 'efectos', 'numeros', 'zoom', 'joystick']) assert.match(juego, new RegExp(`data-ajuste="${ajuste}"`));
 });
+
+test('mote y avatar: el juego tiene «Tu ficha», el cliente lo guarda y la cabecera enseña el mote y la cara', () => {
+  const juego = fs.readFileSync(path.join(PUBLIC, 'js', 'game', 'juego.js'), 'utf8');
+  const cliente = fs.readFileSync(path.join(PUBLIC, 'js', 'api.js'), 'utf8');
+  const cabecera = fs.readFileSync(path.join(PUBLIC, 'js', 'ui', 'cabecera.js'), 'utf8');
+  const avatar = fs.readFileSync(path.join(PUBLIC, 'js', 'ui', 'avatar.js'), 'utf8');
+  const jugar = fs.readFileSync(path.join(PUBLIC, 'js', 'ui', 'vistas', 'jugar.js'), 'utf8');
+  assert.match(juego, /data-pantalla="identidad"/);
+  assert.match(juego, /data-accion="identidad"/);
+  assert.match(juego, /data-campo="ident-apodo"[^>]*maxlength="16"/);
+  assert.match(cliente, /ponerIdentidad: \(cambios\) => peticion\('PUT', '\/juego\/identidad', cambios\)/);
+  assert.match(jugar, /identidad: \(cambios\) => api\.ponerIdentidad\(cambios\)/);
+  assert.match(jugar, /alCambiarUsuario: \(u\) => ponerUsuario\(u\)/);
+  assert.match(cabecera, /nodoAvatar\(estado\.usuario/);
+  assert.match(cabecera, /nombreVisible\(estado\.usuario\)/);
+  assert.match(avatar, /apodo \|\| usuario\?\.email/);
+});

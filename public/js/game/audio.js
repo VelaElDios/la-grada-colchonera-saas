@@ -21,6 +21,7 @@ const SONIDOS = {
   'jefe-derrotado': { de: 120, a: 800, dur: 0.6, onda: 'sawtooth', vol: 0.07, cada: 500 },
   sinergia: { de: 520, a: 1040, dur: 0.5, onda: 'triangle', vol: 0.08, cada: 600 },
   ultra: { de: 220, a: 1320, dur: 1.1, onda: 'sawtooth', vol: 0.09, cada: 1500 },
+  ambiente: { de: 260, a: 1040, dur: 1.4, onda: 'triangle', vol: 0.09, cada: 2000 },
   escudo: { de: 600, a: 300, dur: 0.1, onda: 'sine', vol: 0.04, cada: 120 },
   fin: { de: 300, a: 40, dur: 0.9, onda: 'sawtooth', vol: 0.08, cada: 1000 },
 };

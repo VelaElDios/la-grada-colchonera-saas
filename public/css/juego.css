@@ -18,6 +18,8 @@
 .hud__bloque--centro .hud__dato:first-child { font-size: var(--t-xl); }
 .hud__dato--oleada { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--gris-300); }
 .hud__dato--oleada strong { color: #fff; }
+.hud__dato--ambiente { font-size: var(--t-xs); font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ambiente, #4ade80); border: 1px solid currentColor; border-radius: var(--r-pill); padding: 2px 10px; background: rgb(7 11 34 / 0.55); white-space: nowrap; }
+@media (max-width: 640px) { .hud__dato--ambiente { display: none; } }
 .hud__equipo { display: flex; flex-wrap: wrap; gap: 6px; max-width: 60%; }
 .pieza { position: relative; display: grid; place-items: center; width: 36px; height: 36px; border-radius: var(--r-sm); background: rgb(7 11 34 / 0.75); border: 1px solid var(--borde-fuerte); }
 .pieza--arma { border-color: rgb(255 123 139 / 0.7); }
@@ -351,6 +353,10 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 
 .insignia-puntos { margin-left: auto; display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 11px; background: var(--ambar); color: var(--azul-900); font-size: 12px; font-weight: 800; }
 .vest--entrena { grid-template-columns: minmax(230px, 300px) 1fr; }
+.plantilla--uno { align-content: start; }
+.ficha--elegida { cursor: default; border-color: var(--rojo-claro, #ff4d63); }
+.entrena__cambiar { display: grid; gap: 8px; padding: 12px 4px; color: var(--gris-300); font-size: var(--t-sm); }
+.entrena__cambiar p { margin: 0; }
 .pantalla__caja--vestuario:has(.vest--entrena) { grid-template-rows: auto minmax(0, 1fr) auto; }
 .entrena__nota { font-size: var(--t-xs); color: var(--gris-300); }
 .entrena__lista { margin: 0; padding: 0; list-style: none; display: grid; gap: var(--s-2); }
@@ -403,7 +409,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .fichado__sobre { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ambar); font-weight: 800; }
 .fichado__nac { font-size: var(--t-xs); color: var(--gris-300); margin-bottom: 4px; }
 
-.ranking--grada li { grid-template-columns: 2rem 1fr auto; }
+.ranking--grada li { grid-template-columns: 2rem 32px 1fr auto; }
 .ranking--grada .ranking__datos { display: grid; gap: 1px; }
 .ranking--grada small { font-size: 11px; color: var(--gris-300); }
 .ranking__tiempo { font-size: var(--t-lg); font-weight: 800; font-variant-numeric: tabular-nums; color: var(--ambar); }
@@ -426,3 +432,26 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .opcion__sinergia--ultra { color: #ffd24a; font-weight: 800; text-shadow: 0 0 10px rgba(255, 210, 74, .6); }
 .pieza--ultra { box-shadow: 0 0 10px rgba(255, 210, 74, .8); border-color: #ffd24a; }
 [data-campo="boton-pruebas"][hidden] { display: none; }
+
+/* ---------- Tu ficha: mote y avatar ---------- */
+.ficha-fan { display: flex; align-items: center; gap: 10px; width: 100%; margin-bottom: 12px; padding: 8px 10px; border-radius: var(--r-md, 12px); border: 1px solid var(--borde-fuerte); background: rgb(255 255 255 / 0.04); color: #fff; text-align: left; cursor: pointer; }
+.ficha-fan:hover, .ficha-fan:focus-visible { background: rgb(255 255 255 / 0.09); }
+.ficha-fan img { width: 44px; height: 44px; border-radius: 50%; image-rendering: pixelated; flex: none; }
+.ficha-fan__vacia { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; background: linear-gradient(135deg, var(--rojo), var(--azul-500)); flex: none; }
+.ficha-fan span { display: grid; min-width: 0; }
+.ficha-fan strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ficha-fan small { color: var(--gris-300); font-size: var(--t-xs); }
+.identidad { display: grid; gap: 12px; }
+.identidad__vista { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.identidad__avatar { width: 96px; height: 96px; border-radius: 50%; image-rendering: pixelated; border: 3px solid var(--rojo-claro, #ff4d63); background: #1d2348; }
+.identidad__campo { display: grid; gap: 6px; flex: 1 1 220px; font-weight: 700; }
+.identidad__campo input { font: inherit; font-size: 1.1rem; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--borde-fuerte); background: rgb(7 11 34 / 0.75); color: #fff; }
+.identidad__campo input:focus-visible { outline: 2px solid var(--rojo-claro, #ff4d63); outline-offset: 2px; }
+.identidad__error { margin: 0; color: #ffb4bd; font-weight: 700; }
+.identidad__caras { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(64px, 1fr)); gap: 8px; max-height: 260px; overflow-y: auto; }
+.cara { width: 100%; aspect-ratio: 1; padding: 3px; border-radius: 50%; border: 2px solid transparent; background: rgb(255 255 255 / 0.05); cursor: pointer; }
+.cara img { width: 100%; height: 100%; border-radius: 50%; image-rendering: pixelated; display: block; }
+.cara[aria-pressed="true"] { border-color: var(--rojo-claro, #ff4d63); box-shadow: 0 0 0 3px rgb(255 77 99 / 0.3); }
+.cara:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.ranking__avatar { width: 32px; height: 32px; border-radius: 50%; image-rendering: pixelated; flex: none; }
+.ranking__avatar--vacio { display: grid; place-items: center; font-weight: 800; font-size: var(--t-xs); background: linear-gradient(135deg, var(--rojo), var(--azul-500)); }

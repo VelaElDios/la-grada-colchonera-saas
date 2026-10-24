@@ -41,7 +41,7 @@ function createApp({
     tokenSigner: createTokenSigner({ secret: config.sessionSecret }),
   });
 
-  const juegoService = createJuegoService({ juegoRepository, ...juegoOpciones });
+  const juegoService = createJuegoService({ juegoRepository, userRepository, ...juegoOpciones });
 
   const app = express();
 

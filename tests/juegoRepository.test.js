@@ -53,6 +53,17 @@ function contrato(nombre, fabrica) {
       assert.deepEqual(lista.map((r) => r.alias), ['beto', 'ana']);
       assert.equal((await repo.mejoresRecords(1)).length, 1);
     });
+
+    test('cambiar el mote o el avatar actualiza la fila del ranking', async () => {
+      const id = await nuevoUsuario();
+      await repo.actualizarIdentidad(id, { alias: 'nadie', avatar: null }); // sin récord no pasa nada
+      assert.equal(await repo.getRecord(id), null);
+      await repo.guardarRecord(id, { alias: 'koke', avatar: null, personaje: 'koke', entrenador: 'cholo', tiempo: 100, nivel: 5, jefes: 0, bajas: 3 });
+      await repo.actualizarIdentidad(id, { alias: 'El Capi', avatar: 'p:koke' });
+      const r = await repo.getRecord(id);
+      assert.equal(r.alias, 'El Capi');
+      assert.equal(r.avatar, 'p:koke');
+    });
   });
 }
 

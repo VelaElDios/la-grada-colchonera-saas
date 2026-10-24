@@ -1,4 +1,5 @@
-import { h, inicial, fechaCorta, NOMBRES_ROL, NOMBRES_ESTADO } from '../dom.js';
+import { h, fechaCorta, NOMBRES_ROL, NOMBRES_ESTADO } from '../dom.js';
+import { nodoAvatar } from '../avatar.js';
 import { api } from '../../api.js';
 import { estado, ponerUsuario } from '../estado.js';
 import { avisar } from '../avisos.js';
@@ -47,8 +48,10 @@ export function montar(raiz, { navegar }) {
       h(
         'section',
         { class: 'tarjeta perfil__ficha' },
-        h('span', { class: 'avatar avatar--grande', attrs: { 'aria-hidden': 'true' } }, inicial(u.email)),
+        nodoAvatar(u, 'grande'),
+        u.apodo ? h('p', { class: 'perfil__mote' }, u.apodo) : null,
         h('p', { class: 'perfil__email' }, u.email),
+        h('a', { class: 'perfil__cambiar', href: '#/jugar' }, u.apodo ? 'Cambiar mote y avatar (en el juego, «Tu ficha»)' : 'Ponte un mote y un avatar en el juego'),
         h('div', { class: 'perfil__chapas' }, insignia(NOMBRES_ROL[u.role] || u.role, u.role === 'admin' ? 'rojo' : 'neutra'), insignia(NOMBRES_ESTADO[u.status] || u.status, u.status === 'active' ? 'verde' : 'ambar')),
         h('p', { class: 'perfil__desde' }, `En la grada desde el ${fechaCorta(u.createdAt)}`),
         h('button', { class: 'btn btn--secundario btn--ancho', type: 'button', onClick: salir }, 'Cerrar sesión'),
