@@ -425,3 +425,4 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .combo--ultra.combo--hecha { box-shadow: 0 0 18px color-mix(in srgb, var(--color-ultra, #ffd24a) 55%, transparent); }
 .opcion__sinergia--ultra { color: #ffd24a; font-weight: 800; text-shadow: 0 0 10px rgba(255, 210, 74, .6); }
 .pieza--ultra { box-shadow: 0 0 10px rgba(255, 210, 74, .8); border-color: #ffd24a; }
+[data-campo="boton-pruebas"][hidden] { display: none; }
