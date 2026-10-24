@@ -41,10 +41,10 @@ function correr(m, mundo, segundos, entrada = { x: 0, y: 0 }, cada = () => {}) {
   }
 }
 
-test('hay 22 armas con 5 niveles y 12 de ellas son nuevas', async () => {
+test('hay 24 armas con 5 niveles (12 de la fase anterior y 2 más: Champions y bengala)', async () => {
   const { ARMAS } = await cargar('config.js');
-  assert.equal(Object.keys(ARMAS).length, 22);
-  const nuevas = ['cabezazo', 'entrada', 'barrera', 'despeje', 'vaselina', 'chilena', 'volea', 'penalti', 'regate', 'cano', 'pared', 'contragolpe'];
+  assert.equal(Object.keys(ARMAS).length, 24);
+  const nuevas = ['champions', 'bengala', 'cabezazo', 'entrada', 'barrera', 'despeje', 'vaselina', 'chilena', 'volea', 'penalti', 'regate', 'cano', 'pared', 'contragolpe'];
   for (const k of nuevas) {
     assert.equal(ARMAS[k].niveles.length, 5, k);
     assert.equal(ARMAS[k].mejoras.length, 4, k);

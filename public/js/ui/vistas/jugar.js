@@ -1,5 +1,6 @@
 import { h } from '../dom.js';
 import { estado } from '../estado.js';
+import { api } from '../../api.js';
 import { estadoError, spinner } from '../componentes.js';
 
 export async function montar(raiz, { navegar }) {
@@ -10,7 +11,17 @@ export async function montar(raiz, { navegar }) {
     const { montarJuego } = await import('../../game/juego.js');
     const contenedor = h('div', { class: 'juego-zona' });
     raiz.replaceChildren(h('h1', { class: 'sr-only', tabIndex: -1 }, 'Jugar'), contenedor);
-    juego = montarJuego(contenedor, { usuario: estado.usuario, alSalir: () => navegar('/') });
+    // El juego no habla con el servidor directamente: recibe estas funciones (así se puede probar aparte)
+    const servidor = {
+      perfil: () => api.getJuegoPerfil(),
+      iniciar: (personaje, entrenador) => api.iniciarPartida(personaje, entrenador),
+      finalizar: (id, resultado) => api.finalizarPartida(id, resultado),
+      finalizarAlCerrar: (id, resultado) => api.finalizarPartidaAlCerrar(id, resultado),
+      contratar: () => api.contratarJugador(),
+      entrenar: (personaje, estadistica) => api.entrenarJugador(personaje, estadistica),
+      ranking: () => api.getRankingJuego(20),
+    };
+    juego = montarJuego(contenedor, { usuario: estado.usuario, alSalir: () => navegar('/'), servidor });
   } catch (error) {
     console.error('[grada] no se pudo cargar el juego', error);
     raiz.replaceChildren(

@@ -1,7 +1,7 @@
 // Oleadas: cuántos rivales salen, de qué equipo y con qué fuerza según avanza la partida.
 // La partida es infinita: los rivales ganan vida, daño y velocidad sin parar (ver ESCALADO en config.js).
 import {
-  EQUIPOS, JEFES, ORDEN_JEFES, MUNDO, ESCALADO, minutosDeOleada, PIELES, PELOS,
+  EQUIPOS, JEFES, ORDEN_JEFES, MUNDO, ESCALADO, ESCALADO_JEFE, ELITES, minutosDeOleada, PIELES, PELOS,
 } from './config.js';
 
 let contadorId = 1;
@@ -9,26 +9,30 @@ let contadorId = 1;
 /** Oleada actual (empieza en 1 y sube cada 30 s). */
 export const oleadaEn = (tiempo) => 1 + Math.floor(tiempo / MUNDO.duracionOleada);
 
-const intervaloAparicion = (oleada) => Math.max(0.12, 1.05 - 0.04 * (oleada - 1));
-const gruposPorAparicion = (oleada) => 1 + Math.floor((oleada - 1) / 4);
+// Menos rivales que antes, pero cada uno más duro (y con élites): la tensión viene de la calidad, no de la cantidad.
+const intervaloAparicion = (oleada) => Math.max(0.25, 1.25 - 0.04 * (oleada - 1));
+const gruposPorAparicion = (oleada) => 1 + Math.floor((oleada - 1) / 5);
 
-export function crearEnemigo(tipo, x, y, oleada) {
+/** `elite`: clave de ELITES.tipos para un rival más duro (ver config.js). */
+export function crearEnemigo(tipo, x, y, oleada, elite = null) {
   const base = EQUIPOS[tipo];
   const m = minutosDeOleada(oleada);
   const id = contadorId++;
-  const vida = Math.max(1, Math.round(base.vida * ESCALADO.vida(m)));
+  const el = elite ? ELITES.tipos[elite] : null;
+  const vida = Math.max(1, Math.round(base.vida * ESCALADO.vida(m) * (el ? el.vida : 1)));
   return {
     id,
     tipo,
     jefe: null,
+    elite,
     x,
     y,
-    r: base.radio,
+    r: base.radio * (el ? el.radio : 1),
     vida,
     vidaMax: vida,
-    vel: base.velocidad * ESCALADO.velocidad(m) * MUNDO.velRivales,
-    dano: Math.max(1, Math.round(base.dano * ESCALADO.dano(m))),
-    xp: Math.max(1, Math.round(base.xp * ESCALADO.xp(m))),
+    vel: base.velocidad * ESCALADO.velocidad(m) * MUNDO.velRivales * (el ? el.vel : 1),
+    dano: Math.max(1, Math.round(base.dano * ESCALADO.dano(m) * (el ? el.dano : 1))),
+    xp: Math.max(1, Math.round(base.xp * ESCALADO.xp(m) * (el ? el.xp : 1))),
     // Reparto estable (sin azar) para que no todos embistan o disparen a la vez
     cdEmbestida: base.embiste ? base.embiste.cada * (0.3 + ((id * 37) % 100) / 140) : 0,
     cdDisparo: base.dispara ? base.dispara.cada * (0.3 + ((id * 53) % 100) / 140) : 0,
@@ -36,7 +40,7 @@ export function crearEnemigo(tipo, x, y, oleada) {
     embestida: 0,
     dirX: 0,
     dirY: 0,
-    freno: base.radio >= 19 ? 0.5 : 1,
+    freno: base.radio * (el ? el.radio : 1) >= 19 ? 0.5 : 1,
     kx: 0,
     ky: 0,
     flash: 0,
@@ -58,7 +62,7 @@ export function crearJefe(indice, x, y, oleada, claveElegida = null) {
   const ciclo = Math.floor(indice / ORDEN_JEFES.length);
   const def = JEFES[clave];
   const m = minutosDeOleada(oleada);
-  const vida = Math.round(def.vida * ESCALADO.vida(m) * (1 + 0.5 * ciclo));
+  const vida = Math.round(def.vida * ESCALADO_JEFE.vida(m, indice) * (1 + 0.25 * ciclo));
   return {
     id: contadorId++,
     tipo: clave,
@@ -70,7 +74,7 @@ export function crearJefe(indice, x, y, oleada, claveElegida = null) {
     vida,
     vidaMax: vida,
     vel: def.velocidad * Math.min(1.35, ESCALADO.velocidad(m)) * MUNDO.velRivales,
-    dano: Math.max(1, Math.round(def.dano * ESCALADO.dano(m))),
+    dano: Math.max(1, Math.round(def.dano * ESCALADO_JEFE.dano(m, indice))),
     xp: Math.round(def.xp * ESCALADO.xp(m)),
     freno: def.freno,
     kx: 0,
@@ -109,10 +113,16 @@ function colocarEnAnillo(mundo, angulo, margen = 0) {
   return [j.x + Math.cos(angulo) * d, j.y + Math.sin(angulo) * d];
 }
 
+/** ¿Este rival sale como élite? Más a menudo cuanto más avanzada la partida. */
+function elegirElite(mundo, oleada) {
+  if (oleada < ELITES.desde || mundo.rng.siguiente() >= ELITES.probabilidad(oleada)) return null;
+  return mundo.rng.elegir(Object.keys(ELITES.tipos));
+}
+
 function aparecer(mundo, tipo, angulo, margen) {
   if (mundo.enemigos.length >= MUNDO.maxEnemigos) return;
   const [x, y] = colocarEnAnillo(mundo, angulo, margen);
-  mundo.enemigos.push(crearEnemigo(tipo, x, y, mundo.oleada));
+  mundo.enemigos.push(crearEnemigo(tipo, x, y, mundo.oleada, elegirElite(mundo, mundo.oleada)));
 }
 
 /**
@@ -139,7 +149,7 @@ export function empezarOleada(mundo) {
   mundo.eventos.push({ tipo: 'oleada', oleada: o });
 
   if (o >= 2 && o % 3 === 1) {
-    const n = 12 + 2 * o;
+    const n = Math.min(110, 12 + 3 * o);
     for (let i = 0; i < n; i += 1) aparecer(mundo, elegirTipo(mundo, o), (i / n) * Math.PI * 2, mundo.rng.rango(-10, 10));
     mundo.eventos.push({ tipo: 'aviso', texto: '¡Te rodean!' });
   }
@@ -149,9 +159,9 @@ export function empezarOleada(mundo) {
     for (let i = 0; i < n; i += 1) aparecer(mundo, 'liverpool', centro + mundo.rng.rango(-0.35, 0.35), mundo.rng.rango(0, 60));
     mundo.eventos.push({ tipo: 'aviso', texto: '¡Contraataque rápido!' });
   }
-  if (o >= 5 && o % 5 === 0) {
-    const indice = o / 5 - 1;
-    const salen = o >= 30 && o % 10 === 0 ? 2 : 1; // más adelante salen dos a la vez
+  if (o >= 4 && o % 4 === 0) { // un jefe cada 2 minutos, el primero a los 1:30
+    const indice = o / 4 - 1;
+    const salen = o >= 24 && o % 8 === 0 ? 2 : 1; // más adelante salen dos a la vez
     for (let k = 0; k < salen; k += 1) {
       const [x, y] = colocarEnAnillo(mundo, mundo.rng.rango(0, Math.PI * 2), 0);
       const jefe = crearJefe(indice, x, y, o, elegirJefe(mundo, indice));

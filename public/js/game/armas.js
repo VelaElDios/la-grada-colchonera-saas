@@ -1,6 +1,8 @@
 // Armas automáticas: el jugador solo se mueve, las armas atacan solas.
 import { ARMAS } from './config.js';
-import { danar, aturdir } from './combate.js';
+import {
+  danar, aturdir, danoFijo, quemar,
+} from './combate.js';
 import { normalizar } from './util.js';
 
 const ALCANCE_BALON = 520;
@@ -58,6 +60,14 @@ function nuevoProyectil(mundo, props) {
   // Las combinaciones («Bombardeo», «Doblete») hacen que los balones atraviesen a más rivales
   const p = mundo.proyectiles[mundo.proyectiles.length - 1];
   if (!p.sinBono) p.perfora += j.mult.perfora ?? 0;
+  // Poderes de oro: balones dorados que atraviesan más y balones con fuego que queman
+  if (!p.tipoDano) {
+    if (j.poder.oro > 0) {
+      p.oro = true;
+      p.perfora += j.poder.oroPerfora;
+    }
+    if (j.poder.fuego > 0) p.fuego = j.poder.fuego;
+  }
 }
 
 /** Pequeño fogonazo y retroceso al chutar: se ve y se siente más el disparo. */
@@ -463,6 +473,75 @@ function arrancarContragolpe(mundo, nivel) {
   mundo.eventos.push({ tipo: 'cantico' });
 }
 
+/** Himno de la Champions: una gran onda alrededor del jugador que daña, empuja y aturde. */
+function cantarElHimno(mundo, nivel) {
+  const j = mundo.jugador;
+  const { radio, dano, aturde } = ARMAS.champions.niveles[nivel - 1];
+  for (let i = 0; i < mundo.enemigos.length; i += 1) {
+    const e = mundo.enemigos[i];
+    if (e.muerto) continue;
+    const d = Math.hypot(e.x - j.x, e.y - j.y);
+    if (d > radio + e.r) continue;
+    danar(mundo, e, dano, normalizar(e.x - j.x, e.y - j.y), 300, 'cuerpo');
+    aturdir(mundo, e, aturde);
+  }
+  mundo.ondas.push({ x: j.x, y: j.y, radio, vida: 0.6, total: 0.6, color: '#4a86ff', silbato: true });
+  mundo.ondas.push({ x: j.x, y: j.y, radio: radio * 0.7, vida: 0.45, total: 0.45, color: '#ffffff' });
+  mundo.sacudida = Math.max(mundo.sacudida, 0.1);
+  mundo.eventos.push({ tipo: 'cantico' });
+}
+
+/** Bengalas: caen sobre los rivales y dejan fuego en el suelo. */
+function lanzarBengalas(mundo, nivel) {
+  const j = mundo.jugador;
+  const { n, dano, radio, dur } = ARMAS.bengala.niveles[nivel - 1];
+  const objetivos = masCercanos(mundo, n + 3, 420);
+  for (let k = 0; k < n; k += 1) {
+    const e = objetivos.length ? objetivos[(k * 2) % objetivos.length] : null;
+    const a = mundo.rng.rango(0, Math.PI * 2);
+    const x = e ? e.x : j.x + Math.cos(a) * 160;
+    const y = e ? e.y : j.y + Math.sin(a) * 160;
+    programarJugador(mundo, 0.25 + 0.12 * k, () => {
+      if (mundo.fuegos.length < 14) mundo.fuegos.push({ x, y, radio, dano, t: dur, total: dur, tick: 0 });
+      mundo.ondas.push({ x, y, radio: radio * 1.2, vida: 0.3, total: 0.3, color: '#ff7a1a' });
+    });
+    mundo.impactos.push({ tipo: 'marca', x, y, radio: radio * 0.8, vida: 0.25 + 0.12 * k, total: 0.25 + 0.12 * k, color: '#ff7a1a' });
+  }
+  mundo.eventos.push({ tipo: 'chute' });
+}
+
+/** Fuegos del suelo (bengalas): queman cada 0,4 s a quien los pisa. */
+export function actualizarFuegos(mundo, dt) {
+  for (let i = 0; i < mundo.fuegos.length; i += 1) {
+    const f = mundo.fuegos[i];
+    f.t -= dt;
+    f.tick -= dt;
+    if (f.tick > 0) continue;
+    f.tick = 0.4;
+    mundo.cuadricula.cerca(f.x, f.y, f.radio + 20, (e) => {
+      if (e.muerto || (e.x - f.x) ** 2 + (e.y - f.y) ** 2 > (f.radio + e.r) ** 2) return;
+      danar(mundo, e, f.dano, null, 0, 'cuerpo');
+      quemar(mundo, e, f.dano * 0.6, 1.5);
+    });
+  }
+}
+
+/** Quemaduras (Bota de Oro y bengalas): un golpe de fuego cada medio segundo mientras dure. */
+export function actualizarQuemaduras(mundo, dt) {
+  for (let i = 0; i < mundo.enemigos.length; i += 1) {
+    const e = mundo.enemigos[i];
+    const q = e.quemado;
+    if (!q || e.muerto) continue;
+    q.t -= dt;
+    q.tick -= dt;
+    if (q.tick <= 0) {
+      q.tick += 0.5;
+      danoFijo(mundo, e, q.dano);
+    }
+    if (q.t <= 0) e.quemado = null;
+  }
+}
+
 /** Armas que se disparan cada cierto tiempo (todas menos los banderines, que giran siempre). */
 const DISPARADAS = {
   balon: dispararBalones,
@@ -486,6 +565,8 @@ const DISPARADAS = {
   cano: hacerUnCano,
   pared: hacerLaPared,
   contragolpe: arrancarContragolpe,
+  champions: cantarElHimno,
+  bengala: lanzarBengalas,
 };
 
 /** Avanza los temporizadores de todas las armas del jugador y las dispara cuando toca. */

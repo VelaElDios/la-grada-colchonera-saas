@@ -56,18 +56,21 @@ export const BIOMAS = {
 
 // Premios repartidos por el campo: hay que ir a por ellos.
 export const PREMIOS = {
-  cada: 7, // segundos entre apariciones
+  cada: 8, // segundos entre apariciones
   max: 4,
   distMin: 380,
   distMax: 640,
   distBorrado: 1100,
   tipos: {
-    cura: { nombre: 'Botiquín', peso: 0.28 },
-    xp: { nombre: 'Balón de Oro', peso: 0.34 },
-    energia: { nombre: 'Energía', peso: 0.24 },
-    iman: { nombre: 'Imán', peso: 0.14 },
+    cura: { nombre: 'Botiquín', peso: 0.14 },
+    xp: { nombre: 'Bola de experiencia', peso: 0.40 },
+    energia: { nombre: 'Energía', peso: 0.30 },
+    iman: { nombre: 'Imán', peso: 0.16 },
   },
 };
+
+// Botiquines: escasos a propósito (si la partida se llena de curas, la tensión desaparece).
+export const CURAS = { probabilidad: 0.006, maximo: 3, cantidad: 0.12 }; // cantidad = fracción de la vida máxima (mínimo 25)
 
 export const JUGADOR = {
   radio: 14,
@@ -77,13 +80,32 @@ export const JUGADOR = {
 
 /**
  * Cómo crecen los rivales con el tiempo. `m` son los minutos de partida (una oleada = 0,5 min).
- * Pensado para que a la media hora sobrevivir sea muy difícil y a los 40 minutos casi imposible.
+ * Dificultad objetivo: a los 20 minutos sobrevivir es muy difícil y a los 30 casi imposible
+ * (antes eran 30 y 40). Para eso el tiempo se «comprime»: el minuto m de ahora pesa como el minuto 1,45·m + 1 de antes.
  */
+export const COMPRESION = { factor: 1.3, base: 0.8 };
+const comprimido = (m) => COMPRESION.factor * m + COMPRESION.base;
 export const ESCALADO = {
-  vida: (m) => 1 + 0.45 * m + 0.02 * m * m,
-  dano: (m) => 1 + 0.12 * m + 0.006 * m * m,
-  velocidad: (m) => Math.min(2.1, 1 + 0.026 * m),
+  vida: (m) => { const t = comprimido(m); return 1 + 0.45 * t + 0.02 * t * t; },
+  dano: (m) => { const t = comprimido(m); return 1 + 0.12 * t + 0.008 * t * t; },
+  velocidad: (m) => Math.min(2.2, 1 + 0.026 * comprimido(m)),
   xp: (m) => 1 + 0.08 * m,
+};
+/** Los jefes crecen aparte: más con el tiempo y con cada jefe vencido, para seguir siendo un reto aunque vayas fuerte. */
+export const ESCALADO_JEFE = {
+  vida: (m, indice) => ESCALADO.vida(m) * (0.7 + 0.4 * indice) * (1 + 0.035 * m), // el primero es asequible; luego crecen más que tú
+  dano: (m, indice) => ESCALADO.dano(m) * (1 + 0.04 * indice),
+};
+
+/** Rivales élite: aparecen desde la oleada `desde`, cada vez más a menudo, y son más duros que los normales. */
+export const ELITES = {
+  desde: 6,
+  probabilidad: (oleada) => Math.min(0.4, 0.04 + 0.014 * (oleada - 6)),
+  tipos: {
+    blindado: { nombre: 'Blindado', color: '#ffd166', vida: 3.2, dano: 1.2, vel: 0.85, radio: 1.25, xp: 4 },
+    veloz: { nombre: 'Velocista', color: '#5ee6ff', vida: 1.6, dano: 1.2, vel: 1.45, radio: 1.0, xp: 3 },
+    furia: { nombre: 'Furioso', color: '#ff4d4d', vida: 2.0, dano: 2.0, vel: 1.15, radio: 1.1, xp: 4 },
+  },
 };
 export const minutosDeOleada = (oleada) => (oleada - 1) / 2;
 
@@ -141,7 +163,7 @@ export const PERSONAJES = {
 
   godin: jugador('Godín', 'defensa', {
     estilo: 'El patrón de la zaga: cabezazos, entradas y un muro que no se mueve.', armaInicial: 'bufanda', mods: { vida: 1.08, cuerpo: 1.1 },
-    habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'cabezazo', 'entrada', 'barrera', 'despeje', 'contragolpe', 'balon', 'canonazo'],
+    habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'cabezazo', 'entrada', 'barrera', 'despeje', 'contragolpe', 'balon', 'canonazo', 'champions'],
   }, {
     piel: '#e0ac84', pelo: { c: '#3a2214', e: 'largo' }, barba: '#3a2214',
   }),
@@ -172,7 +194,7 @@ export const PERSONAJES = {
 
   koke: jugador('Koke', 'medio', {
     estilo: 'El capitán: de todo un poco y mejor cuanto más juega.', armaInicial: 'balon', mods: { vida: 1.03 },
-    habilidades: ['balon', 'efecto', 'corner', 'pared', 'vaselina', 'silbato', 'canticos', 'bufanda', 'banderines', 'tarjeta', 'var', 'regate', 'contragolpe', 'volea'],
+    habilidades: ['balon', 'efecto', 'corner', 'pared', 'vaselina', 'silbato', 'canticos', 'bufanda', 'banderines', 'tarjeta', 'var', 'regate', 'contragolpe', 'volea', 'champions'],
   }, {
     piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'corto' }, botas: '#f4f4f4',
   }),
@@ -227,7 +249,7 @@ export const PERSONAJES = {
   }),
   costa: jugador('Diego Costa', 'delantero', {
     estilo: 'Un delantero de los de antes: golpea, empuja y marca igual.', armaInicial: 'cabezazo', mods: { vida: 1.18, cuerpo: 1.45, vel: 0.97 },
-    habilidades: ['bufanda', 'cabezazo', 'entrada', 'tarjeta', 'balon', 'canonazo', 'chilena', 'volea', 'penalti', 'banderines', 'silbato', 'barrera'],
+    habilidades: ['bufanda', 'cabezazo', 'entrada', 'tarjeta', 'balon', 'canonazo', 'chilena', 'volea', 'penalti', 'banderines', 'silbato', 'barrera', 'bengala'],
   }, {
     piel: '#c68642', pelo: { c: '#16110d', e: 'rapado' }, barba: '#16110d', botas: '#ffffff',
   }),
@@ -239,11 +261,165 @@ export const PERSONAJES = {
   }),
   falcao: jugador('Falcao', 'delantero', {
     estilo: 'El Tigre: cabezazos y penaltis letales dentro del área.', armaInicial: 'cabezazo', mods: { disparo: 1.12, cuerpo: 1.3 },
-    habilidades: ['cabezazo', 'penalti', 'balon', 'canonazo', 'chilena', 'volea', 'vaselina', 'corner', 'entrada', 'contragolpe', 'bufanda', 'tarjeta'],
+    habilidades: ['cabezazo', 'penalti', 'balon', 'canonazo', 'chilena', 'volea', 'vaselina', 'corner', 'entrada', 'contragolpe', 'bufanda', 'tarjeta', 'bengala'],
   }, {
     piel: '#e0ac84', pelo: { c: '#3a2214', e: 'largo' }, barba: '#3a2214', botas: '#111111',
   }),
+
+  // ---- Fichajes (se consiguen con las fichas de contrato; ver club.js) ----
+  grbic: jugador('Grbić', 'portero', {
+    estilo: 'Portero de la cantera de los guantes: poco repertorio, pero sin miedo a nada.', armaInicial: 'barrera', mods: { vida: 0.97 },
+    habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'cabezazo', 'barrera', 'despeje'],
+  }, {
+    piel: '#f0c8a6', pelo: { c: '#2b1b12', e: 'corto' }, barba: 'rgba(43,27,18,0.5)',
+    camiseta: { c: '#e8573a', c2: '#111111', p: 'cuello' }, pantalon: '#111111', medias: '#111111', botas: '#ffffff', guantes: '#ffd84a',
+  }),
+  courtois: jugador('Courtois', 'portero', {
+    estilo: 'Un gigante bajo palos: parte casi todo y reacciona a todo.', armaInicial: 'barrera', mods: { vida: 1.12, vel: 1.02 },
+    habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'cabezazo', 'barrera', 'despeje', 'entrada', 'contragolpe', 'regate', 'pared', 'champions'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#4a3320', e: 'corto' },
+    camiseta: { c: '#1b2a5c', c2: '#7ad7ff', p: 'cuello' }, pantalon: '#1b2a5c', medias: '#1b2a5c', botas: '#111111', guantes: '#7cff4d',
+  }),
+
+  trippier: jugador('Trippier', 'defensa', {
+    estilo: 'Lateral derecho con una zurda de oro: centros y balón parado.', armaInicial: 'efecto', mods: { disparo: 1.2, vel: 1.03 },
+    habilidades: ['bufanda', 'entrada', 'regate', 'pared', 'balon', 'efecto', 'corner', 'vaselina', 'canonazo', 'contragolpe', 'despeje', 'volea'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'corto' }, barba: 'rgba(107,68,35,0.5)', botas: '#ffffff',
+  }),
+  savic: jugador('Savić', 'defensa', {
+    estilo: 'Central grande y cabezón: no pasa nadie ni nada por el aire.', armaInicial: 'cabezazo', mods: { vida: 1.1, cuerpo: 1.1 },
+    habilidades: ['bufanda', 'banderines', 'cabezazo', 'entrada', 'barrera', 'despeje', 'tarjeta', 'var', 'canonazo', 'balon', 'contragolpe', 'silbato'],
+  }, {
+    piel: '#e8bb94', pelo: { c: '#2b1b12', e: 'rapado' }, barba: '#2b1b12', botas: '#111111',
+  }),
+  miranda: jugador('Miranda', 'defensa', {
+    estilo: 'Capitán de la zaga del doblete: serio, seguro y un poco bruto.', armaInicial: 'despeje', mods: { vida: 1.08, cuerpo: 1.1 },
+    habilidades: ['bufanda', 'banderines', 'cabezazo', 'entrada', 'barrera', 'despeje', 'tarjeta', 'silbato', 'var', 'contragolpe', 'balon', 'canonazo', 'bengala'],
+  }, {
+    piel: '#c68642', pelo: { c: '#16110d', e: 'rapado' }, barba: '#16110d', botas: '#111111',
+  }),
+  lodi: jugador('Lodi', 'defensa', {
+    estilo: 'Lateral zurdo de potencia: sube, regatea y tira de lejos.', armaInicial: 'canonazo', mods: { vel: 1.05, disparo: 1.1, vida: 0.95 },
+    habilidades: ['bufanda', 'entrada', 'regate', 'pared', 'balon', 'canonazo', 'corner', 'contragolpe', 'efecto'],
+  }, {
+    piel: '#c68642', pelo: { c: '#16110d', e: 'rizado' }, botas: '#00c2a8',
+  }),
+
+  baena: jugador('Baena', 'medio', {
+    estilo: 'Cerebro joven del medio campo: pase, giro y poco más (de momento).', armaInicial: 'efecto', mods: { vel: 1.02 },
+    habilidades: ['balon', 'efecto', 'pared', 'regate', 'vaselina', 'corner', 'contragolpe', 'bufanda'],
+  }, {
+    piel: '#e8bb94', pelo: { c: '#2b1b12', e: 'corto' }, botas: '#4aa8ff',
+  }),
+  partey: jugador('Thomas Partey', 'medio', {
+    estilo: 'Pivote atlético y poderoso: recupera, avanza y remata de lejos.', armaInicial: 'entrada', mods: { vel: 1.04, vida: 1.08 },
+    habilidades: ['bufanda', 'banderines', 'entrada', 'cabezazo', 'despeje', 'regate', 'pared', 'balon', 'canonazo', 'volea', 'contragolpe', 'corner', 'champions'],
+  }, {
+    piel: '#8d5524', pelo: { c: '#111111', e: 'rapado' }, botas: '#ffd84a',
+  }),
+  saul: jugador('Saúl', 'medio', {
+    estilo: 'Llega desde atrás como un tren: voleas, cabezazos y mucho pulmón.', armaInicial: 'volea', mods: { disparo: 1.1, vida: 1.03 },
+    habilidades: ['bufanda', 'banderines', 'canticos', 'cabezazo', 'entrada', 'balon', 'canonazo', 'volea', 'chilena', 'pared', 'contragolpe', 'bengala', 'corner'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'largo' }, barba: 'rgba(107,68,35,0.5)', botas: '#ff7a1a',
+  }),
+  pantic: jugador('Milinko Pantić', 'medio', {
+    estilo: 'El Mono: un pie derecho que parecía un cañón y llevaba el balón pegado.', armaInicial: 'canonazo', mods: { disparo: 1.2, vida: 0.95 },
+    habilidades: ['balon', 'canonazo', 'efecto', 'vaselina', 'volea', 'penalti', 'corner', 'pared', 'regate', 'cano', 'canticos', 'champions'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#3a2214', e: 'largo' }, botas: '#f4f4f4',
+  }),
+  tiago: jugador('Tiago Mendes', 'medio', {
+    estilo: 'Mediocentro elegante y serio: cumple en todo, no brilla en nada.', armaInicial: 'entrada', mods: { vida: 1.02 },
+    habilidades: ['bufanda', 'entrada', 'cabezazo', 'balon', 'pared', 'regate', 'canonazo', 'volea', 'contragolpe', 'despeje'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#16110d', e: 'corto' }, barba: 'rgba(22,17,13,0.4)', botas: '#111111',
+  }),
+  gabi: jugador('Gabi', 'medio', {
+    estilo: 'El capitán que lo da todo: pelea cada balón y aprieta a los suyos.', armaInicial: 'bufanda', mods: { vida: 1.05, cuerpo: 1.15 },
+    habilidades: ['bufanda', 'banderines', 'canticos', 'entrada', 'silbato', 'tarjeta', 'pared', 'balon', 'bengala'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'corto' }, botas: '#111111',
+  }),
+  futre: jugador('Futre', 'medio', {
+    estilo: 'El extremo de las pelucas y los caños: el Niño Bonito de los 90.', armaInicial: 'cano', mods: { vel: 1.08, disparo: 1.1, vida: 0.95 },
+    habilidades: ['balon', 'efecto', 'vaselina', 'regate', 'cano', 'pared', 'corner', 'volea', 'canonazo', 'chilena', 'contragolpe', 'cabezazo', 'canticos', 'champions'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#d9b24c', e: 'largo' }, botas: '#ff3bd4',
+  }),
+  simeone: jugador('Diego Simeone', 'medio', {
+    estilo: 'El Cholo jugador: garra, tarjetas y partido a partido desde el centro del campo.', armaInicial: 'tarjeta', mods: { cuerpo: 1.2, vida: 1.05 },
+    habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'entrada', 'cabezazo', 'barrera', 'contragolpe', 'balon', 'champions', 'bengala'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#16110d', e: 'gomina' }, barba: 'rgba(22,17,13,0.4)', botas: '#111111',
+  }),
+  adelardo: jugador('Adelardo', 'medio', {
+    estilo: 'Leyenda del Atleti de los 60 y 70: sacrificio, toque y una fe inmensa.', armaInicial: 'balon', mods: { vida: 1.04 },
+    habilidades: ['balon', 'efecto', 'pared', 'regate', 'vaselina', 'corner', 'canticos', 'bufanda', 'bengala'],
+  }, {
+    piel: '#e8bb94', pelo: { c: '#2b1b12', e: 'tupe' }, botas: '#111111',
+  }),
+
+  aragones: jugador('Luis Aragonés', 'delantero', {
+    estilo: 'El Sabio de Hortaleza: pocos tiros, pero cada uno con su idea.', armaInicial: 'balon', mods: { disparo: 1.08 },
+    habilidades: ['balon', 'efecto', 'canonazo', 'volea', 'cabezazo', 'penalti', 'contragolpe', 'regate', 'canticos', 'bufanda'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#2b1b12', e: 'corto' }, botas: '#111111',
+  }),
+  kun: jugador('Kun Agüero', 'delantero', {
+    estilo: 'Bajito, explosivo y letal: del Calderón al gol que paró el mundo.', armaInicial: 'volea', mods: { disparo: 1.15, vel: 1.05, vida: 0.95 },
+    habilidades: ['balon', 'efecto', 'volea', 'chilena', 'vaselina', 'penalti', 'canonazo', 'regate', 'cano', 'pared', 'contragolpe', 'corner', 'bengala', 'champions', 'cabezazo'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#16110d', e: 'rizado' }, barba: 'rgba(22,17,13,0.4)', botas: '#4aa8ff',
+  }),
 };
+
+/**
+ * Ficha de cada jugador: nacionalidad, época en el club y una breve descripción (se ve en el vestuario y al ficharlo).
+ */
+const FICHAS = {
+  oblak: ['Eslovenia', 'Desde 2014', 'El portero que más veces ha parado al mundo entero: sereno, enorme y casi imbatible en el Metropolitano.'],
+  musso: ['Argentina', 'Desde 2024', 'Portero ágil y seguro con los pies, llegó para pelear los guantes del Atleti con la calma de los grandes.'],
+  grbic: ['Croacia', 'Desde 2022', 'Portero croata de buena planta que creció a la sombra de los mejores; sobrio, sin florituras.'],
+  courtois: ['Bélgica', 'Cedido 2011-2014', 'Con 19 años levantó una Europa League, una Copa y una Supercopa bajo palos; hoy es de los mejores del planeta.'],
+  godin: ['Uruguay', '2010-2019', 'El patrón de la defensa del Cholo: garra, cabeza y gol en los partidos grandes. Un mito del Calderón.'],
+  lenglet: ['Francia', 'Cedido 2022-2023', 'Central zurdo y elegante, bueno con el balón en los pies; llegó para dar salida desde atrás.'],
+  pubill: ['España', 'Cantera', 'Joven central del filial con piernas y personalidad; todo un proyecto de futuro rojiblanco.'],
+  molina: ['Argentina', 'Desde 2022', 'Lateral derecho incansable: sube, baja y marca cuando menos se espera, como en el Mundial de Qatar.'],
+  grimaldo: ['España', 'Actualidad', 'Lateral zurdo de calidad con centros y faltas peligrosas; un talento formado en La Masia.'],
+  trippier: ['Inglaterra', '2015-2019', 'Lateral con una pierna derecha de lujo: centros medidos y faltas que acaban en la escuadra.'],
+  savic: ['Montenegro', '2015-2022', 'Central de dos metros, fuerte en el juego aéreo y más rápido de lo que parece; pieza clave del Atleti campeón de Liga.'],
+  miranda: ['Brasil', '2011-2015', 'Líder de la zaga del doblete 2013-14: bravo, seguro y con una salida de balón muy limpia.'],
+  lodi: ['Brasil', '2019-2022', 'Lateral zurdo de potencia y mucho recorrido; sus subidas y su pegada se hicieron famosas.'],
+  koke: ['España', 'Desde 2009', 'El capitán y el alma del vestuario: toda una vida con la camiseta rojiblanca y más de 700 partidos.'],
+  llorente: ['España', 'Desde 2019', 'Pulmón de acero: lo mismo ataja en defensa que acaba la jugada en el área contraria.'],
+  barrios: ['España', 'Cantera', 'Mediocentro con toque y visión de juego; un chico de la casa con mucha clase en cada pase.'],
+  lee: ['Corea del Sur', 'Desde 2025', 'Zurdo muy técnico y desequilibrante; sus regates y su visión del pase son marca de la casa.'],
+  baena: ['España', 'Desde 2024', 'Cerebro joven del centro del campo: pase corto, giro y una enorme confianza en sus recursos.'],
+  partey: ['Ghana', '2015-2020', 'Pivote poderoso y ágil que lo cubre todo; salió de la cantera para ser fijo en la medular del Cholo.'],
+  saul: ['España', '2012-2021', 'Mediocentro llegador de la cantera: gol de volea, cabezazos y una lucha constante.'],
+  pantic: ['Serbia', '1995-1998', 'El Mono: pie derecho prodigioso, ídolo del doblete de 1996; goleaba y volcaba el campo a base de calidad.'],
+  tiago: ['Portugal', '2010-2014', 'Mediocentro seguro y duro, de mucha experiencia, que aportó equilibrio a los campeones.'],
+  gabi: ['España', '2011-2016', 'Capitán del equipo campeón de Liga: defensor del escudo y un líder dentro y fuera del campo.'],
+  futre: ['Portugal', '1989-1993', 'Extremo mágico y revolucionario: sus caños, sus melenas y sus goles hicieron soñar a los atléticos.'],
+  simeone: ['Argentina', '1994-1997', 'Como jugador fue ya el Cholo: pura garra, pero también goles y buen toque; pilar del doblete.'],
+  adelardo: ['España', '1959-1976', 'Mito de los 60 y 70: 12 títulos con el Atleti. Un centrocampista de sacrificio y mucha clase.'],
+  griezmann: ['Francia', 'Desde 2014', 'El mejor del equipo: goleador, asistidor y defensor. Máximo anotador de la historia rojiblanca.'],
+  torres: ['España', 'Cantera / 2015-2018', 'El Niño: capitán con 19 años, ídolo de toda una generación y símbolo del Atleti de los 2000.'],
+  lookman: ['Nigeria', 'Desde 2025', 'Extremo veloz y eléctrico, con un gol en cada regate y un desborde que se hace imposible de seguir.'],
+  giuliano: ['Argentina', 'Desde 2023', 'Hijo del Cholo, puro corazón: presiona hasta el final y se deja la piel por el escudo.'],
+  julian: ['Argentina', 'Desde 2024', 'La Araña: campeón del mundo, presiona sin descanso y remata con las dos piernas.'],
+  costa: ['Brasil', '2010-2014 / 2018-2021', 'El delantero más bravo y más peleón: golpeó, empujó y marcó para ganar la Liga 2013-14.'],
+  forlan: ['Uruguay', '2007-2010', 'Pichichi, Bota de Oro y campeón de Europa League: un zurdazo que valía un título cada vez.'],
+  falcao: ['Colombia', '2011-2013', 'El Tigre: en dos años levantó una Europa League y una Supercopa con un hat-trick memorable.'],
+  aragones: ['España', '1964-1974 (jugador)', 'El Sabio de Hortaleza: pilar del Atleti de los 60 y 70, goleador y luego mítico entrenador.'],
+  kun: ['Argentina', '2006-2011', 'El Kun: bajito, explosivo y goleador nato; el delantero que enamoró al Calderón antes de la gloria.'],
+};
+Object.entries(FICHAS).forEach(([clave, [nacionalidad, epoca, descripcion]]) => {
+  if (PERSONAJES[clave]) Object.assign(PERSONAJES[clave], { nacionalidad, epoca, descripcion });
+});
 
 // ---------------------------------------------------------------------------------------------
 // Entrenadores: multiplican las estadísticas y aportan una ulti que se carga con las bajas.
@@ -702,6 +878,30 @@ export const ARMAS = {
     ],
     mejoras: ['Dura más y más veloz', 'Dura más y más daño', 'Dura más y más veloz', 'Dura mucho más y se activa antes'],
   },
+  champions: {
+    nombre: 'Himno de la Champions', tipo: 'cuerpo', icono: 'champions',
+    descripcion: 'Una onda de estadio sacude todo a tu alrededor: daña, empuja y aturde.',
+    niveles: [
+      { cd: 6.5, radio: 150, dano: 26, aturde: 0.8 },
+      { cd: 6.0, radio: 180, dano: 36, aturde: 1.0 },
+      { cd: 5.5, radio: 210, dano: 48, aturde: 1.2 },
+      { cd: 5.0, radio: 245, dano: 66, aturde: 1.5 },
+      { cd: 4.2, radio: 290, dano: 95, aturde: 2.0 },
+    ],
+    mejoras: ['Onda más grande y más daño', 'Más grande, más daño y aturde más', 'Mucho más daño y alcance', 'Enorme, aturde mucho y suena más a menudo'],
+  },
+  bengala: {
+    nombre: 'Bengala de la grada', tipo: 'cuerpo', icono: 'bengala',
+    descripcion: 'Lanzas bengalas que dejan fuego en el suelo: los rivales que lo pisan se queman.',
+    niveles: [
+      { cd: 5.0, n: 1, dano: 7, radio: 52, dur: 3.0 },
+      { cd: 4.6, n: 1, dano: 9, radio: 58, dur: 3.4 },
+      { cd: 4.2, n: 2, dano: 11, radio: 62, dur: 3.8 },
+      { cd: 3.8, n: 2, dano: 14, radio: 68, dur: 4.2 },
+      { cd: 3.2, n: 3, dano: 18, radio: 78, dur: 5.0 },
+    ],
+    mejoras: ['Más daño y dura más', 'Otra bengala más', 'Más daño y más grande', 'Una bengala más y fuego enorme'],
+  },
 };
 
 /** Mejoras pasivas: cada nivel suma `porNivel` a su atributo. Máximo 5 niveles. */
@@ -714,6 +914,31 @@ export const PASIVAS = {
   masaje: { nombre: 'Masajista', descripcion: 'Recuperas 0,5 de vida por segundo y nivel.', icono: 'cruz', porNivel: 0.5 },
   espinilleras: { nombre: 'Espinilleras', descripcion: '-6 % de daño recibido por nivel.', icono: 'escudo', porNivel: 0.06 },
   pulmones: { nombre: 'Pulmones de acero', descripcion: 'Tus armas recargan un 7 % más rápido por nivel.', icono: 'viento', porNivel: 0.07 },
+  // --- Poderes de los grandes premios: cambian cómo se juega ---
+  balonOro: {
+    nombre: 'Balón de Oro', poder: true, icono: 'balonOro', porNivel: 0.14,
+    descripcion: 'Tus balones se vuelven dorados: +14 % de daño de disparo por nivel y atraviesan más rivales (niveles 3 y 5).',
+  },
+  botaOro: {
+    nombre: 'Bota de Oro', poder: true, icono: 'botaOro', porNivel: 1,
+    descripcion: 'Tus balones llevan fuego: queman al rival (daño cada medio segundo, más fuerte por nivel).',
+  },
+  guanteOro: {
+    nombre: 'Guante de Oro', poder: true, icono: 'guanteOro', porNivel: 1,
+    descripcion: 'Paras golpes: cada carga anula un impacto y se recupera sola (más cargas y más rápido por nivel).',
+  },
+  brazalete: {
+    nombre: 'Brazalete de capitán', poder: true, icono: 'brazalete', porNivel: 0.25,
+    descripcion: 'La ulti se carga un 25 % más rápido por nivel y +3 % de velocidad.',
+  },
+  trebol: {
+    nombre: 'Trébol rojiblanco', poder: true, icono: 'trebol', porNivel: 0.06,
+    descripcion: '+6 % de golpe crítico por nivel (los críticos hacen el doble de daño).',
+  },
+  prorroga: {
+    nombre: 'Prórroga', poder: true, icono: 'reloj', porNivel: 1,
+    descripcion: 'Si caes a 0 de vida te levantas con el 40 % (+10 % por nivel) y expulsas a los rivales cercanos. Al nivel 5, dos veces.',
+  },
 };
 
 /** Mejoras sin límite: salen cuando ya tienes casi todo al máximo, así la partida nunca se bloquea. */
@@ -793,6 +1018,26 @@ export const SINERGIAS = {
     nombre: 'Leyenda rojiblanca', icono: 'estrella', distintas: { cuantas: 6, nivel: 3 },
     requiere: {}, descripcion: '+10 % de daño, +10 % de experiencia y +5 % de resistencia.', bonus: { dano: 0.10, xp: 0.10, armadura: 0.05 },
   },
+  triplete: {
+    nombre: 'Triple Corona', icono: 'balonOro', requiere: { balonOro: 3, botaOro: 3, guanteOro: 3 },
+    descripcion: '+20 % de daño, +10 % de crítico y +8 % de resistencia.', bonus: { dano: 0.20, critico: 0.10, armadura: 0.08 },
+  },
+  infierno: {
+    nombre: 'Infierno del Metropolitano', icono: 'bengala', requiere: { bengala: 3, botaOro: 3, corner: 2 },
+    descripcion: 'Todo lo que quemas arde un 50 % más fuerte y +10 % de daño.', bonus: { fuego: 0.5, dano: 0.10 },
+  },
+  nocheEuropea: {
+    nombre: 'Noche europea', icono: 'champions', requiere: { champions: 3, canticos: 3, silbato: 2 },
+    descripcion: 'Las armas recargan un 12 % más rápido y aturdes 0,5 s más.', bonus: { cd: 0.12, aturde: 0.5 },
+  },
+  fortuna: {
+    nombre: 'Estrella de la suerte', icono: 'trebol', requiere: { trebol: 3, cantera: 3, brazalete: 2 },
+    descripcion: '+20 % de experiencia y +12 % de crítico.', bonus: { xp: 0.20, critico: 0.12 },
+  },
+  capitan: {
+    nombre: 'Capitán eterno', icono: 'brazalete', requiere: { brazalete: 3, guanteOro: 2, pasion: 3 },
+    descripcion: '+12 % de resistencia y recuperas 1 de vida por segundo.', bonus: { armadura: 0.12, regen: 1 },
+  },
   plantilla: {
     nombre: 'Plantilla completa', icono: 'camiseta', distintas: { cuantas: 9, nivel: 1 },
     requiere: {}, descripcion: '+20 % de experiencia.', bonus: { xp: 0.20 },
@@ -803,5 +1048,5 @@ export const NIVEL_MAXIMO = 5;
 
 /** Experiencia necesaria para pasar del nivel `n` al siguiente. */
 export function xpParaSubir(n) {
-  return Math.round(5 + (n - 1) * 4 + (n - 1) ** 1.5);
+  return Math.round(5 + (n - 1) * 4.5 + 0.9 * (n - 1) ** 1.7);
 }

@@ -75,6 +75,23 @@ export const api = {
   deleteUser: (id) => peticion('DELETE', `/users/${encodeURIComponent(id)}`),
   changeRole: (id, role) => peticion('PATCH', `/users/${encodeURIComponent(id)}/role`, { role }),
 
+  // Juego: club (plantilla, entrenamiento, contratos) y ranking de la grada
+  getJuegoPerfil: () => peticion('GET', '/juego/perfil'),
+  iniciarPartida: (personaje, entrenador) => peticion('POST', '/juego/partidas', { personaje, entrenador }),
+  finalizarPartida: (partidaId, resultado) => peticion('POST', `/juego/partidas/${encodeURIComponent(partidaId)}/fin`, resultado),
+  contratarJugador: () => peticion('POST', '/juego/contratar'),
+  entrenarJugador: (personaje, estadistica) => peticion('POST', '/juego/entrenar', { personaje, estadistica }),
+  getRankingJuego: (limite = 20) => peticion('GET', `/juego/ranking?limite=${encodeURIComponent(limite)}`),
+  /** Al cerrar la pestaña en plena partida: envía el resultado sin esperar respuesta (el navegador lo completa solo). */
+  finalizarPartidaAlCerrar: (partidaId, resultado) => {
+    try {
+      const cuerpo = new Blob([JSON.stringify(resultado)], { type: 'application/json' });
+      return navigator.sendBeacon(`/api/juego/partidas/${encodeURIComponent(partidaId)}/fin`, cuerpo);
+    } catch {
+      return false;
+    }
+  },
+
   /** Registra la función que se ejecuta cuando la sesión deja de ser válida. */
   alExpirarSesion: (funcion) => {
     alNoAutenticado = funcion;

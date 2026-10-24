@@ -4,11 +4,12 @@ const express = require('express');
 const { createAuthRouter } = require('./auth');
 const { createUsersRouter } = require('./users');
 const { createPruebaRouter } = require('./prueba');
+const { createJuegoRouter } = require('./juego');
 const { currentUser, requireAuth } = require('./currentUser');
 const { errorHandler, notFoundHandler } = require('./errorHandler');
 const { requestLogger } = require('./requestLogger');
 
-function createApiRouter({ userService, accountConfirmation, oauthClients, config, logger }) {
+function createApiRouter({ userService, accountConfirmation, juegoService, oauthClients, config, logger }) {
   const router = express.Router();
 
   router.use(requestLogger({ logger }));
@@ -30,6 +31,7 @@ function createApiRouter({ userService, accountConfirmation, oauthClients, confi
   router.use('/prueba', createPruebaRouter({ allowedDomains: config.allowedDomains || [] }));
   // Rutas protegidas: solo con sesión iniciada
   router.use('/users', requireAuth, createUsersRouter({ userService }));
+  router.use('/juego', requireAuth, createJuegoRouter({ juegoService }));
 
   router.use(notFoundHandler);
   router.use(errorHandler);
