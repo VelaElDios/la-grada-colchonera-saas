@@ -31,13 +31,13 @@ export const textoMarca = (marca) => (marca
 
 const claveStats = (usuario) => `grada.stats.${usuario?.id ?? 'anonimo'}`;
 const VACIAS = {
-  partidas: 0, bajas: 0, jefes: 0, mejorTiempo: 0, mejorOleada: 0, mejorNivel: 0, ultimas: [], mejores: [],
+  partidas: 0, bajas: 0, jefes: 0, mejorTiempo: 0, mejorOleada: 0, mejorNivel: 0, ultimas: [], mejores: [], sinergias: [],
 };
 
 export function leerStats(usuario) {
   let guardadas = null;
   try { guardadas = JSON.parse(localStorage.getItem(claveStats(usuario))); } catch { /* sin datos */ }
-  const stats = { ...VACIAS, ultimas: [], mejores: [], ...(guardadas || {}) };
+  const stats = { ...VACIAS, ultimas: [], mejores: [], sinergias: [], ...(guardadas || {}) };
   // Si solo existe la marca antigua (antes de este menú), se aprovecha
   const vieja = leerMarca(usuario);
   if (vieja && stats.mejorTiempo < vieja.tiempo) {
@@ -62,9 +62,19 @@ export function registrarPartida(usuario, partida) {
   stats.mejorTiempo = Math.max(stats.mejorTiempo, partida.tiempo);
   stats.mejorOleada = Math.max(stats.mejorOleada, partida.oleada);
   stats.mejorNivel = Math.max(stats.mejorNivel, partida.nivel);
+  stats.sinergias = [...new Set([...stats.sinergias, ...(partida.sinergias ?? [])])];
   stats.ultimas = [fila, ...stats.ultimas].slice(0, 6);
   stats.mejores = [...stats.mejores, fila].sort((a, b) => b.tiempo - a.tiempo).slice(0, 5);
   try { localStorage.setItem(claveStats(usuario), JSON.stringify(stats)); } catch { /* sin almacenamiento */ }
   guardarMarca(usuario, partida);
   return { stats, record };
+}
+
+/** Apunta una combinación como descubierta. Devuelve true si era la primera vez. */
+export function registrarSinergia(usuario, clave) {
+  const stats = leerStats(usuario);
+  if (stats.sinergias.includes(clave)) return false;
+  stats.sinergias = [...stats.sinergias, clave];
+  try { localStorage.setItem(claveStats(usuario), JSON.stringify(stats)); } catch { /* sin almacenamiento */ }
+  return true;
 }

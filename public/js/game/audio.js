@@ -19,6 +19,8 @@ const SONIDOS = {
   nivel: { de: 440, a: 880, dur: 0.35, onda: 'triangle', vol: 0.07, cada: 400 },
   oleada: { de: 200, a: 400, dur: 0.4, onda: 'square', vol: 0.05, cada: 500 },
   'jefe-derrotado': { de: 120, a: 800, dur: 0.6, onda: 'sawtooth', vol: 0.07, cada: 500 },
+  sinergia: { de: 520, a: 1040, dur: 0.5, onda: 'triangle', vol: 0.08, cada: 600 },
+  escudo: { de: 600, a: 300, dur: 0.1, onda: 'sine', vol: 0.04, cada: 120 },
   fin: { de: 300, a: 40, dur: 0.9, onda: 'sawtooth', vol: 0.08, cada: 1000 },
 };
 

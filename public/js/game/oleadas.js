@@ -49,9 +49,12 @@ export function crearEnemigo(tipo, x, y, oleada) {
   };
 }
 
-/** Un jefe: `indice` 0 = Guardiola, 1 = Mourinho, 2 = Cristiano, 3 = Messi, y vuelta a empezar más fuertes. */
-export function crearJefe(indice, x, y, oleada) {
-  const clave = ORDEN_JEFES[indice % ORDEN_JEFES.length];
+/**
+ * Un jefe. Sin `claveElegida` sale por orden (ORDEN_JEFES); con ella, ese jefe. `indice` es cuántos jefes han salido ya:
+ * cada vuelta completa a la lista los hace un 50 % más duros.
+ */
+export function crearJefe(indice, x, y, oleada, claveElegida = null) {
+  const clave = claveElegida ?? ORDEN_JEFES[indice % ORDEN_JEFES.length];
   const ciclo = Math.floor(indice / ORDEN_JEFES.length);
   const def = JEFES[clave];
   const m = minutosDeOleada(oleada);
@@ -112,6 +115,24 @@ function aparecer(mundo, tipo, angulo, margen) {
   mundo.enemigos.push(crearEnemigo(tipo, x, y, mundo.oleada));
 }
 
+/**
+ * Jefe que toca: al azar entre los que ya pueden salir (`desde` = a partir de qué jefe de la partida) y que
+ * no han salido aún en esta ronda. Cuando han salido todos, empieza otra ronda (sin repetir el último).
+ */
+export function elegirJefe(mundo, indice) {
+  const aptos = ORDEN_JEFES.filter((c) => (JEFES[c].desde ?? 0) <= indice);
+  let libres = aptos.filter((c) => !mundo.jefesVistos.includes(c));
+  if (!libres.length) {
+    const ultimo = mundo.jefesVistos[mundo.jefesVistos.length - 1];
+    mundo.jefesVistos = [];
+    libres = aptos.filter((c) => c !== ultimo);
+    if (!libres.length) libres = aptos;
+  }
+  const clave = mundo.rng.elegir(libres);
+  mundo.jefesVistos.push(clave);
+  return clave;
+}
+
 /** Eventos especiales al empezar una oleada: cercos, manadas y jefes. */
 export function empezarOleada(mundo) {
   const o = mundo.oleada;
@@ -130,10 +151,13 @@ export function empezarOleada(mundo) {
   }
   if (o >= 5 && o % 5 === 0) {
     const indice = o / 5 - 1;
-    const [x, y] = colocarEnAnillo(mundo, mundo.rng.rango(0, Math.PI * 2), 0);
-    const jefe = crearJefe(indice, x, y, o);
-    mundo.enemigos.push(jefe);
-    mundo.eventos.push({ tipo: 'aviso', texto: `¡${jefe.nombre}!`, jefe: true });
+    const salen = o >= 30 && o % 10 === 0 ? 2 : 1; // más adelante salen dos a la vez
+    for (let k = 0; k < salen; k += 1) {
+      const [x, y] = colocarEnAnillo(mundo, mundo.rng.rango(0, Math.PI * 2), 0);
+      const jefe = crearJefe(indice, x, y, o, elegirJefe(mundo, indice));
+      mundo.enemigos.push(jefe);
+      mundo.eventos.push({ tipo: 'aviso', texto: `¡${jefe.nombre}!`, jefe: true });
+    }
   }
 }
 

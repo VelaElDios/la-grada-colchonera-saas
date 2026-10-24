@@ -115,35 +115,134 @@ const ROJO = '#c8102e';
 const BLANCO = '#ffffff';
 const AZUL = '#1b2a5c';
 
+const atleti = { c: ROJO, c2: BLANCO, p: 'franjas' };
+const jugador = (nombre, posicion, rasgos, resto) => ({ nombre, posicion, ...rasgos, aspecto: { camiseta: atleti, pantalon: AZUL, medias: ROJO, botas: '#1d1d1d', ...resto } });
+
+/**
+ * `habilidades`: las armas que ese jugador puede aprender (entre 8 y 16: los mejores tienen más).
+ * `mods`: pequeños retoques sobre las estadísticas de su posición. `estilo`: cómo juega.
+ * `armaInicial`: con qué sale al campo (siempre está en su lista de habilidades).
+ */
 export const PERSONAJES = {
-  oblak: {
-    nombre: 'Oblak', posicion: 'portero',
-    aspecto: {
-      piel: '#f2c6a0', pelo: { c: '#2b1b12', e: 'corto' },
-      camiseta: { c: '#d8e43a', c2: '#111111', p: 'cuello' }, pantalon: '#111111', medias: '#111111', botas: '#ff7bb0', guantes: '#ff7a1a',
-    },
-  },
-  godin: {
-    nombre: 'Godín', posicion: 'defensa',
-    aspecto: {
-      piel: '#e0ac84', pelo: { c: '#3a2214', e: 'largo' }, barba: '#3a2214',
-      camiseta: { c: ROJO, c2: BLANCO, p: 'franjas' }, pantalon: AZUL, medias: ROJO, botas: '#1d1d1d',
-    },
-  },
-  koke: {
-    nombre: 'Koke', posicion: 'medio',
-    aspecto: {
-      piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'corto' },
-      camiseta: { c: ROJO, c2: BLANCO, p: 'franjas' }, pantalon: AZUL, medias: ROJO, botas: '#f4f4f4',
-    },
-  },
-  griezmann: {
-    nombre: 'Griezmann', posicion: 'delantero',
-    aspecto: {
-      piel: '#f7d2b0', pelo: { c: '#d9b24c', e: 'tupe' },
-      camiseta: { c: ROJO, c2: BLANCO, p: 'franjas' }, pantalon: AZUL, medias: ROJO, botas: '#ff8a00',
-    },
-  },
+  oblak: jugador('Oblak', 'portero', {
+    estilo: 'El muro del Metropolitano: aguanta de todo y sabe ponerse de escudo.', armaInicial: 'bufanda', mods: { vida: 1.05 },
+    habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'cabezazo', 'barrera', 'despeje', 'entrada', 'contragolpe'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#2b1b12', e: 'corto' },
+    camiseta: { c: '#d8e43a', c2: '#111111', p: 'cuello' }, pantalon: '#111111', medias: '#111111', botas: '#ff7bb0', guantes: '#ff7a1a',
+  }),
+  musso: jugador('Musso', 'portero', {
+    estilo: 'Portero ágil que saca rápido: más veloz, y con la barrera como especialidad.', armaInicial: 'cabezazo', mods: { vida: 0.96, vel: 1.04 },
+    habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'cabezazo', 'barrera', 'despeje', 'contragolpe'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#1a1410', e: 'corto' }, barba: 'rgba(40,30,25,0.55)',
+    camiseta: { c: '#2e6bd1', c2: '#111111', p: 'cuello' }, pantalon: '#111111', medias: '#111111', botas: '#ffcc00', guantes: '#ffffff',
+  }),
+
+  godin: jugador('Godín', 'defensa', {
+    estilo: 'El patrón de la zaga: cabezazos, entradas y un muro que no se mueve.', armaInicial: 'bufanda', mods: { vida: 1.08, cuerpo: 1.1 },
+    habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'cabezazo', 'entrada', 'barrera', 'despeje', 'contragolpe', 'balon', 'canonazo'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#3a2214', e: 'largo' }, barba: '#3a2214',
+  }),
+  lenglet: jugador('Lenglet', 'defensa', {
+    estilo: 'Central zurdo que despeja y saca el balón jugado desde atrás.', armaInicial: 'despeje', mods: { vida: 1.0, disparo: 1.15 },
+    habilidades: ['bufanda', 'banderines', 'cabezazo', 'entrada', 'barrera', 'despeje', 'tarjeta', 'balon', 'canonazo', 'pared'],
+  }, {
+    piel: '#e8bb94', pelo: { c: '#2b1b12', e: 'corto' }, barba: '#2b1b12',
+  }),
+  pubill: jugador('Pubill', 'defensa', {
+    estilo: 'Joven y con piernas: rápido para ser central, listo para cortar.', armaInicial: 'entrada', mods: { vida: 0.95, vel: 1.06 },
+    habilidades: ['bufanda', 'banderines', 'cabezazo', 'entrada', 'despeje', 'barrera', 'balon', 'regate'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#3a2214', e: 'corto' },
+  }),
+  molina: jugador('Nahuel Molina', 'defensa', {
+    estilo: 'Lateral incansable: sube y baja la banda sin parar.', armaInicial: 'entrada', mods: { vel: 1.07, vida: 0.98 },
+    habilidades: ['bufanda', 'banderines', 'entrada', 'regate', 'contragolpe', 'pared', 'balon', 'volea', 'corner', 'despeje'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#16110d', e: 'corto' }, barba: 'rgba(22,17,13,0.5)', botas: '#00c2a8',
+  }),
+  grimaldo: jugador('Grimaldo', 'defensa', {
+    estilo: 'Lateral zurdo con guante en la pierna: centros, faltas y regates.', armaInicial: 'balon', mods: { vel: 1.04, disparo: 1.15, vida: 0.97 },
+    habilidades: ['bufanda', 'entrada', 'regate', 'pared', 'balon', 'efecto', 'canonazo', 'corner', 'vaselina', 'contragolpe', 'volea', 'cano'],
+  }, {
+    piel: '#e8bb94', pelo: { c: '#16110d', e: 'gomina' }, barba: '#16110d', botas: '#ffffff',
+  }),
+
+  koke: jugador('Koke', 'medio', {
+    estilo: 'El capitán: de todo un poco y mejor cuanto más juega.', armaInicial: 'balon', mods: { vida: 1.03 },
+    habilidades: ['balon', 'efecto', 'corner', 'pared', 'vaselina', 'silbato', 'canticos', 'bufanda', 'banderines', 'tarjeta', 'var', 'regate', 'contragolpe', 'volea'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'corto' }, botas: '#f4f4f4',
+  }),
+  llorente: jugador('Marcos Llorente', 'medio', {
+    estilo: 'Un pulmón de acero: arranques, entradas y disparos de media distancia.', armaInicial: 'entrada', mods: { vel: 1.07, vida: 1.05 },
+    habilidades: ['bufanda', 'banderines', 'entrada', 'cabezazo', 'despeje', 'contragolpe', 'regate', 'pared', 'balon', 'canonazo', 'volea', 'corner'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#6b4a2a', e: 'tupe' }, botas: '#ff3b3b',
+  }),
+  barrios: jugador('Pablo Barrios', 'medio', {
+    estilo: 'Mediocentro con clase: toques, regates y pases de pizarra.', armaInicial: 'pared', mods: { disparo: 1.05, vel: 1.02 },
+    habilidades: ['balon', 'efecto', 'pared', 'regate', 'cano', 'vaselina', 'contragolpe', 'bufanda', 'entrada', 'silbato', 'volea'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#1a1410', e: 'rizado' }, botas: '#4aa8ff',
+  }),
+  lee: jugador('Kang-in Lee', 'medio', {
+    estilo: 'Zurdo técnico y desequilibrante: caños, vaselinas y mucho regate.', armaInicial: 'volea', mods: { vel: 1.05, disparo: 1.08, vida: 0.92 },
+    habilidades: ['balon', 'efecto', 'vaselina', 'regate', 'cano', 'pared', 'corner', 'volea', 'canticos', 'contragolpe', 'canonazo'],
+  }, {
+    piel: '#f2d4b0', pelo: { c: '#111111', e: 'tupe' }, botas: '#ffd84a',
+  }),
+
+  griezmann: jugador('Griezmann', 'delantero', {
+    estilo: 'El mejor del equipo: un repertorio enorme de tiros, regates y trucos.', armaInicial: 'balon', mods: { disparo: 1.1 },
+    habilidades: ['balon', 'efecto', 'corner', 'vaselina', 'chilena', 'volea', 'penalti', 'canonazo', 'pared', 'regate', 'contragolpe', 'cano', 'bufanda', 'tarjeta', 'silbato', 'var'],
+  }, {
+    piel: '#f7d2b0', pelo: { c: '#d9b24c', e: 'tupe' }, botas: '#ff8a00',
+  }),
+  torres: jugador('Fernando Torres', 'delantero', {
+    estilo: 'El Niño: velocidad, chilenas y cabezazos al segundo palo.', armaInicial: 'chilena', mods: { vel: 1.05, disparo: 1.1 },
+    habilidades: ['balon', 'canonazo', 'volea', 'chilena', 'penalti', 'cabezazo', 'contragolpe', 'regate', 'efecto', 'corner', 'bufanda', 'vaselina', 'pared'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#6b4a2a', e: 'largo' }, botas: '#f4f4f4',
+  }),
+  lookman: jugador('Lookman', 'delantero', {
+    estilo: 'Extremo eléctrico: regates y arrancadas por la banda.', armaInicial: 'balon', mods: { vel: 1.09, vida: 0.92 },
+    habilidades: ['regate', 'cano', 'pared', 'balon', 'efecto', 'volea', 'vaselina', 'contragolpe', 'corner', 'chilena'],
+  }, {
+    piel: '#8d5524', pelo: { c: '#111111', e: 'rapado' }, botas: '#ff8a00',
+  }),
+  giuliano: jugador('Giuliano Simeone', 'delantero', {
+    estilo: 'Pura intensidad: presiona, corre y se mete en todos los charcos.', armaInicial: 'bufanda', mods: { vel: 1.06, cuerpo: 1.4, vida: 1.06 },
+    habilidades: ['bufanda', 'banderines', 'entrada', 'cabezazo', 'contragolpe', 'regate', 'pared', 'balon', 'volea', 'corner'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#3a2214', e: 'corto' }, barba: 'rgba(58,34,20,0.5)', botas: '#7cff4d',
+  }),
+  julian: jugador('Julián Álvarez', 'delantero', {
+    estilo: 'La Araña: presiona y remata con las dos piernas.', armaInicial: 'balon', mods: { vel: 1.05, disparo: 1.1 },
+    habilidades: ['balon', 'efecto', 'volea', 'chilena', 'vaselina', 'penalti', 'pared', 'regate', 'contragolpe', 'corner', 'canonazo', 'cano', 'tarjeta', 'var'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#16110d', e: 'corto' }, botas: '#4aa8ff',
+  }),
+  costa: jugador('Diego Costa', 'delantero', {
+    estilo: 'Un delantero de los de antes: golpea, empuja y marca igual.', armaInicial: 'cabezazo', mods: { vida: 1.18, cuerpo: 1.45, vel: 0.97 },
+    habilidades: ['bufanda', 'cabezazo', 'entrada', 'tarjeta', 'balon', 'canonazo', 'chilena', 'volea', 'penalti', 'banderines', 'silbato', 'barrera'],
+  }, {
+    piel: '#c68642', pelo: { c: '#16110d', e: 'rapado' }, barba: '#16110d', botas: '#ffffff',
+  }),
+  forlan: jugador('Forlán', 'delantero', {
+    estilo: 'Zurdazo y volea: pocos tiros, pero a la escuadra.', armaInicial: 'volea', mods: { disparo: 1.18 },
+    habilidades: ['canonazo', 'penalti', 'volea', 'chilena', 'vaselina', 'efecto', 'balon', 'corner', 'pared', 'contragolpe', 'regate', 'canticos'],
+  }, {
+    piel: '#f2c6a0', pelo: { c: '#d9b24c', e: 'largo' }, botas: '#f4f4f4',
+  }),
+  falcao: jugador('Falcao', 'delantero', {
+    estilo: 'El Tigre: cabezazos y penaltis letales dentro del área.', armaInicial: 'cabezazo', mods: { disparo: 1.12, cuerpo: 1.3 },
+    habilidades: ['cabezazo', 'penalti', 'balon', 'canonazo', 'chilena', 'volea', 'vaselina', 'corner', 'entrada', 'contragolpe', 'bufanda', 'tarjeta'],
+  }, {
+    piel: '#e0ac84', pelo: { c: '#3a2214', e: 'largo' }, barba: '#3a2214', botas: '#111111',
+  }),
 };
 
 // ---------------------------------------------------------------------------------------------
@@ -236,10 +335,11 @@ export const EQUIPOS = {
 // Jefes: entrenadores y estrellas de los grandes rivales. Salen cada 5 oleadas, uno tras otro.
 // ---------------------------------------------------------------------------------------------
 
-export const ORDEN_JEFES = ['guardiola', 'mourinho', 'cristiano', 'messi'];
+export const ORDEN_JEFES = ['guardiola', 'mourinho', 'cristiano', 'messi', 'vinicius', 'yamal', 'neymar', 'bale', 'benzema', 'suarez'];
 
 export const JEFES = {
   guardiola: {
+    desde: 0,
     nombre: 'Pep Guardiola', equipo: 'FC Barcelona', vida: 500, velocidad: 46, radio: 24, dano: 12, xp: 40, freno: 0.15,
     habilidad: 'Rondo, pases en círculo, tiki-taka y espiral de balones', cada: 7,
     aspecto: {
@@ -248,6 +348,7 @@ export const JEFES = {
     },
   },
   mourinho: {
+    desde: 0,
     nombre: 'José Mourinho', equipo: 'Real Madrid', vida: 800, velocidad: 40, radio: 28, dano: 15, xp: 50, freno: 0.1,
     habilidad: 'Autobús: ondas de choque, muro de defensas y embestida', cada: 6, radioPulso: 210,
     aspecto: {
@@ -256,6 +357,7 @@ export const JEFES = {
     },
   },
   cristiano: {
+    desde: 1,
     nombre: 'Cristiano Ronaldo', equipo: 'Real Madrid', vida: 600, velocidad: 58, radio: 24, dano: 14, xp: 45, freno: 0.15,
     habilidad: 'Cañonazos, ráfagas y el salto «Siuuu»', cada: 2.6,
     aspecto: {
@@ -264,6 +366,7 @@ export const JEFES = {
     },
   },
   messi: {
+    desde: 1,
     nombre: 'Leo Messi', equipo: 'FC Barcelona', vida: 400, velocidad: 78, radio: 20, dano: 13, xp: 45, freno: 0.2,
     habilidad: 'Regates: embestidas encadenadas, rosca y extremos', cada: 3.2,
     aspecto: {
@@ -271,10 +374,64 @@ export const JEFES = {
       camiseta: { c: '#a50044', c2: '#004d98', p: 'franjas' }, pantalon: '#004d98', medias: '#a50044', botas: '#111111',
     },
   },
+  vinicius: {
+    desde: 0,
+    nombre: 'Vinicius Jr.', equipo: 'Real Madrid', vida: 430, velocidad: 82, radio: 20, dano: 13, xp: 46, freno: 0.2,
+    habilidad: 'Embestidas en zigzag, rosca y ráfagas', cada: 3.0,
+    aspecto: {
+      piel: '#6b4423', pelo: { c: '#111111', e: 'cresta' },
+      camiseta: { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, pantalon: '#fafafa', medias: '#fafafa', botas: '#7cff4d',
+    },
+  },
+  yamal: {
+    desde: 1,
+    nombre: 'Lamine Yamal', equipo: 'FC Barcelona', vida: 390, velocidad: 88, radio: 18, dano: 12, xp: 48, freno: 0.2,
+    habilidad: 'Rosca, tiki-taka y extremos', cada: 2.8,
+    aspecto: {
+      piel: '#a56a3c', pelo: { c: '#111111', e: 'rizado' },
+      camiseta: { c: '#a50044', c2: '#004d98', p: 'franjas' }, pantalon: '#004d98', medias: '#a50044', botas: '#ffd84a',
+    },
+  },
+  neymar: {
+    desde: 2,
+    nombre: 'Neymar Jr.', equipo: 'Brasil', vida: 540, velocidad: 64, radio: 22, dano: 14, xp: 52, freno: 0.15,
+    habilidad: 'Lluvia de bicicletas, saltos y espirales', cada: 3.0,
+    aspecto: {
+      piel: '#c68642', pelo: { c: '#d9b24c', e: 'cresta' },
+      camiseta: { c: '#f2c200', c2: '#1a7a3a', p: 'cuello' }, pantalon: '#1b3f9c', medias: '#ffffff', botas: '#ff3bd4',
+    },
+  },
+  bale: {
+    desde: 2,
+    nombre: 'Gareth Bale', equipo: 'Real Madrid', vida: 660, velocidad: 70, radio: 24, dano: 15, xp: 55, freno: 0.12,
+    habilidad: 'Cañonazos enormes y arrancadas de velocista', cada: 2.8,
+    aspecto: {
+      piel: '#f0c8a6', pelo: { c: '#6b4423', e: 'tupe' },
+      camiseta: { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, pantalon: '#fafafa', medias: '#fafafa', botas: '#1d1d1d',
+    },
+  },
+  benzema: {
+    desde: 3,
+    nombre: 'Karim Benzema', equipo: 'Real Madrid', vida: 720, velocidad: 52, radio: 24, dano: 15, xp: 56, freno: 0.12,
+    habilidad: 'Disparos de precisión, rondos y toques de primera', cada: 2.9,
+    aspecto: {
+      piel: '#d9a77a', pelo: { c: '#111111', e: 'corto' }, barba: '#111111',
+      camiseta: { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, pantalon: '#fafafa', medias: '#fafafa', botas: '#d8d8d8',
+    },
+  },
+  suarez: {
+    desde: 3,
+    nombre: 'Luis Suárez', equipo: 'FC Barcelona', vida: 780, velocidad: 66, radio: 24, dano: 16, xp: 58, freno: 0.1,
+    habilidad: 'Mordiscos: embestidas con pulso, murallas y autobús', cada: 3.0, radioPulso: 190,
+    aspecto: {
+      piel: '#e0ac84', pelo: { c: '#3a2214', e: 'corto' }, barba: '#3a2214',
+      camiseta: { c: '#a50044', c2: '#004d98', p: 'franjas' }, pantalon: '#004d98', medias: '#a50044', botas: '#111111',
+    },
+  },
 };
 
 // ---------------------------------------------------------------------------------------------
-// Armas. `tipo`: 'disparo' (el portero no puede usarlas) o 'cuerpo'. Índice 0 = nivel 1.
+// Armas. `tipo`: 'disparo' (el portero no puede usarlas), 'cuerpo' o 'movil' (regates y movilidad). Índice 0 = nivel 1.
 // ---------------------------------------------------------------------------------------------
 
 export const ARMAS = {
@@ -398,6 +555,153 @@ export const ARMAS = {
     ],
     mejoras: ['Un rayo más', 'Un rayo más y más daño', 'Un rayo más y más área', 'Un rayo más y mucho más daño'],
   },
+  // --- Cuerpo a cuerpo ---
+  cabezazo: {
+    nombre: 'Cabezazo', tipo: 'cuerpo', icono: 'cabezazo',
+    descripcion: 'Un testarazo corto y brutal contra el rival más cercano: daña, aparta y aturde.',
+    niveles: [
+      { cd: 2.6, largo: 85, ancho: 0.9, dano: 22, aturde: 0.8 },
+      { cd: 2.4, largo: 92, ancho: 1.0, dano: 28, aturde: 1.0 },
+      { cd: 2.2, largo: 100, ancho: 1.1, dano: 36, aturde: 1.2 },
+      { cd: 2.0, largo: 110, ancho: 1.25, dano: 46, aturde: 1.4 },
+      { cd: 1.6, largo: 125, ancho: 1.4, dano: 62, aturde: 1.8 },
+    ],
+    mejoras: ['Más daño y aturde más', 'Más alcance y daño', 'Más daño y aturde más', 'Mucho más daño, alcance y rapidez'],
+  },
+  entrada: {
+    nombre: 'Entrada rasante', tipo: 'cuerpo', icono: 'entrada',
+    descripcion: 'Te deslizas hacia delante llevándote por delante a todos los que cruzas.',
+    niveles: [
+      { cd: 5.5, largo: 150, ancho: 36, dano: 20, empuje: 380 },
+      { cd: 5.0, largo: 170, ancho: 38, dano: 26, empuje: 400 },
+      { cd: 4.6, largo: 190, ancho: 40, dano: 34, empuje: 420 },
+      { cd: 4.2, largo: 210, ancho: 44, dano: 44, empuje: 450 },
+      { cd: 3.4, largo: 240, ancho: 50, dano: 60, empuje: 500 },
+    ],
+    mejoras: ['Más recorrido y daño', 'Más recorrido y daño', 'Más daño y ancho', 'Mucho más daño y más a menudo'],
+  },
+  barrera: {
+    nombre: 'Barrera defensiva', tipo: 'cuerpo', icono: 'barrera',
+    descripcion: 'Una barrera te protege unos segundos: no recibes daño y los balones rivales rebotan.',
+    niveles: [
+      { cd: 14, dur: 2.0, radio: 60 },
+      { cd: 13, dur: 2.5, radio: 64 },
+      { cd: 12, dur: 3.0, radio: 70 },
+      { cd: 11, dur: 3.6, radio: 76 },
+      { cd: 9, dur: 4.5, radio: 84 },
+    ],
+    mejoras: ['Dura más', 'Dura más y se activa antes', 'Dura más y más grande', 'Dura mucho más y se activa antes'],
+  },
+  despeje: {
+    nombre: 'Despeje', tipo: 'cuerpo', icono: 'despeje',
+    descripcion: 'Un patadón en abanico que lanza lejos a los rivales de delante y destruye sus balones.',
+    niveles: [
+      { cd: 4.0, radio: 150, dano: 14, empuje: 520 },
+      { cd: 3.7, radio: 165, dano: 18, empuje: 560 },
+      { cd: 3.4, radio: 180, dano: 24, empuje: 600 },
+      { cd: 3.0, radio: 200, dano: 32, empuje: 650 },
+      { cd: 2.4, radio: 230, dano: 44, empuje: 720 },
+    ],
+    mejoras: ['Más alcance y daño', 'Más alcance y daño', 'Más daño y fuerza', 'Mucho más alcance y más a menudo'],
+  },
+  // --- Disparo ---
+  vaselina: {
+    nombre: 'Vaselina', tipo: 'disparo', icono: 'vaselina',
+    descripcion: 'Balones por alto que caen sobre los rivales y explotan en área.',
+    niveles: [
+      { cd: 3.4, n: 1, dano: 26, radio: 70 },
+      { cd: 3.1, n: 2, dano: 26, radio: 72 },
+      { cd: 2.9, n: 2, dano: 34, radio: 80 },
+      { cd: 2.6, n: 3, dano: 34, radio: 86 },
+      { cd: 2.1, n: 4, dano: 46, radio: 100 },
+    ],
+    mejoras: ['Un balón más', 'Más daño y área', 'Un balón más', 'Un balón más, más daño y más rápido'],
+  },
+  chilena: {
+    nombre: 'Chilena', tipo: 'disparo', icono: 'chilena',
+    descripcion: 'Una chilena espectacular: dos balones potentes salen en direcciones opuestas.',
+    niveles: [
+      { cd: 2.8, dano: 18, perfora: 3, pares: 1 },
+      { cd: 2.6, dano: 22, perfora: 3, pares: 1 },
+      { cd: 2.4, dano: 26, perfora: 4, pares: 2 },
+      { cd: 2.1, dano: 32, perfora: 4, pares: 2 },
+      { cd: 1.7, dano: 42, perfora: 6, pares: 3 },
+    ],
+    mejoras: ['Más daño', 'Un par de balones más', 'Más daño y atraviesa más', 'Un par más, mucho más daño y más rápido'],
+  },
+  volea: {
+    nombre: 'Volea', tipo: 'disparo', icono: 'volea',
+    descripcion: 'Una ráfaga de remates de primera contra el rival más cercano.',
+    niveles: [
+      { cd: 2.2, n: 3, dano: 7 },
+      { cd: 2.0, n: 4, dano: 8 },
+      { cd: 1.8, n: 5, dano: 9 },
+      { cd: 1.6, n: 6, dano: 11 },
+      { cd: 1.3, n: 8, dano: 14 },
+    ],
+    mejoras: ['Un remate más', 'Un remate más', 'Dos remates más y más daño', 'Dos remates más, más daño y más rápido'],
+  },
+  penalti: {
+    nombre: 'Penalti', tipo: 'disparo', icono: 'penalti',
+    descripcion: 'Un chut certero al rival más duro de la pantalla: no falla.',
+    niveles: [
+      { cd: 7.0, dano: 60 },
+      { cd: 6.4, dano: 85 },
+      { cd: 5.8, dano: 115 },
+      { cd: 5.0, dano: 150 },
+      { cd: 4.0, dano: 220 },
+    ],
+    mejoras: ['Más daño', 'Más daño', 'Mucho más daño', 'Daño enorme y se lanza más a menudo'],
+  },
+  // --- Regates y movilidad ---
+  regate: {
+    nombre: 'Regate', tipo: 'movil', icono: 'regate',
+    descripcion: 'Un quiebro rápido en tu dirección: eres intocable un momento y apartas a quien cruzas.',
+    niveles: [
+      { cd: 6.0, impulso: 520, invul: 0.45, dano: 8, empuje: 200 },
+      { cd: 5.5, impulso: 560, invul: 0.55, dano: 12, empuje: 230 },
+      { cd: 5.0, impulso: 600, invul: 0.65, dano: 16, empuje: 260 },
+      { cd: 4.5, impulso: 650, invul: 0.75, dano: 22, empuje: 300 },
+      { cd: 3.6, impulso: 700, invul: 0.9, dano: 30, empuje: 340 },
+    ],
+    mejoras: ['Más impulso e invulnerable más rato', 'Más daño e invulnerabilidad', 'Más impulso y daño', 'Mucho más daño y más a menudo'],
+  },
+  cano: {
+    nombre: 'Caño', tipo: 'movil', icono: 'cano',
+    descripcion: 'Humillas a los rivales de tu alrededor: se quedan aturdidos un buen rato.',
+    niveles: [
+      { cd: 8.0, radio: 110, aturde: 1.0, dano: 6 },
+      { cd: 7.2, radio: 125, aturde: 1.3, dano: 8 },
+      { cd: 6.5, radio: 140, aturde: 1.6, dano: 11 },
+      { cd: 5.8, radio: 160, aturde: 1.9, dano: 15 },
+      { cd: 4.8, radio: 190, aturde: 2.4, dano: 22 },
+    ],
+    mejoras: ['Más radio y aturdimiento', 'Más radio y aturdimiento', 'Más radio, daño y aturdimiento', 'Mucho más radio y más a menudo'],
+  },
+  pared: {
+    nombre: 'Pared', tipo: 'movil', icono: 'pared',
+    descripcion: 'Un balón que va a por el rival más cercano y vuelve a tus pies, golpeando a la ida y a la vuelta.',
+    niveles: [
+      { cd: 2.4, n: 1, dano: 10 },
+      { cd: 2.2, n: 1, dano: 13 },
+      { cd: 2.0, n: 2, dano: 13 },
+      { cd: 1.8, n: 2, dano: 17 },
+      { cd: 1.4, n: 3, dano: 22 },
+    ],
+    mejoras: ['Más daño', 'Un balón más', 'Más daño', 'Un balón más, más daño y más rápido'],
+  },
+  contragolpe: {
+    nombre: 'Contragolpe', tipo: 'movil', icono: 'contragolpe',
+    descripcion: 'Arrancas a toda velocidad un rato: corres más y pegas más fuerte mientras dura.',
+    niveles: [
+      { cd: 9.0, dur: 2.5, vel: 0.25, dano: 0.10 },
+      { cd: 8.4, dur: 3.0, vel: 0.28, dano: 0.14 },
+      { cd: 7.8, dur: 3.5, vel: 0.32, dano: 0.18 },
+      { cd: 7.0, dur: 4.0, vel: 0.36, dano: 0.24 },
+      { cd: 5.8, dur: 5.0, vel: 0.42, dano: 0.32 },
+    ],
+    mejoras: ['Dura más y más veloz', 'Dura más y más daño', 'Dura más y más veloz', 'Dura mucho más y se activa antes'],
+  },
 };
 
 /** Mejoras pasivas: cada nivel suma `porNivel` a su atributo. Máximo 5 niveles. */
@@ -419,6 +723,80 @@ export const EXTRAS = {
   vel: { nombre: 'Piernas frescas', descripcion: '+2 % de velocidad (hasta +40 %).', icono: 'bota' },
   xp: { nombre: 'Ojeador', descripcion: '+5 % de experiencia.', icono: 'estrella' },
   recarga: { nombre: 'Ritmo de juego', descripcion: 'Las armas recargan un 2 % más rápido (hasta -55 %).', icono: 'viento' },
+};
+
+
+/**
+ * Combinaciones («metas»): al juntar ciertas habilidades a cierto nivel se activa un bonus.
+ * `requiere`: { habilidad: nivelMínimo }. `distintas`: { cuantas, nivel } = tener N armas distintas a ese nivel.
+ * `bonus` (se suman o multiplican en `recalcular`): dano, vel, cd (reduce), armadura, regen, disparo, cuerpo, xp,
+ * perfora (+N a los balones), aturde (+segundos) y cdArbitro (recarga de silbato, tarjeta y VAR).
+ */
+export const SINERGIAS = {
+  muro: {
+    nombre: 'Muro rojiblanco', icono: 'barrera', requiere: { barrera: 2, cabezazo: 2, despeje: 2 },
+    descripcion: '+12 % de resistencia y +15 % de daño cuerpo a cuerpo.', bonus: { armadura: 0.12, cuerpo: 0.15 },
+  },
+  tikitaka: {
+    nombre: 'Tiki-taka', icono: 'pared', requiere: { pared: 3, regate: 2, efecto: 2 },
+    descripcion: 'Armas recargan un 10 % más rápido y +8 % de velocidad.', bonus: { cd: 0.10, vel: 0.08 },
+  },
+  contra: {
+    nombre: 'Contraataque letal', icono: 'contragolpe', requiere: { contragolpe: 3, regate: 2, volea: 2 },
+    descripcion: '+18 % de daño y +8 % de velocidad.', bonus: { dano: 0.18, vel: 0.08 },
+  },
+  catenaccio: {
+    nombre: 'Catenaccio', icono: 'escudo', requiere: { barrera: 3, tarjeta: 2, silbato: 2 },
+    descripcion: '+15 % de resistencia y recuperas 1 de vida por segundo.', bonus: { armadura: 0.15, regen: 1 },
+  },
+  pichichi: {
+    nombre: 'Pichichi', icono: 'penalti', requiere: { penalti: 3, volea: 3, chilena: 2 },
+    descripcion: '+30 % de daño de disparo.', bonus: { disparo: 0.30 },
+  },
+  bombardeo: {
+    nombre: 'Bombardeo', icono: 'canon', requiere: { canonazo: 3, corner: 3, vaselina: 2 },
+    descripcion: 'Los balones atraviesan a un rival más y +10 % de daño.', bonus: { perfora: 1, dano: 0.10 },
+  },
+  cholista: {
+    nombre: 'Partido a partido', icono: 'bufanda', requiere: { bufanda: 4, banderines: 3, canticos: 3 },
+    descripcion: '+30 % de daño cuerpo a cuerpo.', bonus: { cuerpo: 0.30 },
+  },
+  aereo: {
+    nombre: 'Dominio aéreo', icono: 'cabezazo', requiere: { cabezazo: 3, despeje: 3, vaselina: 2 },
+    descripcion: 'Aturdes casi un segundo más.', bonus: { aturde: 0.8 },
+  },
+  arbitro: {
+    nombre: 'El árbitro está de nuestra parte', icono: 'var', requiere: { var: 3, tarjeta: 3, silbato: 3 },
+    descripcion: 'Silbato, tarjeta y VAR recargan un 30 % más rápido.', bonus: { cdArbitro: 0.30 },
+  },
+  jugon: {
+    nombre: 'Jugón', icono: 'cano', requiere: { regate: 3, cano: 3, pared: 2 },
+    descripcion: '+10 % de velocidad y las armas recargan un 8 % más rápido.', bonus: { vel: 0.10, cd: 0.08 },
+  },
+  doblete: {
+    nombre: 'Doblete', icono: 'balon', requiere: { balon: 5, efecto: 5 },
+    descripcion: 'Los balones atraviesan a un rival más y +15 % de daño de disparo.', bonus: { perfora: 1, disparo: 0.15 },
+  },
+  lineaDura: {
+    nombre: 'Línea dura', icono: 'entrada', requiere: { entrada: 3, cabezazo: 3, tarjeta: 3 },
+    descripcion: '+20 % de daño cuerpo a cuerpo y aturdes medio segundo más.', bonus: { cuerpo: 0.20, aturde: 0.5 },
+  },
+  balonParado: {
+    nombre: 'Balón parado', icono: 'esquina', requiere: { corner: 3, canonazo: 3, efecto: 3 },
+    descripcion: '+20 % de daño de disparo.', bonus: { disparo: 0.20 },
+  },
+  fisico: {
+    nombre: 'Preparación física', icono: 'pizarra', requiere: { tactica: 3, pulmones: 3, botas: 3 },
+    descripcion: '+10 % de daño y las armas recargan un 8 % más rápido.', bonus: { dano: 0.10, cd: 0.08 },
+  },
+  leyenda: {
+    nombre: 'Leyenda rojiblanca', icono: 'estrella', distintas: { cuantas: 6, nivel: 3 },
+    requiere: {}, descripcion: '+10 % de daño, +10 % de experiencia y +5 % de resistencia.', bonus: { dano: 0.10, xp: 0.10, armadura: 0.05 },
+  },
+  plantilla: {
+    nombre: 'Plantilla completa', icono: 'camiseta', distintas: { cuantas: 9, nivel: 1 },
+    requiere: {}, descripcion: '+20 % de experiencia.', bonus: { xp: 0.20 },
+  },
 };
 
 export const NIVEL_MAXIMO = 5;

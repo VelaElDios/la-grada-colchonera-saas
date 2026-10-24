@@ -4,6 +4,9 @@
 //  · Mourinho: «autobús» (ondas de choque, muro de defensas y una embestida del autobús).
 //  · Cristiano: abanicos y ráfagas de tiros, y «Siuuu»: un salto que cae donde estabas.
 //  · Messi: embestidas encadenadas, balones con rosca y una nube de extremos.
+//  · Vinicius: embestidas en zigzag, rosca y ráfagas.   · Yamal: rosca, tiki-taka y extremos.
+//  · Neymar: lluvia de impactos, saltos y espirales.    · Bale: cañonazos enormes y arrancadas de velocista.
+//  · Benzema: disparos de precisión y rondos.           · Suárez: mordiscos (embestida + pulso), murallas y autobús.
 import { JEFES, JUGADOR, MUNDO } from './config.js';
 import { crearEnemigo } from './oleadas.js';
 import { normalizar } from './util.js';
@@ -23,6 +26,11 @@ export function dispararAlJugador(mundo, e, angulo, velocidad = 250, danoRel = 0
 /** Resta vida al jugador teniendo en cuenta la armadura. Devuelve el daño aplicado. */
 export function danarJugador(mundo, cantidad) {
   const j = mundo.jugador;
+  if (j.escudo > 0) { // la barrera absorbe el golpe
+    j.invul = 0.15;
+    mundo.eventos.push({ tipo: 'escudo' });
+    return 0;
+  }
   const real = Math.max(1, Math.round(cantidad * (1 - j.mult.armadura)));
   j.vida -= real;
   j.invul = JUGADOR.invulnerabilidad;
@@ -136,6 +144,8 @@ const HABILIDADES = {
     e.velEmbestida = 380;
     e.duracionEmbestida = 0.85;
     e.cierre = 'pulso';
+    e.radioCierre = 170;
+    e.opts = null;
     e.pendientes = 0;
   },
 
@@ -197,22 +207,88 @@ const HABILIDADES = {
     }
     mundo.eventos.push({ tipo: 'aviso', texto: '¡Extremos!' });
   },
+
+  // Vinicius
+  zigzag(mundo, e) {
+    prepararEmbestida(mundo, e, 0.45, { desvio: 0.5, zig: true, vel: 520, dur: 0.5 });
+    e.pendientes = 2;
+  },
+  // Neymar
+  lluvia(mundo, e) {
+    const j = mundo.jugador;
+    const n = e.fase >= 3 ? 8 : e.fase === 2 ? 6 : 4;
+    for (let i = 0; i < n; i += 1) {
+      const a = mundo.rng.rango(0, Math.PI * 2);
+      const d = i === 0 ? 0 : mundo.rng.rango(40, 230);
+      const x = j.x + Math.cos(a) * d;
+      const y = j.y + Math.sin(a) * d;
+      const t = 0.9 + i * 0.12;
+      mundo.avisosJefe.push({ x, y, radio: 75, vida: t, total: t, tipo: 'impacto' });
+      programar(e, t, () => golpeEn(mundo, e, x, y, 75));
+    }
+    mundo.eventos.push({ tipo: 'aviso', texto: '¡Bicicletas!' });
+  },
+  // Bale
+  arrancada(mundo, e) {
+    prepararEmbestida(mundo, e, 0.55, { vel: 760, dur: 0.6, largo: 460, cierre: null });
+    e.pendientes = 0;
+  },
+  canon(mundo, e) {
+    dispararAlJugador(mundo, e, haciaJugador(mundo, e), 340, 1.2, { r: 18, vida: 4 });
+    mundo.eventos.push({ tipo: 'cantico' });
+  },
+  canonTriple(mundo, e) {
+    for (let k = 0; k < 3; k += 1) {
+      programar(e, k * 0.35, () => {
+        dispararAlJugador(mundo, e, haciaJugador(mundo, e), 360, 1.2, { r: 18, vida: 4 });
+        mundo.eventos.push({ tipo: 'cantico' });
+      });
+    }
+  },
+  // Benzema
+  precision(mundo, e, def, n = 3) {
+    for (let k = 0; k < n; k += 1) {
+      programar(e, k * 0.28, () => {
+        dispararAlJugador(mundo, e, haciaJugador(mundo, e), 470, 0.9);
+        mundo.eventos.push({ tipo: 'chute' });
+      });
+    }
+  },
+  precisionDoble(mundo, e, def) {
+    HABILIDADES.precision(mundo, e, def, 6);
+  },
+  // Suárez
+  mordisco(mundo, e, def) {
+    prepararEmbestida(mundo, e, 0.4, { vel: 560, dur: 0.55, largo: 300, cierre: 'pulso', radioCierre: def.radioPulso });
+    e.pendientes = 0;
+  },
+  mordisco2(mundo, e, def) {
+    prepararEmbestida(mundo, e, 0.4, { vel: 560, dur: 0.55, largo: 300, cierre: 'pulso', radioCierre: def.radioPulso });
+    e.pendientes = 1;
+  },
 };
 
 // ---------------------------------------------------------------------------------------------
 // Movimientos propios del jefe (saltos y embestidas)
 // ---------------------------------------------------------------------------------------------
 
-function prepararEmbestida(mundo, e, espera) {
-  const [dx, dy] = normalizar(mundo.jugador.x - e.x, mundo.jugador.y - e.y);
-  e.dirX = dx;
-  e.dirY = dy;
+/**
+ * Prepara una embestida hacia el jugador. Opciones `o`: desvio (ángulo), zig (alterna el desvío en cadena),
+ * vel, dur, largo (del aviso), cierre ('pulso' | 'anillo' | null) y radioCierre.
+ */
+function prepararEmbestida(mundo, e, espera, o = {}) {
+  const [dx0, dy0] = normalizar(mundo.jugador.x - e.x, mundo.jugador.y - e.y);
+  const a = Math.atan2(dy0, dx0) + (o.desvio ?? 0);
+  e.dirX = Math.cos(a);
+  e.dirY = Math.sin(a);
   e.estado = 'preparar';
   e.carga = espera;
-  e.largoAviso = 340;
-  e.velEmbestida = 470 * MULT_VEL[e.fase];
-  e.duracionEmbestida = 0.7;
-  e.cierre = e.fase >= 2 ? 'anillo' : null;
+  e.largoAviso = o.largo ?? 340;
+  e.velEmbestida = (o.vel ?? 470) * MULT_VEL[e.fase];
+  e.duracionEmbestida = o.dur ?? 0.7;
+  e.cierre = o.cierre !== undefined ? o.cierre : (e.fase >= 2 ? 'anillo' : null);
+  e.radioCierre = o.radioCierre ?? 170;
+  e.opts = o;
 }
 
 function saltar(mundo, e) {
@@ -245,11 +321,12 @@ function moverPropio(mundo, e, dt) {
     e.y += e.dirY * e.velEmbestida * dt;
     if (e.carga <= 0) {
       e.estado = 'normal';
-      if (e.cierre === 'pulso') golpePulso(mundo, e, 170);
+      if (e.cierre === 'pulso') golpePulso(mundo, e, e.radioCierre ?? 170);
       if (e.cierre === 'anillo') anillo(mundo, e, 8, 210, mundo.rng.rango(0, 6.28), 0.55);
       if (e.pendientes > 0) {
         e.pendientes -= 1;
-        prepararEmbestida(mundo, e, 0.32);
+        const o = e.opts ?? {};
+        prepararEmbestida(mundo, e, 0.32, o.zig ? { ...o, desvio: -o.desvio } : o);
       } else {
         e.cd = def.cada * MULT_ESPERA[e.fase];
       }
@@ -284,6 +361,12 @@ const PLAN = {
   mourinho: { 1: ['pulso', 'muro'], 2: ['pulsoDoble', 'muro', 'autobus'], 3: ['autobus', 'pulsoDoble', 'muro', 'autobus'] },
   cristiano: { 1: ['abanico', 'siu'], 2: ['abanico', 'rafaga', 'siu'], 3: ['abanico7', 'siuDoble', 'rafaga'] },
   messi: { 1: ['embestida', 'rosca'], 2: ['embestida2', 'rosca', 'embestida'], 3: ['embestida3', 'rosca', 'nube'] },
+  vinicius: { 1: ['zigzag', 'abanico'], 2: ['zigzag', 'rosca', 'embestida2'], 3: ['zigzag', 'embestida3', 'rafaga', 'nube'] },
+  yamal: { 1: ['rosca', 'tikitaka'], 2: ['rosca', 'nube', 'embestida'], 3: ['rosca', 'tikitaka', 'nube', 'embestida2'] },
+  neymar: { 1: ['lluvia', 'siu'], 2: ['lluvia', 'espiral', 'siuDoble'], 3: ['lluvia', 'siuDoble', 'espiral', 'abanico7'] },
+  bale: { 1: ['canon', 'arrancada'], 2: ['canon', 'arrancada', 'abanico'], 3: ['canonTriple', 'arrancada', 'siu', 'canon'] },
+  benzema: { 1: ['precision', 'rondo'], 2: ['precision', 'tikitaka', 'rondo'], 3: ['precisionDoble', 'rondoDoble', 'tikitaka'] },
+  suarez: { 1: ['mordisco', 'pulso'], 2: ['mordisco', 'pulsoDoble', 'muro'], 3: ['mordisco2', 'pulsoDoble', 'autobus', 'muro'] },
 };
 
 const faseSegunVida = (e) => (e.vida > e.vidaMax * 0.66 ? 1 : e.vida > e.vidaMax * 0.33 ? 2 : 3);

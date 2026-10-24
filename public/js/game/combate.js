@@ -41,7 +41,8 @@ export function curar(mundo, cantidad) {
 export function multiplicadorDano(jugador, tipo) {
   const porTipo = tipo === 'disparo' ? jugador.mult.disparo : tipo === 'cuerpo' ? jugador.mult.cuerpo : 1;
   const ritmo = 1 + MOVIMIENTO.bonoDano * (jugador.ritmo ?? 0); // correr da más daño
-  return jugador.mult.dano * porTipo * ritmo * (jugador.animo > 0 ? jugador.bonoAnimo : 1);
+  const contra = jugador.contra && jugador.contra.t > 0 ? 1 + jugador.contra.dano : 1; // contragolpe
+  return jugador.mult.dano * porTipo * ritmo * contra * (jugador.animo > 0 ? jugador.bonoAnimo : 1);
 }
 
 /**
@@ -61,6 +62,21 @@ export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo =
   if (!mundo.sinNumeros) crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), enemigo.jefe ? '#ffd166' : '#ffffff');
   if (enemigo.vida <= 0) matar(mundo, enemigo);
   else mundo.eventos.push({ tipo: 'golpe' });
+}
+
+/**
+ * Aturde a un rival `segundos` (más lo que den las combinaciones). Los jefes no se quedan quietos:
+ * solo van más lentos un rato.
+ */
+export function aturdir(mundo, enemigo, segundos) {
+  if (enemigo.muerto) return;
+  const t = segundos + (mundo.jugador.mult.aturde ?? 0);
+  if (enemigo.jefe) {
+    enemigo.lento = Math.max(enemigo.lento, t * 0.6);
+  } else {
+    enemigo.aturdido = Math.max(enemigo.aturdido ?? 0, t);
+    enemigo.embestida = 0;
+  }
 }
 
 function colorDe(enemigo) {
