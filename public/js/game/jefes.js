@@ -27,6 +27,7 @@ export function danarJugador(mundo, cantidad) {
   j.vida -= real;
   j.invul = JUGADOR.invulnerabilidad;
   j.flash = 0.18;
+  if (real >= j.vidaMax * 0.12) mundo.congelar = Math.max(mundo.congelar, 0.07); // los golpes fuertes se notan
   mundo.sacudida = Math.max(mundo.sacudida, 0.2);
   mundo.eventos.push({ tipo: 'dano' });
   return real;

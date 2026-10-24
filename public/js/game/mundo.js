@@ -1,7 +1,7 @@
 // Simulación del juego: sin dibujar nada y sin tocar el DOM, así se puede probar con node:test.
 // Estados: 'jugando' → 'mejora' (elegir mejora al subir de nivel) → 'jugando' ... → 'fin'.
 import {
-  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, xpParaSubir,
+  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir,
 } from './config.js';
 import { crearRng, crearCuadricula, normalizar } from './util.js';
 import { actualizarArmas } from './armas.js';
@@ -59,6 +59,9 @@ export function crearMundo({
       velBase: posicion.vel,
       dirX: 1,
       dirY: 0,
+      vx: 0, // velocidad actual (con inercia)
+      vy: 0,
+      polvo: 0,
       moviendo: false,
       ritmo: 0, // 0..1: sube corriendo y baja parado
       quieto: 0, // segundos seguidos sin moverse
@@ -99,6 +102,8 @@ export function crearMundo({
     textos: [],
     particulas: [],
     sacudida: 0,
+    congelar: 0,
+    camara: null,
     pendientes: 0,
     cargaPendiente: 0,
     opciones: [],
@@ -140,9 +145,20 @@ function moverJugador(mundo, dt, entrada) {
   const v = j.velBase * j.mult.vel * bonoFuria * barro * fuerza;
   const x0 = j.x;
   const y0 = j.y;
-  j.x += dx * v * dt;
-  j.y += dy * v * dt;
+  // Aceleración y frenada con algo de inercia: arrancas y paras con ritmo, no de golpe
+  const k = 1 - Math.exp(-(j.moviendo ? FISICA.aceleracion : FISICA.frenada) * dt);
+  j.vx += (dx * v - j.vx) * k;
+  j.vy += (dy * v - j.vy) * k;
+  j.x += j.vx * dt;
+  j.y += j.vy * dt;
   resolver(mundo.terreno, j); // las gradas no se atraviesan
+
+  // Polvo, salpicaduras de barro o de agua bajo los pies
+  j.polvo -= dt;
+  if (j.polvo <= 0 && Math.hypot(j.vx, j.vy) > 80) {
+    j.polvo = 0.1;
+    crearParticulas(mundo, j.x, j.y + j.r, j.zona === 'barro' ? '#6e4b2a' : j.zona === 'lluvia' ? '#bfe3ff' : '#d9e8c0', 2, 45);
+  }
 
   // Moverse tiene premio: el ritmo sube corriendo y se pierde parado
   if (j.moviendo) {
@@ -240,6 +256,7 @@ function moverProyectiles(mundo, dt) {
         p.golpeados.add(e.id);
         p.perfora -= 1;
         danar(mundo, e, p.dano, normalizar(p.vx, p.vy), p.empuje, 'disparo');
+        if (mundo.ondas.length < 40) mundo.ondas.push({ x: p.x, y: p.y, radio: 18, vida: 0.14, total: 0.14 });
       });
     }
     if (p.vida <= 0 || p.perfora <= 0) p.muerto = true;
@@ -404,6 +421,10 @@ function compactar(lista, vale) {
  */
 export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   if (mundo.estado !== 'jugando') return;
+  if (mundo.congelar > 0) { // «hit stop»: un instante de pausa en los golpes fuertes
+    mundo.congelar -= dt;
+    return;
+  }
   const j = mundo.jugador;
   mundo.tiempo += dt;
 

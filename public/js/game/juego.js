@@ -3,7 +3,7 @@
 import { MUNDO, PERSONAJES, POSICIONES, ENTRENADORES } from './config.js';
 import { crearMundo, avanzar, elegirMejora, resumen, usarUlti } from './mundo.js';
 import { retratoUrl, aspectoDe } from './sprites.js';
-import { dibujar } from './render.js';
+import { dibujar, actualizarCamara } from './render.js';
 import { crearEntrada } from './entrada.js';
 import { crearAudio } from './audio.js';
 import { crearHud } from './hud.js';
@@ -550,6 +550,7 @@ export function montarJuego(contenedor, { usuario, alSalir }) {
       pasearEnElMenu(dt);
     }
 
+    actualizarCamara(mundo, dt);
     ctx.setTransform(vista.dpr, 0, 0, vista.dpr, 0, 0);
     // En el menú el jugador se ve más grande
     dibujar(ctx, mundo, fase === 'hub' ? { ...vista, escala: vista.escala * 2.1 } : vista);

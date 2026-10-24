@@ -314,6 +314,10 @@ La configuración y los secretos llegan **solo por variables de entorno** ([`src
 Los errores se devuelven como `{ "error": { "code": "...", "message": "..." } }`.
 Sin una sesión válida, las rutas protegidas responden `401 UNAUTHENTICATED`; con sesión pero sin el rol necesario, `403 FORBIDDEN`.
 
+#### Cámara y sensaciones
+
+La cámara es 3/4: el suelo se aplasta en vertical (`CAMARA.inclinacion`) y los muñecos, balones y textos se dibujan de pie sobre él, algo más pequeños cuanto más arriba están. Sigue al jugador con suavidad y mira un poco hacia donde corres. El movimiento tiene inercia (`FISICA`), el jugador se inclina y se estira al correr, los golpes aplastan al muñeco y congelan un instante la partida, los balones dejan estela y al disparar hay destello y retroceso. Todo se ajusta en `public/js/game/config.js`.
+
 ### Roles
 
 - **user:** gestiona su propia cuenta (ver su perfil y darse de baja).

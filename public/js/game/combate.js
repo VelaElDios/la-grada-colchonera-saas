@@ -53,6 +53,7 @@ export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo =
   const cantidad = Math.max(1, Math.round(base * multiplicadorDano(mundo.jugador, tipo)));
   enemigo.vida -= cantidad;
   enemigo.flash = 0.1;
+  crearParticulas(mundo, enemigo.x, enemigo.y, '#ffffff', 3, 110); // chispas del golpe
   if (empuje && velEmpuje) {
     enemigo.kx += empuje[0] * velEmpuje * enemigo.freno;
     enemigo.ky += empuje[1] * velEmpuje * enemigo.freno;
@@ -78,6 +79,7 @@ function matar(mundo, enemigo) {
     for (let i = 0; i < 4; i += 1) soltarGema(mundo, enemigo.x, enemigo.y, enemigo.xp);
     mundo.curas.push({ x: enemigo.x, y: enemigo.y });
     mundo.sacudida = Math.max(mundo.sacudida, 0.4);
+    mundo.congelar = Math.max(mundo.congelar, 0.14);
     mundo.jugador.jefes += 1;
     mundo.eventos.push({ tipo: 'jefe-derrotado', nombre: enemigo.nombre });
   } else if (mundo.rng.siguiente() < 0.018) {

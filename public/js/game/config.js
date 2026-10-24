@@ -12,6 +12,17 @@ export const MUNDO = {
   velRivales: 1.2, // multiplicador global de la velocidad de todos los rivales
 };
 
+// Cámara en 3/4: el suelo se ve algo más aplastado que un plano cenital puro y los muñecos se quedan de pie.
+export const CAMARA = {
+  inclinacion: 0.8, // 1 = cenital puro; menos = más inclinada
+  suavizado: 8, // cuánto tarda la cámara en alcanzarte (mayor = más pegada)
+  adelanto: 70, // la cámara mira un poco hacia donde corres (a ritmo máximo)
+  profundidad: 0.14, // los de abajo en pantalla se ven un poco más grandes
+};
+
+// Cómo se siente el movimiento: el jugador acelera y frena con algo de inercia.
+export const FISICA = { aceleracion: 15, frenada: 22 };
+
 // Moverse tiene premio y quedarse quieto, castigo: el «ritmo» sube mientras corres y baja cuando paras.
 export const MOVIMIENTO = {
   rampa: 1.1, // segundos corriendo seguidos para llegar al ritmo máximo

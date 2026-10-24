@@ -35,6 +35,14 @@ function nuevoProyectil(mundo, props) {
   });
 }
 
+/** Pequeño fogonazo y retroceso al chutar: se ve y se siente más el disparo. */
+function destelloDeDisparo(mundo, [dx, dy]) {
+  const j = mundo.jugador;
+  if (mundo.ondas.length < 40) mundo.ondas.push({ x: j.x + dx * 18, y: j.y + dy * 18, radio: 16, vida: 0.1, total: 0.1 });
+  j.vx -= dx * 22; // pequeño retroceso
+  j.vy -= dy * 22;
+}
+
 function dispararBalones(mundo, nivel) {
   const j = mundo.jugador;
   const { n, dano, perfora } = ARMAS.balon.niveles[nivel - 1];
@@ -58,6 +66,7 @@ function dispararBalones(mundo, nivel) {
     }
     nuevoProyectil(mundo, { vx: dx * 380, vy: dy * 380, dano, perfora });
   }
+  destelloDeDisparo(mundo, objetivos.length ? normalizar(objetivos[0].x - j.x, objetivos[0].y - j.y) : [j.dirX, j.dirY]);
   mundo.eventos.push({ tipo: 'chute' });
 }
 
@@ -67,6 +76,7 @@ function dispararCanonazo(mundo, nivel) {
   const [objetivo] = masCercanos(mundo, 1, 650);
   const [dx, dy] = objetivo ? normalizar(objetivo.x - j.x, objetivo.y - j.y) : [j.dirX, j.dirY];
   nuevoProyectil(mundo, { vx: dx * 520, vy: dy * 520, r, dano, perfora, vida: 1.6, empuje: 380, grande: true });
+  destelloDeDisparo(mundo, [dx, dy]);
   mundo.sacudida = Math.max(mundo.sacudida, 0.08);
   mundo.eventos.push({ tipo: 'cantico' });
 }
