@@ -3,6 +3,7 @@
 import { obtenerSprite, dibujarSprite, aspectoDe } from './sprites.js';
 import { visibles as terrenoVisible } from './terreno.js';
 import { CAMARA, ELITES } from './config.js';
+import { dibujarUltrasSuelo, dibujarUltrasAire, dibujarUltrasPantalla } from './render-ultras.js';
 
 // ---------------------------------------------------------------------------------------------
 // Cámara 3/4: el suelo se aplasta en vertical (como si lo vieras desde arriba y de lado) y los
@@ -1040,6 +1041,7 @@ export function dibujar(ctx, mundo, vista) {
   mundo.impactos.forEach((im) => dibujarImpacto(ctx, im, t));
   mundo.fuegos.forEach((f) => visible(f) && dibujarFuego(ctx, f, t));
   mundo.ondas.forEach((o) => dibujarOnda(ctx, o));
+  dibujarUltrasSuelo(ctx, mundo, t);
 
   // Rivales, jugador y obstáculos se ordenan por su «suelo»: lo que está más abajo en pantalla se dibuja delante
   const lista = [];
@@ -1054,12 +1056,26 @@ export function dibujar(ctx, mundo, vista) {
     e.mx = dx / l;
     lista.push({ y: e.y + e.r, f: () => dibujarEnemigo(ctx, e, t) });
   }
+  if (mundo.ult.magia.dur > 0) { // el tiempo parado deja imágenes de ti mismo
+    mundo.ult.magia.rastro.forEach((p, i, todo) => lista.push({
+      y: p.y + j.r - 1,
+      f: () => {
+        const [x0, y0] = [j.x, j.y];
+        j.x = p.x; j.y = p.y;
+        ctx.globalAlpha = 0.14 + 0.1 * (i / todo.length);
+        dibujarJugador(ctx, j, t);
+        ctx.globalAlpha = 1;
+        j.x = x0; j.y = y0;
+      },
+    }));
+  }
   if (mundo.estado !== 'fin') lista.push({ y: j.y + j.r, f: () => dibujarJugador(ctx, j, t) });
   lista.sort((a, b) => a.y - b.y);
   for (const d of lista) d.f();
   mundo.tajos.forEach(dibujarTajo.bind(null, ctx));
   j.banderines.forEach((b) => recto(ctx, b.x, b.y, () => dibujarBanderin(ctx, b, t)));
   mundo.proyectiles.forEach((p) => dibujarProyectil(ctx, p));
+  dibujarUltrasAire(ctx, mundo, t);
   mundo.disparosEnemigos.forEach((d) => dibujarDisparoEnemigo(ctx, d));
   mundo.rayos.forEach((r) => dibujarRayo(ctx, r));
   mundo.tarjetas.forEach((tr) => recto(ctx, tr.x, tr.y, () => dibujarTarjeta(ctx, tr)));
@@ -1093,5 +1109,6 @@ export function dibujar(ctx, mundo, vista) {
   ctx.restore();
 
   dibujarAmbiente(ctx, j, ancho, alto, t);
+  dibujarUltrasPantalla(ctx, mundo, ancho, alto, t);
   dibujarFlechasPremios(ctx, mundo, cam, ancho, alto, escala, t);
 }

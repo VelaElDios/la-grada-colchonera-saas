@@ -3,10 +3,11 @@
 // Cada jugador solo puede aprender SUS habilidades (config.js → PERSONAJES[...].habilidades), y juntar
 // ciertas habilidades a cierto nivel activa combinaciones («metas») con bonus (config.js → SINERGIAS).
 import {
-  ARMAS, PASIVAS, EXTRAS, POSICIONES, ENTRENADORES, JUGADOR, NIVEL_MAXIMO, PERSONAJES, SINERGIAS,
+  ARMAS, PASIVAS, EXTRAS, POSICIONES, ENTRENADORES, JUGADOR, NIVEL_MAXIMO, PERSONAJES, SINERGIAS, ULTRAS,
 } from './config.js';
 import { curar } from './combate.js';
 import { efectoEstadisticas, estadisticasVacias } from './club.js';
+import { ultrasPara, celebrarUltra, nivelTotalArmas } from './ultras.js';
 
 /** Nivel que tiene el jugador de una habilidad (arma) o mejora pasiva. */
 const nivelDe = (j, clave) => j.armas[clave]?.nivel ?? j.pasivas[clave] ?? 0;
@@ -41,6 +42,8 @@ export function recalcular(jugador) {
 
   // Combinaciones activas: suman sus bonus
   jugador.sinergias = sinergiasActivas(jugador);
+  jugador.ultras = [...new Set([...ultrasPara(jugador.sinergias, nivelTotalArmas(jugador)), ...(jugador.ultrasForzadas ?? [])])]; // forzadas: solo para pruebas y calibración
+  if (jugador.ultrasExactas) jugador.ultras = [...jugador.ultrasExactas]; // solo para calibrar: build con exactamente estas ultras
   const b = {
     dano: 0, vel: 0, cd: 0, armadura: 0, regen: 0, disparo: 0, cuerpo: 0, xp: 0, perfora: 0, aturde: 0, cdArbitro: 0, critico: 0, fuego: 0,
   };
@@ -54,10 +57,10 @@ export function recalcular(jugador) {
     vel: (1 + PASIVAS.botas.porNivel * p.botas + Math.min(0.4, 0.02 * x.vel) + 0.03 * p.brazalete) * ent.mult.vel * (1 + b.vel),
     dano: (1 + PASIVAS.tactica.porNivel * p.tactica + 0.04 * x.dano) * ent.mult.dano * (1 + b.dano) * ef.dano,
     cuerpo: pos.cuerpo * (mods.cuerpo ?? 1) * (1 + b.cuerpo),
-    disparo: pos.disparo * (mods.disparo ?? 1) * (1 + b.disparo) * (1 + PASIVAS.balonOro.porNivel * p.balonOro),
+    disparo: pos.disparo * (mods.disparo ?? 1) * (1 + b.disparo) * (1 + PASIVAS.balonOro.porNivel * p.balonOro) * (jugador.ultras.includes('balonOro') ? 1 + ULTRAS.balonOro.disparo : 1),
     xp: (1 + PASIVAS.cantera.porNivel * p.cantera + 0.05 * x.xp) * ent.mult.xp * (1 + b.xp) * ef.xp,
     cd: Math.max(0.35, (1 - PASIVAS.pulmones.porNivel * p.pulmones - 0.02 * x.recarga) * (1 - b.cd)),
-    armadura: Math.min(0.7, PASIVAS.espinilleras.porNivel * p.espinilleras + b.armadura + ef.armadura),
+    armadura: Math.min(0.7, PASIVAS.espinilleras.porNivel * p.espinilleras + b.armadura + ef.armadura + (jugador.ultras.includes('zamora') ? ULTRAS.zamora.armadura : 0)),
     critico: Math.min(0.8, PASIVAS.trebol.porNivel * p.trebol + ef.critico + b.critico),
     carga: 1 + PASIVAS.brazalete.porNivel * p.brazalete,
     fuego: b.fuego,
@@ -118,7 +121,13 @@ export function generarOpciones(mundo) {
   candidatas.forEach((c) => {
     if (c.tipo === 'extra') return;
     const claves = completaria(j, c.clave, c.nivelNuevo);
-    if (claves.length) c.sinergia = SINERGIAS[claves[0]].nombre;
+    if (claves.length) {
+      c.sinergia = SINERGIAS[claves[0]].nombre;
+      // ¿Esa combinación nos da una ULTRA?
+      const con = new Set([...j.sinergias, ...claves]);
+      const nueva = ultrasPara(con, nivelTotalArmas(j) + (c.tipo === 'arma' ? 1 : 0)).find((u) => !j.ultras.includes(u));
+      if (nueva) c.ultra = ULTRAS[nueva].nombre;
+    }
   });
 
   const elegidas = mundo.rng.barajar(candidatas).slice(0, 3);
@@ -136,6 +145,7 @@ export function aplicarMejora(mundo, id) {
   if (!opcion) return false;
   const j = mundo.jugador;
   const antes = new Set(j.sinergias);
+  const ultrasAntes = new Set(j.ultras);
 
   if (opcion.tipo === 'arma') {
     j.armas[opcion.clave].nivel = opcion.nivelNuevo;
@@ -156,6 +166,11 @@ export function aplicarMejora(mundo, id) {
   j.sinergias.filter((k) => !antes.has(k)).forEach((k) => {
     if (!mundo.sinergiasLogradas.includes(k)) mundo.sinergiasLogradas.push(k);
     mundo.eventos.push({ tipo: 'sinergia', clave: k, nombre: SINERGIAS[k].nombre, descripcion: SINERGIAS[k].descripcion });
+  });
+  // ¿Ha conseguido una ULTRA?
+  j.ultras.filter((k) => !ultrasAntes.has(k)).forEach((k) => {
+    if (!mundo.ultrasLogradas.includes(k)) mundo.ultrasLogradas.push(k);
+    celebrarUltra(mundo, k);
   });
   return true;
 }

@@ -8,7 +8,8 @@
     "start": "node src/server.js",
     "dev": "node --watch src/server.js",
     "test": "node --test",
-    "db:migrate": "node src/db/migrate.js"
+    "db:migrate": "node src/db/migrate.js",
+    "juego:desbloquear": "node scripts/desbloquear-juego.js"
   },
   "engines": {
     "node": ">=20.12"

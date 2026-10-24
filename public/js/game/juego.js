@@ -1,7 +1,7 @@
 // Montaje del juego: pantallas (menú, pausa, mejora, final), bucle principal y conexión entre
 // la simulación (mundo.js), el dibujo (render.js), el sonido y la interfaz superpuesta (hud.js).
 import {
-  MUNDO, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, SINERGIAS,
+  MUNDO, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, SINERGIAS, ULTRAS,
 } from './config.js';
 import { crearMundo, avanzar, elegirMejora, resumen, usarUlti } from './mundo.js';
 import { retratoUrl, aspectoDe } from './sprites.js';
@@ -131,6 +131,9 @@ const PLANTILLA = `
       <p class="pantalla__texto">Junta ciertas habilidades a cierto nivel durante la partida y se activa una combinación con un bonus extra. Algunas son más fuertes que otras: ¡descúbrelas todas!</p>
       <p class="combos__cuenta" data-campo="combos-cuenta"></p>
       <ul class="combos" data-campo="combos"></ul>
+      <h3 class="combos__subtitulo">Ultras</h3>
+      <p class="combos__cuenta" data-campo="ultras-cuenta"></p>
+      <ul class="combos combos--ultras" data-campo="ultras"></ul>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Volver</button></div>
     </div>
   </section>
@@ -152,7 +155,8 @@ const PLANTILLA = `
           <p class="pantalla__sobretitulo">Entrenamiento</p>
           <h2 id="juego-t-entr" class="pantalla__titulo">Mejora a tus jugadores</h2>
         </div>
-        <p class="vest__aviso">Cada jugador gana <strong>1 punto por cada 3 jefes</strong> que venza. Sube su <strong>vida, defensa, disparo y suerte</strong>: lo que lo hace mejor es lo que entrena.</p>
+        <p class="vest__aviso">Cada jugador gana puntos <strong>eliminando rivales</strong> (los primeros salen baratos, los últimos cuestan mucho) y <strong>1 punto extra por cada 3 jefes</strong>. Sube su <strong>vida, defensa, disparo y suerte</strong>.</p>
+        ${usuario?.role === 'admin' && servidor?.desbloquear ? '<button type="button" class="btn btn--secundario" data-accion="desbloquear">Modo pruebas: desbloquearlo todo</button>' : ''}
       </div>
       <div class="vest vest--entrena">
         <ul class="plantilla" data-campo="entrena-lista" aria-label="Tu plantilla"></ul>
@@ -166,7 +170,7 @@ const PLANTILLA = `
     <div class="pantalla__caja">
       <p class="pantalla__sobretitulo">Mercado de fichajes</p>
       <h2 id="juego-t-contr" class="pantalla__titulo" tabindex="-1" data-enfoque>Contratar</h2>
-      <p class="pantalla__texto">Cada <strong>5 jefes</strong> que venzas (con cualquier jugador) consigues una ficha de contrato. Canjéala y te llega un jugador al azar que aún no tengas.</p>
+      <p class="pantalla__texto">Cada <strong>3 jefes</strong> que venzas (con cualquier jugador) consigues una ficha de contrato. Canjéala y te llega un jugador al azar que aún no tengas.</p>
       <div data-campo="contratar-panel"></div>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub">${icono('volver', 18)} Volver</button></div>
     </div>
@@ -223,7 +227,7 @@ const PLANTILLA = `
         <li><strong>Muévete siempre.</strong> Corriendo sube tu <em>ritmo</em>: más daño, más experiencia y la ulti se carga sola. Si te quedas quieto, los rivales aprietan.</li>
         <li>Las armas atacan solas. Los diamantes azules dan experiencia y los <strong>premios</strong> del campo (flechas en el borde) te curan, suben de nivel o cargan la ulti.</li>
         <li><strong>Barro</strong>: te frena. <strong>Lluvia</strong>: los balones, tuyos y rivales, corren más. El campo cambia por tramos (estadio, cantera, campo de entrenamiento): <strong>gradas, corrales, pasillos, carteles, porterías y focos</strong> no se atraviesan, ni tú, ni los rivales, ni los balones. Hay que dar rodeos.</li>
-        <li>Algunos rivales embisten (se agachan antes) y otros disparan balones. Cada 4 oleadas (cada 2 minutos) llega un <strong>jefe</strong> con tres fases; salen al azar entre todos y cada vez son más duros. También aparecen <strong>rivales élite</strong> con aro de color. Los jefes que venzas te dan puntos de <strong>entrenamiento</strong> (1 por cada 3) y <strong>fichas de contrato</strong> (1 por cada 5).</li>
+        <li>Algunos rivales embisten (se agachan antes) y otros disparan balones. Cada 4 oleadas (cada 2 minutos) llega un <strong>jefe</strong> con tres fases; salen al azar entre todos y cada vez son más duros. También aparecen <strong>rivales élite</strong> con aro de color. Los rivales que elimines te dan puntos de <strong>entrenamiento</strong> (más baratos al principio), cada 3 jefes dan 1 punto más y <strong>fichas de contrato</strong> (1 por cada 3). Al juntar varias combinaciones consigues <strong>ULTRAS</strong>, los poderes de leyenda que hacen falta para llegar a los minutos altos.</li>
         <li>Cada jugador solo aprende <strong>las habilidades de su estilo</strong> (un portero no chuta, un defensa mete cabezazos y entradas…). Al juntar ciertas habilidades se activan <strong>combinaciones</strong> con bonus: mira las metas en el menú.</li>
       </ul>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Entendido</button></div>
@@ -525,7 +529,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
       <p class="detalle__nac"><strong>${esc(p.nacionalidad ?? '')}</strong>${p.epoca ? ` · ${esc(p.epoca)}` : ''}</p>
       <p class="detalle__desc">${esc(p.descripcion ?? '')}</p>
       <p class="detalle__estilo">${p.estilo}</p>
-      ${posee(clave) ? '' : '<p class="detalle__bloqueado">Aún no lo tienes. Consíguelo canjeando una ficha en <strong>Contratar</strong> (una por cada 5 jefes vencidos).</p>'}
+      ${posee(clave) ? '' : '<p class="detalle__bloqueado">Aún no lo tienes. Consíguelo canjeando una ficha en <strong>Contratar</strong> (una por cada 3 jefes vencidos).</p>'}
       ${entren ? `<p class="detalle__entreno">Entrenamiento: ${['vida', 'defensa', 'disparo', 'suerte'].map((e) => `<span class="chip-stat">${e} <b>${entren[e]}</b></span>`).join('')}</p>` : ''}
       <div class="detalle__stats">
         ${barraEstadistica('Vida', st.vida / 190, st.vida)}
@@ -607,6 +611,20 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
     }
   }
 
+  async function desbloquearTodo() {
+    if (ocupado || !servidor?.desbloquear) return;
+    ocupado = true;
+    try {
+      aplicarClub(await servidor.desbloquear());
+      anunciar('Modo pruebas: todos los jugadores desbloqueados y con puntos de sobra');
+    } catch (error) {
+      anunciar(error.message || 'No se ha podido desbloquear');
+    } finally {
+      ocupado = false;
+      pintarEntrenamiento();
+    }
+  }
+
   async function canjearFicha() {
     if (ocupado || estadoClub !== 'listo') return;
     ocupado = true;
@@ -668,6 +686,31 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
           ${conocida ? `<small>${requisitos}</small>` : ''}
         </span>
         <span class="combo__marca">${posible ? `Posible con ${yo.nombre}` : `No para ${yo.nombre}`}</span>
+      </li>`;
+    }).join('');
+  }
+
+  /** Las seis ULTRAS: poderes de leyenda que se consiguen juntando varias combinaciones. */
+  function pintarUltras() {
+    const st = leerStats(usuario);
+    const hechas = new Set(st.sinergias);
+    const yo = PERSONAJES[eleccion.personaje];
+    const claves = Object.keys(ULTRAS);
+    q('[data-campo="ultras-cuenta"]').textContent = `${claves.filter((k) => hechas.has(`u:${k}`)).length} de ${claves.length} conseguidas`;
+    q('[data-campo="ultras"]').innerHTML = claves.map((k) => {
+      const u = ULTRAS[k];
+      const conocida = hechas.has(`u:${k}`);
+      const posibles = u.de.filter((c) => Object.keys(SINERGIAS[c].requiere).filter((x) => ARMAS[x]).every((x) => yo.habilidades.includes(x))
+        && !(yo.posicion === 'portero' && Object.keys(SINERGIAS[c].requiere).some((x) => ARMAS[x]?.tipo === 'disparo')));
+      const alcanzable = posibles.length >= u.cuantas;
+      return `<li class="combo combo--ultra${conocida ? ' combo--hecha' : ''}${alcanzable ? '' : ' combo--imposible'}" style="--color-ultra:${u.color}">
+        <span class="combo__icono">${icono(conocida ? u.icono : 'candado', 26)}</span>
+        <span class="combo__cuerpo">
+          <strong>${conocida ? u.nombre : '???'}</strong>
+          <span>${conocida ? u.descripcion : `Un poder de leyenda: junta ${u.cuantas} de estas combinaciones.`}</span>
+          <small>${u.de.map((c) => `${SINERGIAS[c].nombre}${posibles.includes(c) ? '' : ' ✗'}`).join(' · ')}</small>
+        </span>
+        <span class="combo__marca">${alcanzable ? `Posible con ${yo.nombre}` : `No para ${yo.nombre}`}</span>
       </li>`;
     }).join('');
   }
@@ -734,7 +777,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
     } else if (panel === 'entrenamiento') pintarEntrenamiento();
     else if (panel === 'contratar') pintarContratar();
     else if (panel === 'direccion') pintarDireccion();
-    else if (panel === 'combos') pintarCombos();
+    else if (panel === 'combos') { pintarCombos(); pintarUltras(); }
     else if (panel === 'ranking') {
       pestanaRanking = servidor ? pestanaRanking : 'mio';
       pintarRanking();
@@ -854,7 +897,8 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
       if (o.sinergia) {
         const nota = document.createElement('span');
         nota.className = 'opcion__sinergia';
-        nota.textContent = `★ Completa la combinación «${o.sinergia}»`;
+        nota.textContent = o.ultra ? `✦ ¡Completa «${o.sinergia}» y consigues la ULTRA «${o.ultra}»!` : `★ Completa la combinación «${o.sinergia}»`;
+        if (o.ultra) nota.classList.add('opcion__sinergia--ultra');
         boton.querySelector('.opcion__cuerpo').append(nota);
       }
       li.append(boton);
@@ -925,6 +969,10 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
         const nueva = registrarSinergia(usuario, ev.clave);
         hud.aviso(`★ ${nueva ? 'Combinación nueva: ' : ''}${ev.nombre}`, 'exito');
         anunciar(`Combinación conseguida: ${ev.nombre}. ${ev.descripcion}`);
+      } else if (ev.tipo === 'ultra') {
+        registrarSinergia(usuario, `u:${ev.clave}`);
+        hud.aviso(`✦ ULTRA: ${ev.nombre}`, 'exito');
+        anunciar(`Ultra conseguida: ${ev.nombre}. ${ev.descripcion}`);
       } else if (ev.tipo === 'jefe-derrotado') {
         hud.aviso(`¡${ev.nombre} eliminado!`, 'exito');
       }
@@ -1004,6 +1052,7 @@ export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
     entrenamiento: () => irAlHub('entrenamiento'),
     contratar: () => irAlHub('contratar'),
     canjear: canjearFicha,
+    desbloquear: desbloquearTodo,
     combos: () => irAlHub('combos'),
     direccion: () => irAlHub('direccion'),
     ranking: () => irAlHub('ranking'),

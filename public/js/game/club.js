@@ -12,7 +12,32 @@ export const ESTADISTICA_NOMBRES = {
 };
 export const NIVEL_ESTADISTICA_MAX = 20;
 export const JEFES_POR_PUNTO = 3; // un punto de entrenamiento por cada 3 jefes vencidos con ese jugador
-export const JEFES_POR_FICHA = 5; // una ficha de contrato por cada 5 jefes vencidos (con cualquiera)
+export const JEFES_POR_FICHA = 3; // una ficha de contrato por cada 3 jefes vencidos (con cualquiera)
+export const PUNTOS_BAJAS_MAX = 40; // los rivales eliminados dan hasta 40 puntos de entrenamiento por jugador
+
+/** Rivales que hay que eliminar con un jugador para ganar su punto nº `k`: los primeros salen baratos y los últimos cuestan mucho. */
+export const costePunto = (k) => Math.round(90 + 30 * k + 0.9 * k * k);
+
+/** Puntos de entrenamiento que dan `bajas` rivales eliminados con un jugador. */
+export function puntosPorBajas(bajas = 0) {
+  let k = 0;
+  let acumulado = 0;
+  while (k < PUNTOS_BAJAS_MAX && acumulado + costePunto(k + 1) <= bajas) {
+    acumulado += costePunto(k + 1);
+    k += 1;
+  }
+  return k;
+}
+
+/** Cuántos rivales faltan para el próximo punto por bajas (null si ya está en el tope) y lo que cuesta ese punto. */
+export function proximoPuntoPorBajas(bajas = 0) {
+  const k = puntosPorBajas(bajas);
+  if (k >= PUNTOS_BAJAS_MAX) return null;
+  let acumulado = 0;
+  for (let i = 1; i <= k; i += 1) acumulado += costePunto(i);
+  const coste = costePunto(k + 1);
+  return { faltan: acumulado + coste - bajas, coste, hechas: bajas - acumulado };
+}
 export const HABILIDADES_MIN = 8;
 
 export const estadisticasVacias = () => ({ vida: 0, defensa: 0, disparo: 0, suerte: 0 });
@@ -24,7 +49,7 @@ export const esInicial = (clave) => (PERSONAJES[clave]?.habilidades.length ?? 99
 export const pesoContrato = (clave) => 1.4 ** -((PERSONAJES[clave]?.habilidades.length ?? HABILIDADES_MIN) - HABILIDADES_MIN);
 
 /** Ficha vacía de un jugador recién fichado. */
-export const fichaNueva = () => ({ jefes: 0, partidas: 0, stats: estadisticasVacias() });
+export const fichaNueva = () => ({ jefes: 0, bajas: 0, partidas: 0, stats: estadisticasVacias() });
 
 /** Equipo inicial: un portero, un defensa, un medio y un delantero de entre los "malos". `azar()` devuelve [0,1). */
 export function plantillaInicial(azar) {
@@ -44,7 +69,9 @@ export const fichasGanadas = (perfil) => Math.floor(perfil.jefesTotal / JEFES_PO
 export const fichasDisponibles = (perfil) => Math.max(0, fichasGanadas(perfil) - perfil.fichasUsadas);
 
 export const puntosGastados = (ficha) => ESTADISTICAS.reduce((s, k) => s + (ficha.stats[k] || 0), 0);
-export const puntosLibres = (ficha) => Math.max(0, Math.floor(ficha.jefes / JEFES_POR_PUNTO) - puntosGastados(ficha));
+/** Puntos ganados en total: 1 por cada 3 jefes y los de las bajas. */
+export const puntosGanados = (ficha) => Math.floor(ficha.jefes / JEFES_POR_PUNTO) + puntosPorBajas(ficha.bajas || 0);
+export const puntosLibres = (ficha) => Math.max(0, puntosGanados(ficha) - puntosGastados(ficha));
 
 /** Jugadores que aún no se tienen (los candidatos de un contrato). */
 export const sinFichar = (perfil) => Object.keys(PERSONAJES).filter((k) => !perfil.jugadores[k]);

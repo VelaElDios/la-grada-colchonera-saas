@@ -3,7 +3,7 @@
 // `retrato(clave)` devuelve la URL del retrato de un jugador (lo pone juego.js).
 import { PERSONAJES, POSICIONES } from './config.js';
 import {
-  ESTADISTICAS, ESTADISTICA_NOMBRES, NIVEL_ESTADISTICA_MAX, JEFES_POR_PUNTO, JEFES_POR_FICHA,
+  ESTADISTICAS, ESTADISTICA_NOMBRES, NIVEL_ESTADISTICA_MAX, JEFES_POR_PUNTO, JEFES_POR_FICHA, PUNTOS_BAJAS_MAX, costePunto,
   rareza, probabilidadesContrato, efectoEstadisticas, estadisticasVacias,
 } from './club.js';
 import { icono } from './iconos.js';
@@ -54,6 +54,7 @@ export function htmlEntrenamiento(club, seleccionado, retrato) {
   if (!f) return { lista, panel: '<p class="panel__vacio">Elige un jugador de tu plantilla.</p>' };
   const p = PERSONAJES[seleccionado];
   const faltan = JEFES_POR_PUNTO - (f.jefes % JEFES_POR_PUNTO);
+  const sig = f.siguientePunto;
   const filas = ESTADISTICAS.map((e) => {
     const nivel = f.stats[e];
     const info = ESTADISTICA_NOMBRES[e];
@@ -79,7 +80,13 @@ export function htmlEntrenamiento(club, seleccionado, retrato) {
         <p class="detalle__total"><strong>${f.puntosLibres}</strong> ${f.puntosLibres === 1 ? 'punto' : 'puntos'} por gastar</p>
       </div>
     </div>
-    <p class="entrena__nota">Ganas <strong>1 punto</strong> por cada <strong>${JEFES_POR_PUNTO} jefes</strong> que venzas con ${esc(p.nombre)}. Le faltan <strong>${faltan === JEFES_POR_PUNTO && f.jefes ? JEFES_POR_PUNTO : faltan}</strong> para el siguiente.</p>
+    <div class="entrena__nota">
+      <p>Eliminados con ${esc(p.nombre)}: <strong>${f.bajas ?? 0}</strong> rivales. ${sig
+    ? `Próximo punto en <strong>${sig.faltan}</strong> más <span class="entrena__coste">(este punto cuesta ${sig.coste}; el último, ${costePunto(PUNTOS_BAJAS_MAX)})</span>.`
+    : 'Ya has ganado todos los puntos por rivales eliminados.'}</p>
+      ${sig ? `<span class="entrena__barra" aria-hidden="true"><span style="width:${Math.round((sig.hechas / sig.coste) * 100)}%"></span></span>` : ''}
+      <p>Además, <strong>1 punto</strong> por cada <strong>${JEFES_POR_PUNTO} jefes</strong> vencidos (te faltan <strong>${faltan}</strong> para el siguiente).</p>
+    </div>
     <ul class="entrena__lista">${filas}</ul>`;
   return { lista, panel };
 }

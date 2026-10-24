@@ -1,7 +1,7 @@
 // Simulación del juego: sin dibujar nada y sin tocar el DOM, así se puede probar con node:test.
 // Estados: 'jugando' → 'mejora' (elegir mejora al subir de nivel) → 'jugando' ... → 'fin'.
 import {
-  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir, CURAS,
+  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir, CURAS, AYUDA_INICIAL, CURTIDOS,
 } from './config.js';
 import { crearRng, crearCuadricula, normalizar } from './util.js';
 import {
@@ -16,6 +16,7 @@ import { actualizarJefe, danarJugador } from './jefes.js';
 import { actualizarUlti, cargarUlti, lanzarUlti } from './ulti.js';
 import { crearTerreno, zonaEn, resolver, tocaGrada, rayoLibre } from './terreno.js';
 import { comportamiento } from './rivales.js';
+import { estadoUltras, actualizarUltras } from './ultras.js';
 
 const SIN_ENTRADA = { x: 0, y: 0 };
 
@@ -89,6 +90,8 @@ export function crearMundo({
       puedeDisparar: true,
       ulti: { carga: 0, max: ULTI.base, usos: 0 },
       sinergias: [], // claves de las combinaciones activas
+      ayuda: 1, // ayuda de novato (1 al empezar, 0 pasados unos minutos)
+      ultras: [], // claves de las ULTRAS conseguidas (config.js → ULTRAS)
       dash: null, // regate o entrada en curso
       escudo: 0, // segundos que le quedan a la barrera
       escudoRadio: 60,
@@ -110,6 +113,8 @@ export function crearMundo({
     temporizadorPremio: 4,
     tajos: [],
     fuegos: [], // fuego en el suelo (bengalas)
+    ult: estadoUltras(), // estado de las ultras (cometas, meteoros, estrellas, cúpula...)
+    ultrasLogradas: [],
     ondas: [],
     rayos: [],
     tarjetas: [],
@@ -272,6 +277,7 @@ function moverEnemigos(mundo, dt) {
           e.rayoT = 0.15;
           if ((e.rodeoT > 0.4 && rayoLibre(terreno, e.x, e.y, j.x, j.y, 400, e.r)) || e.rodeoT > 7) e.rodeo = 0;
         }
+        if (e.rodeo && !(Number.isFinite(e.nx) && Number.isFinite(e.ny))) e.rodeo = 0; // sin pared a la que seguir, no rodea (evitaba NaN)
         if (e.rodeo) {
           dx = -e.ny * e.rodeo * 0.95 - e.nx * 0.4;
           dy = e.nx * e.rodeo * 0.95 - e.ny * 0.4;
@@ -311,7 +317,7 @@ function moverEnemigos(mundo, dt) {
     e.tAncla = (e.tAncla || 0) + dt;
     if (e.tAncla > 0.9) {
       const avance = Math.hypot(e.x - (e.axx ?? e.x), e.y - (e.ayy ?? e.y));
-      if (e.chocoVentana && dist > e.r * 3 && avance < e.vel * 0.9 * 0.3) e.rodeo = -(e.rodeo || 1);
+      if (e.chocoVentana && dist > e.r * 3 && avance < e.vel * 0.9 * 0.3 && Number.isFinite(e.nx)) e.rodeo = -(e.rodeo || 1);
       e.tAncla = 0;
       e.chocoVentana = false;
       e.axx = e.x;
@@ -488,7 +494,7 @@ function recogerObjetos(mundo, dt) {
     }
     if (d2 < (j.r + 10) ** 2) {
       g.recogida = true;
-      ganarExperiencia(mundo, g.valor * j.mult.xp * (1 + MOVIMIENTO.bonoXp * j.ritmo));
+      ganarExperiencia(mundo, g.valor * j.mult.xp * (1 + MOVIMIENTO.bonoXp * j.ritmo) * (1 + AYUDA_INICIAL.xp * j.ayuda));
       mundo.eventos.push({ tipo: 'gema' });
     }
   }
@@ -545,6 +551,11 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   const j = mundo.jugador;
   mundo.tiempo += dt;
 
+  j.ayuda = Math.max(0, 1 - mundo.tiempo / AYUDA_INICIAL.duracion);
+  if (!mundo.avisoCurtidos && mundo.tiempo >= CURTIDOS.desde * 60) {
+    mundo.avisoCurtidos = true;
+    mundo.eventos.push({ tipo: 'aviso', texto: '¡Se han adaptado a tus armas! Solo las ULTRAS los atraviesan' });
+  }
   const oleada = oleadaEn(mundo.tiempo);
   if (oleada !== mundo.oleada) {
     mundo.oleada = oleada;
@@ -558,6 +569,7 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   actualizarArmas(mundo, dt);
   actualizarFuegos(mundo, dt);
   actualizarQuemaduras(mundo, dt);
+  actualizarUltras(mundo, dt);
   moverProyectiles(mundo, dt);
   moverDisparosEnemigos(mundo, dt);
   recogerObjetos(mundo, dt);
@@ -650,5 +662,6 @@ export function resumen(mundo) {
   return {
     tiempo: mundo.tiempo, oleada: mundo.oleada, nivel: j.nivel, bajas: j.bajas, jefes: j.jefes, personaje: j.personaje, entrenador: j.entrenador,
     sinergias: [...mundo.sinergiasLogradas],
+    ultras: [...mundo.ultrasLogradas],
   };
 }

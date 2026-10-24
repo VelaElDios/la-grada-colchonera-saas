@@ -120,9 +120,12 @@ test('correr da ritmo: más daño, más experiencia y la ulti se carga; parado, 
   const { multiplicadorDano } = await cargar('combate.js');
   const { m, mundo } = await mundoLimpio(11);
   const j = mundo.jugador;
-  const base = multiplicadorDano(j, 'cuerpo');
   for (let i = 0; i < 90; i++) m.avanzar(mundo, PASO, { x: 0, y: 1 });
   assert.ok(j.ritmo > 0.99);
+  const ritmoActual = j.ritmo;
+  j.ritmo = 0; // misma hora de partida (la ayuda inicial decae con el tiempo): solo cambia el ritmo
+  const base = multiplicadorDano(j, 'cuerpo');
+  j.ritmo = ritmoActual;
   assert.ok(Math.abs(multiplicadorDano(j, 'cuerpo') - base * (1 + MOVIMIENTO.bonoDano)) < 1e-9);
   assert.ok(j.ulti.carga > 0, 'recorrer campo carga la ulti');
   for (let i = 0; i < 60; i++) m.avanzar(mundo, PASO, { x: 0, y: 0 });

@@ -18,6 +18,7 @@ export async function montar(raiz, { navegar }) {
       finalizar: (id, resultado) => api.finalizarPartida(id, resultado),
       finalizarAlCerrar: (id, resultado) => api.finalizarPartidaAlCerrar(id, resultado),
       contratar: () => api.contratarJugador(),
+      desbloquear: () => api.desbloquearJuego(),
       entrenar: (personaje, estadistica) => api.entrenarJugador(personaje, estadistica),
       ranking: () => api.getRankingJuego(20),
     };

@@ -10,8 +10,8 @@ let contadorId = 1;
 export const oleadaEn = (tiempo) => 1 + Math.floor(tiempo / MUNDO.duracionOleada);
 
 // Menos rivales que antes, pero cada uno más duro (y con élites): la tensión viene de la calidad, no de la cantidad.
-const intervaloAparicion = (oleada) => Math.max(0.25, 1.25 - 0.04 * (oleada - 1));
-const gruposPorAparicion = (oleada) => 1 + Math.floor((oleada - 1) / 5);
+const intervaloAparicion = (oleada) => Math.max(0.25, 1.7 - 0.072 * (oleada - 1));
+const gruposPorAparicion = (oleada) => 1 + Math.floor((oleada - 1) / 4);
 
 /** `elite`: clave de ELITES.tipos para un rival más duro (ver config.js). */
 export function crearEnemigo(tipo, x, y, oleada, elite = null) {
@@ -189,7 +189,10 @@ export function reciclarLejanos(mundo) {
   const lim2 = MUNDO.distanciaDescarte ** 2;
   for (let i = 0; i < mundo.enemigos.length; i += 1) {
     const e = mundo.enemigos[i];
-    if ((e.x - j.x) ** 2 + (e.y - j.y) ** 2 > lim2 && !e.jefe) {
+    if (!Number.isFinite(e.x + e.y)) { // red de seguridad: un rival con posición rota vuelve al campo
+      const [x, y] = colocarEnAnillo(mundo, mundo.rng.rango(0, Math.PI * 2));
+      e.x = x; e.y = y; e.kx = 0; e.ky = 0; e.rodeo = 0;
+    } else if ((e.x - j.x) ** 2 + (e.y - j.y) ** 2 > lim2 && !e.jefe) {
       const [x, y] = colocarEnAnillo(mundo, mundo.rng.rango(0, Math.PI * 2));
       e.x = x;
       e.y = y;

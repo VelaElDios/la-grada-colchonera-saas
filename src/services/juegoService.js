@@ -5,7 +5,9 @@ const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { randomInt, randomUUID } = require('node:crypto');
 
-const { ValidationError, NotFoundError, ConflictError } = require('./errors');
+const {
+  ValidationError, NotFoundError, ConflictError, ForbiddenError,
+} = require('./errors');
 
 const RUTA_JUEGO = path.join(__dirname, '..', '..', 'public', 'js', 'game');
 const MAX_REINTENTOS = 4;
@@ -36,7 +38,7 @@ function aliasDe(user) {
 function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => Date.now() }) {
   /** Lee el perfil (lo crea con el equipo inicial la primera vez), lo transforma y lo guarda con control de versión. */
   async function conPerfil(user, transformar) {
-    const { club } = await cargarReglas();
+    const { club, config } = await cargarReglas();
     for (let intento = 0; intento < MAX_REINTENTOS; intento += 1) {
       let actual = await juegoRepository.getPerfil(user.id);
       if (!actual) {
@@ -44,7 +46,7 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
         actual = await juegoRepository.getPerfil(user.id);
       }
       const datos = structuredClone(actual.datos);
-      const resultado = await transformar(datos, { club });
+      const resultado = await transformar(datos, { club, config });
       if (resultado?.sinCambios || await juegoRepository.guardarPerfil(user.id, datos, actual.version)) {
         return { datos, resultado };
       }
@@ -58,6 +60,8 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
     Object.entries(datos.jugadores).forEach(([clave, ficha]) => {
       jugadores[clave] = {
         jefes: ficha.jefes,
+        bajas: ficha.bajas || 0,
+        siguientePunto: club.proximoPuntoPorBajas(ficha.bajas || 0),
         partidas: ficha.partidas || 0,
         stats: ficha.stats,
         puntosLibres: club.puntosLibres(ficha),
@@ -108,13 +112,14 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
         if (!actual || actual.id !== partidaId) throw new NotFoundError('No hay una partida en curso con ese identificador');
         const transcurrido = (ahora() - actual.inicio) / 1000;
         if (tiempo > TIEMPO_MAXIMO || tiempo > transcurrido + MARGEN_RELOJ) throw new ValidationError('El tiempo no coincide con la partida');
-        if (jefes > 3 + tiempo / 50 || nivel > 8 + tiempo / 3 || bajas > 60 * tiempo + 50) {
+        if (jefes > 3 + tiempo / 50 || nivel > 8 + tiempo / 3 || bajas > 20 * tiempo + 50) {
           throw new ValidationError('El resultado no es creíble');
         }
         const ficha = d.jugadores[actual.personaje];
         const puntosAntes = club.puntosLibres(ficha);
         const fichasAntes = club.fichasDisponibles(d);
         ficha.jefes += jefes;
+        ficha.bajas = (ficha.bajas || 0) + bajas;
         ficha.partidas = (ficha.partidas || 0) + 1;
         d.jefesTotal += jefes;
         d.partidas += 1;
@@ -140,7 +145,7 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
     /** Gasta una ficha de contrato: un jugador nuevo al azar (nunca repetido; los de pocas habilidades salen más). */
     async contratar(user) {
       const { datos, resultado } = await conPerfil(user, (d, { club }) => {
-        if (club.fichasDisponibles(d) < 1) throw new ConflictError('No tienes fichas de contrato (una por cada 5 jefes vencidos)');
+        if (club.fichasDisponibles(d) < 1) throw new ConflictError('No tienes fichas de contrato (una por cada 3 jefes vencidos)');
         const clave = club.sortearContrato(d, azar);
         if (!clave) throw new ConflictError('Ya tienes a todos los jugadores');
         d.fichasUsadas += 1;
@@ -156,9 +161,28 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
         if (!club.ESTADISTICAS.includes(estadistica)) throw new ValidationError('Estadística no válida');
         const ficha = typeof personaje === 'string' ? d.jugadores[personaje] : null;
         if (!ficha) throw new ValidationError('Ese jugador no está en tu plantilla');
-        if (club.puntosLibres(ficha) < 1) throw new ConflictError('No tienes puntos de entrenamiento con ese jugador (uno por cada 3 jefes vencidos)');
+        if (club.puntosLibres(ficha) < 1) throw new ConflictError('No tienes puntos de entrenamiento con ese jugador (se ganan con rivales eliminados y con jefes vencidos)');
         if (ficha.stats[estadistica] >= club.NIVEL_ESTADISTICA_MAX) throw new ConflictError('Esa estadística ya está al máximo');
         ficha.stats[estadistica] += 1;
+        return {};
+      });
+      return reglas(datos);
+    },
+
+    /**
+     * Modo pruebas: ficha a todos los jugadores y puntos de sobra. Solo para administradores
+     * (o, con `forzar`, desde el script de la terminal). No toca el ranking.
+     */
+    async desbloquearTodo(user, { forzar = false } = {}) {
+      if (!forzar && user.role !== 'admin') throw new ForbiddenError('Solo un administrador puede usar el modo pruebas');
+      const { datos } = await conPerfil(user, (d, { club, config }) => {
+        Object.keys(config.PERSONAJES).forEach((clave) => {
+          const ficha = d.jugadores[clave] ?? club.fichaNueva();
+          ficha.jefes = Math.max(ficha.jefes, 60);
+          ficha.bajas = Math.max(ficha.bajas || 0, 60000);
+          d.jugadores[clave] = ficha;
+        });
+        d.jefesTotal = Math.max(d.jefesTotal, 150);
         return {};
       });
       return reglas(datos);

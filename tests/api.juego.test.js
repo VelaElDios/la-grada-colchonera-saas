@@ -26,7 +26,7 @@ describe('API /api/juego', () => {
   const post = (c, ruta, body = {}) => srv.request('POST', `/juego${ruta}`, { cookie: c, body });
 
   /** Juega una partida completa que dura `tiempo` s y vence a `jefes` jefes. */
-  async function jugar(c, personaje, { jefes = 0, tiempo = 300, nivel = 20, bajas = 200 } = {}) {
+  async function jugar(c, personaje, { jefes = 0, tiempo = 300, nivel = 20, bajas = 0 } = {}) {
     const ini = await post(c, '/partidas', { personaje, entrenador: 'cholo' });
     assert.equal(ini.status, 201, JSON.stringify(ini.body));
     reloj += tiempo * 1000;
@@ -66,7 +66,7 @@ describe('API /api/juego', () => {
     assert.equal((await post(cookie, '/partidas', { personaje: propio, entrenador: 'nadie' })).status, 400);
   });
 
-  test('los jefes dan puntos (1 por cada 3 con ese jugador) y fichas (1 por cada 5 en total)', async () => {
+  test('los jefes dan puntos (1 por cada 3 con ese jugador) y fichas (1 por cada 3 en total)', async () => {
     const { cookie } = await nuevoUsuario();
     const [a, b] = Object.keys((await get(cookie, '/perfil')).body.jugadores);
 
@@ -75,7 +75,7 @@ describe('API /api/juego', () => {
     assert.equal(r.body.recompensas.puntosNuevos, 0);
     assert.equal(r.body.perfil.fichas, 0);
 
-    r = await jugar(cookie, b, { jefes: 3 }); // otro jugador: 3 jefes → 1 punto para él; en total 5 → 1 ficha
+    r = await jugar(cookie, b, { jefes: 3 }); // otro jugador: 3 jefes → 1 punto para él; en total 5 → 1 ficha (cada 3)
     assert.equal(r.body.recompensas.puntosNuevos, 1);
     assert.equal(r.body.recompensas.fichasNuevas, 1);
     assert.equal(r.body.perfil.fichas, 1);
@@ -166,5 +166,28 @@ describe('API /api/juego', () => {
     await jugar(cookie, a, { jefes: 5, tiempo: 600 });
     const [r1, r2] = await Promise.all([post(cookie, '/contratar'), post(cookie, '/contratar')]);
     assert.deepEqual([r1.status, r2.status].sort(), [200, 409]);
+  });
+  test('las bajas dan puntos de entrenamiento al jugador (cada vez más caros)', async () => {
+    const { cookie } = await nuevoUsuario();
+    const [a] = Object.keys((await get(cookie, '/perfil')).body.jugadores);
+    let r = await jugar(cookie, a, { tiempo: 600, bajas: 100 });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.perfil.jugadores[a].puntosLibres, 0); // aún no llega al primer punto
+    r = await jugar(cookie, a, { tiempo: 600, bajas: 100 });
+    assert.equal(r.body.perfil.jugadores[a].puntosLibres, 1);
+    assert.equal(r.body.perfil.jugadores[a].bajas, 200);
+  });
+
+  test('el modo pruebas (/desbloquear) es solo para administradores', async () => {
+    const normal = await nuevoUsuario();
+    assert.equal((await post(normal.cookie, '/desbloquear')).status, 403);
+
+    await srv.seedUser({ email: 'jefa@grada.es', password: 'aupa-atleti', role: 'admin' });
+    const cookie = (await srv.request('POST', '/auth/login', { body: { email: 'jefa@grada.es', password: 'aupa-atleti' } })).cookie;
+    const r = await post(cookie, '/desbloquear');
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    const perfil = (await get(cookie, '/perfil')).body;
+    assert.ok(Object.keys(perfil.jugadores).length >= 30, 'tiene a casi todos los jugadores');
+    assert.ok(Object.values(perfil.jugadores).every((j) => j.puntosLibres > 10));
   });
 });

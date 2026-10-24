@@ -1,7 +1,7 @@
 // Interfaz que se superpone al juego (vida, experiencia, tiempo, oleada, armas, ulti y barra de jefe...).
 // Solo toca el DOM cuando un valor cambia, para no gastar rendimiento en cada fotograma.
 import {
-  ARMAS, PASIVAS, EXTRAS, ENTRENADORES, MOVIMIENTO, SINERGIAS,
+  ARMAS, PASIVAS, EXTRAS, ENTRENADORES, MOVIMIENTO, SINERGIAS, ULTRAS,
 } from './config.js';
 import { xpSiguiente } from './mundo.js';
 import { formatearTiempo } from './util.js';
@@ -55,6 +55,7 @@ export function crearHud(raiz) {
     const totalExtras = Object.keys(EXTRAS).reduce((s, k) => s + j.extras[k], 0);
     if (totalExtras > 0) piezas.push({ nombre: 'Mejoras extra', icono: 'mas', nivel: totalExtras, clase: 'extra' });
     j.sinergias.forEach((k) => piezas.push({ nombre: `Combinación: ${SINERGIAS[k].nombre}`, icono: SINERGIAS[k].icono, nivel: '★', clase: 'sinergia' }));
+    j.ultras.forEach((k) => piezas.push({ nombre: `ULTRA: ${ULTRAS[k].nombre}`, icono: ULTRAS[k].icono, nivel: '✦', clase: 'ultra' }));
     const firma = piezas.map((p) => `${p.nombre}${p.nivel}`).join('|');
     if (firma === ultimo.equipo) return;
     ultimo.equipo = firma;

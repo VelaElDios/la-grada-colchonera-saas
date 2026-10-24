@@ -4,6 +4,7 @@ import {
   danar, aturdir, danoFijo, quemar,
 } from './combate.js';
 import { normalizar } from './util.js';
+import { golpeUltra } from './ultras.js';
 
 const ALCANCE_BALON = 520;
 
@@ -520,7 +521,8 @@ export function actualizarFuegos(mundo, dt) {
     f.tick = 0.4;
     mundo.cuadricula.cerca(f.x, f.y, f.radio + 20, (e) => {
       if (e.muerto || (e.x - f.x) ** 2 + (e.y - f.y) ** 2 > (f.radio + e.r) ** 2) return;
-      danar(mundo, e, f.dano, null, 0, 'cuerpo');
+      if (f.pct) golpeUltra(mundo, e, f.dano, f.pct, null, 0, 'cuerpo');
+      else danar(mundo, e, f.dano, null, 0, 'cuerpo');
       quemar(mundo, e, f.dano * 0.6, 1.5);
     });
   }
