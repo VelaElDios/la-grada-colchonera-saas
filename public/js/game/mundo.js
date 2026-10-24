@@ -1,12 +1,14 @@
 // Simulación del juego: sin dibujar nada y sin tocar el DOM, así se puede probar con node:test.
 // Estados: 'jugando' → 'mejora' (elegir mejora al subir de nivel) → 'jugando' ... → 'fin'.
 import {
-  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir,
+  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir, CURAS,
 } from './config.js';
 import { crearRng, crearCuadricula, normalizar } from './util.js';
-import { actualizarArmas, actualizarAcciones } from './armas.js';
 import {
-  curar, danar, aturdir, crearParticulas, crearTexto,
+  actualizarArmas, actualizarAcciones, actualizarFuegos, actualizarQuemaduras,
+} from './armas.js';
+import {
+  curar, danar, aturdir, crearParticulas, crearTexto, quemar,
 } from './combate.js';
 import { generarOpciones, aplicarMejora, recalcular } from './mejoras.js';
 import { oleadaEn, empezarOleada, actualizarApariciones, reciclarLejanos } from './oleadas.js';
@@ -26,7 +28,7 @@ const SIN_ENTRADA = { x: 0, y: 0 };
  * @param {boolean} [opciones.pasilloMenu] Deja libre de obstáculos la franja por la que pasea el muñeco del menú
  */
 export function crearMundo({
-  semilla = Date.now(), efectosReducidos = false, personaje = 'koke', entrenador = 'cholo', pasilloMenu = false,
+  semilla = Date.now(), efectosReducidos = false, personaje = 'koke', entrenador = 'cholo', pasilloMenu = false, entrenamiento = null,
 } = {}) {
   const pj = PERSONAJES[personaje] ?? PERSONAJES.koke;
   const clavePersonaje = PERSONAJES[personaje] ? personaje : 'koke';
@@ -94,6 +96,10 @@ export function crearMundo({
       animo: 0, // segundos que le quedan al bonus de daño del Cholo
       furia: 0, // segundos que le quedan a la Furia Roja de Luis
       bonoAnimo: ENTRENADORES.cholo.ulti.bonoDano,
+      entrenamiento: entrenamiento ? { ...entrenamiento } : null, // estadísticas del club { vida, defensa, disparo, suerte }
+      poder: { oro: 0, oroPerfora: 0, fuego: 0, guantes: 0, guantesCada: 16, prorroga: 0 },
+      guantes: { cargas: 0, max: 0, t: 0 }, // Guante de Oro: golpes que puede parar
+      prorrogas: 0, // veces que ya se ha levantado
     },
     enemigos: [],
     proyectiles: [],
@@ -103,6 +109,7 @@ export function crearMundo({
     premios: [],
     temporizadorPremio: 4,
     tajos: [],
+    fuegos: [], // fuego en el suelo (bengalas)
     ondas: [],
     rayos: [],
     tarjetas: [],
@@ -197,6 +204,13 @@ function moverJugador(mundo, dt, entrada) {
   j.invul = Math.max(0, j.invul - dt);
   j.flash = Math.max(0, j.flash - dt);
   j.escudo = Math.max(0, j.escudo - dt);
+  if (j.guantes.cargas < j.guantes.max) {
+    j.guantes.t += dt;
+    if (j.guantes.t >= j.poder.guantesCada) {
+      j.guantes.t = 0;
+      j.guantes.cargas += 1;
+    }
+  } else j.guantes.t = 0;
   if (j.contra) {
     j.contra.t -= dt;
     if (j.contra.t <= 0) j.contra = null;
@@ -353,6 +367,7 @@ function moverProyectiles(mundo, dt) {
         p.golpeados.add(e.id);
         p.perfora -= 1;
         danar(mundo, e, p.dano, normalizar(p.vx, p.vy), p.empuje, p.tipoDano ?? 'disparo');
+        if (p.fuego) quemar(mundo, e, p.dano * (0.2 + 0.08 * p.fuego) * mundo.jugador.mult.dano, 3);
         if (mundo.ondas.length < 40) mundo.ondas.push({ x: p.x, y: p.y, radio: 18, vida: 0.14, total: 0.14 });
       });
     }
@@ -481,7 +496,7 @@ function recogerObjetos(mundo, dt) {
     const c = mundo.curas[i];
     if ((c.x - j.x) ** 2 + (c.y - j.y) ** 2 < (j.r + 14) ** 2) {
       c.recogida = true;
-      curar(mundo, 25);
+      curar(mundo, Math.max(25, Math.round(j.vidaMax * CURAS.cantidad)));
       mundo.eventos.push({ tipo: 'cura' });
     }
   }
@@ -541,6 +556,8 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   moverEnemigos(mundo, dt);
   actualizarAcciones(mundo, dt);
   actualizarArmas(mundo, dt);
+  actualizarFuegos(mundo, dt);
+  actualizarQuemaduras(mundo, dt);
   moverProyectiles(mundo, dt);
   moverDisparosEnemigos(mundo, dt);
   recogerObjetos(mundo, dt);
@@ -555,6 +572,7 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   compactar(mundo.curas, (c) => !c.recogida);
   compactar(mundo.premios, (p) => !p.recogido);
   compactar(mundo.tajos, (t) => t.vida > 0);
+  compactar(mundo.fuegos, (f) => f.t > 0);
   compactar(mundo.ondas, (o) => o.vida > 0);
   compactar(mundo.rayos, (r) => r.vida > 0);
   compactar(mundo.tarjetas, (t) => t.vida > 0);
@@ -565,11 +583,14 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
 
   // La ulti se carga con las bajas de este fotograma
   if (mundo.cargaPendiente > 0) {
-    cargarUlti(mundo, mundo.cargaPendiente);
+    cargarUlti(mundo, mundo.cargaPendiente * j.mult.carga);
     mundo.cargaPendiente = 0;
   }
   actualizarUlti(mundo, dt);
 
+  if (j.vida <= 0 && j.poder.prorroga > 0 && j.prorrogas < (j.poder.prorroga >= 5 ? 2 : 1)) {
+    levantarse(mundo); // Prórroga: otra oportunidad
+  }
   if (j.vida <= 0) {
     j.vida = 0;
     mundo.estado = 'fin';
@@ -578,6 +599,28 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
     return;
   }
   if (mundo.pendientes > 0) abrirMejora(mundo);
+}
+
+/** Prórroga: el jugador se levanta con parte de la vida y expulsa a los rivales cercanos. */
+function levantarse(mundo) {
+  const j = mundo.jugador;
+  j.prorrogas += 1;
+  j.vida = Math.round(j.vidaMax * (0.3 + 0.1 * j.poder.prorroga));
+  j.invul = 2;
+  for (let i = 0; i < mundo.enemigos.length; i += 1) {
+    const e = mundo.enemigos[i];
+    if (e.muerto) continue;
+    const [nx, ny] = normalizar(e.x - j.x, e.y - j.y);
+    if ((e.x - j.x) ** 2 + (e.y - j.y) ** 2 < 260 * 260) {
+      e.kx += nx * 700 * e.freno;
+      e.ky += ny * 700 * e.freno;
+      e.aturdido = Math.max(e.aturdido ?? 0, e.jefe ? 0 : 1.5);
+    }
+  }
+  mundo.disparosEnemigos.length = 0;
+  mundo.ondas.push({ x: j.x, y: j.y, radio: 260, vida: 0.7, total: 0.7, color: '#ffd166', ulti: true });
+  crearTexto(mundo, j.x, j.y - 30, '¡Prórroga!', '#ffd166');
+  mundo.eventos.push({ tipo: 'escudo' });
 }
 
 function abrirMejora(mundo) {

@@ -9,6 +9,8 @@ const { createPool } = require('./db/pool');
 const { migrate } = require('./db/migrate');
 const { createMemoryUserRepository } = require('./repositories/memoryUserRepository');
 const { createPostgresUserRepository } = require('./repositories/postgresUserRepository');
+const { createMemoryJuegoRepository } = require('./repositories/memoryJuegoRepository');
+const { createPostgresJuegoRepository } = require('./repositories/postgresJuegoRepository');
 const { createPasswordHasher } = require('./services/passwordHasher');
 const { createUserService } = require('./services/userService');
 const { createLogger } = require('./logger');
@@ -23,6 +25,7 @@ async function createDataLayer(config, { pool: givenPool } = {}) {
     return {
       storage: 'memoria',
       userRepository: createMemoryUserRepository(),
+      juegoRepository: createMemoryJuegoRepository(),
       sessionStore: undefined,
       close: async () => {},
     };
@@ -42,6 +45,7 @@ async function createDataLayer(config, { pool: givenPool } = {}) {
   return {
     storage: 'PostgreSQL',
     userRepository: createPostgresUserRepository(pool),
+    juegoRepository: createPostgresJuegoRepository(pool),
     sessionStore,
     close: async () => {
       sessionStore.close();
@@ -84,6 +88,7 @@ async function bootstrap(config, options = {}) {
     mailer,
     config,
     userRepository: data.userRepository,
+    juegoRepository: data.juegoRepository,
     sessionStore: data.sessionStore,
     passwordHasher,
     logger,

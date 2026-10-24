@@ -15,13 +15,15 @@ async function simular(m, mundo, segundos, entrada = { x: 0, y: 0 }) {
   }
 }
 
-test('hay 19 jugadores del Atleti con estadísticas de su posición retocadas por sus rasgos', async () => {
+test('hay 36 jugadores del Atleti con estadísticas de su posición retocadas por sus rasgos', async () => {
   const { PERSONAJES, POSICIONES } = await cargar('config.js');
   const m = await cargar('mundo.js');
   const esperados = ['oblak', 'musso', 'godin', 'lenglet', 'pubill', 'molina', 'grimaldo', 'koke', 'llorente', 'barrios', 'lee', 'griezmann',
-    'torres', 'lookman', 'giuliano', 'julian', 'costa', 'forlan', 'falcao'];
+    'torres', 'lookman', 'giuliano', 'julian', 'costa', 'forlan', 'falcao',
+    'grbic', 'courtois', 'trippier', 'savic', 'miranda', 'lodi', 'baena', 'partey', 'saul', 'pantic', 'tiago', 'gabi', 'futre', 'simeone', 'adelardo',
+    'aragones', 'kun'];
   assert.deepEqual(Object.keys(PERSONAJES).sort(), [...esperados].sort());
-  const delanteros = ['griezmann', 'torres', 'lookman', 'giuliano', 'julian', 'costa', 'forlan', 'falcao'];
+  const delanteros = ['griezmann', 'torres', 'lookman', 'giuliano', 'julian', 'costa', 'forlan', 'falcao', 'aragones', 'kun'];
   delanteros.forEach((k) => assert.equal(PERSONAJES[k].posicion, 'delantero', k));
   // El vidaMax sale de la posición × los rasgos del jugador × el entrenador por defecto (Cholo, +5 % de vida)
   const g = m.crearMundo({ semilla: 1, personaje: 'griezmann' }).jugador;
@@ -87,7 +89,7 @@ test('hay 16 equipos rivales y se desbloquean poco a poco', async () => {
   for (const e of Object.values(EQUIPOS)) assert.ok(e.kit.camiseta.c && e.vida > 0 && e.velocidad > 0);
 });
 
-test('hay 10 jefes y salen cada 5 oleadas, al azar entre los que ya les toca y sin repetir en la misma ronda', async () => {
+test('hay 10 jefes y salen cada 4 oleadas, al azar entre los que ya les toca y sin repetir en la misma ronda', async () => {
   const { JEFES, ORDEN_JEFES } = await cargar('config.js');
   const m = await cargar('mundo.js');
   const { empezarOleada, elegirJefe } = await cargar('oleadas.js');
@@ -98,20 +100,20 @@ test('hay 10 jefes y salen cada 5 oleadas, al azar entre los que ya les toca y s
   // En la oleada 5 solo pueden salir los jefes «de entrada»; luego se van sumando los más duros
   const vistos = [];
   const mundo = m.crearMundo({ semilla: 3 });
-  for (const oleada of [5, 10, 15, 20, 25]) {
+  for (const oleada of [4, 8, 12, 16, 20]) {
     mundo.oleada = oleada;
     mundo.enemigos.length = 0;
     empezarOleada(mundo);
     const jefes = mundo.enemigos.filter((e) => e.jefe);
     assert.equal(jefes.length, 1, `un jefe en la oleada ${oleada}`);
-    assert.ok((JEFES[jefes[0].jefe].desde ?? 0) <= oleada / 5 - 1, `${jefes[0].jefe} no puede salir tan pronto`);
+    assert.ok((JEFES[jefes[0].jefe].desde ?? 0) <= oleada / 4 - 1, `${jefes[0].jefe} no puede salir tan pronto`);
     vistos.push(jefes[0].jefe);
   }
   assert.equal(new Set(vistos).size, 5, 'no se repiten en la misma ronda');
   // La misma semilla da los mismos jefes
   const otro = m.crearMundo({ semilla: 3 });
   const repetidos = [];
-  for (const oleada of [5, 10, 15, 20, 25]) {
+  for (const oleada of [4, 8, 12, 16, 20]) {
     otro.oleada = oleada;
     otro.enemigos.length = 0;
     empezarOleada(otro);

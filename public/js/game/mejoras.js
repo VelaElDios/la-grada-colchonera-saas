@@ -6,6 +6,7 @@ import {
   ARMAS, PASIVAS, EXTRAS, POSICIONES, ENTRENADORES, JUGADOR, NIVEL_MAXIMO, PERSONAJES, SINERGIAS,
 } from './config.js';
 import { curar } from './combate.js';
+import { efectoEstadisticas, estadisticasVacias } from './club.js';
 
 /** Nivel que tiene el jugador de una habilidad (arma) o mejora pasiva. */
 const nivelDe = (j, clave) => j.armas[clave]?.nivel ?? j.pasivas[clave] ?? 0;
@@ -41,20 +42,25 @@ export function recalcular(jugador) {
   // Combinaciones activas: suman sus bonus
   jugador.sinergias = sinergiasActivas(jugador);
   const b = {
-    dano: 0, vel: 0, cd: 0, armadura: 0, regen: 0, disparo: 0, cuerpo: 0, xp: 0, perfora: 0, aturde: 0, cdArbitro: 0,
+    dano: 0, vel: 0, cd: 0, armadura: 0, regen: 0, disparo: 0, cuerpo: 0, xp: 0, perfora: 0, aturde: 0, cdArbitro: 0, critico: 0, fuego: 0,
   };
   jugador.sinergias.forEach((k) => Object.entries(SINERGIAS[k].bonus).forEach(([campo, v]) => { b[campo] += v; }));
 
-  jugador.vidaMax = Math.round((pos.vida * (mods.vida ?? 1) + PASIVAS.pasion.porNivel * p.pasion + 12 * x.vida) * ent.mult.vida);
+  const ef = efectoEstadisticas(jugador.entrenamiento ?? estadisticasVacias()); // estadísticas del club (entrenamiento)
+
+  jugador.vidaMax = Math.round((pos.vida * (mods.vida ?? 1) + PASIVAS.pasion.porNivel * p.pasion + 12 * x.vida) * ent.mult.vida * ef.vida);
   jugador.velBase = pos.vel * (mods.vel ?? 1);
   jugador.mult = {
-    vel: (1 + PASIVAS.botas.porNivel * p.botas + Math.min(0.4, 0.02 * x.vel)) * ent.mult.vel * (1 + b.vel),
-    dano: (1 + PASIVAS.tactica.porNivel * p.tactica + 0.04 * x.dano) * ent.mult.dano * (1 + b.dano),
+    vel: (1 + PASIVAS.botas.porNivel * p.botas + Math.min(0.4, 0.02 * x.vel) + 0.03 * p.brazalete) * ent.mult.vel * (1 + b.vel),
+    dano: (1 + PASIVAS.tactica.porNivel * p.tactica + 0.04 * x.dano) * ent.mult.dano * (1 + b.dano) * ef.dano,
     cuerpo: pos.cuerpo * (mods.cuerpo ?? 1) * (1 + b.cuerpo),
-    disparo: pos.disparo * (mods.disparo ?? 1) * (1 + b.disparo),
-    xp: (1 + PASIVAS.cantera.porNivel * p.cantera + 0.05 * x.xp) * ent.mult.xp * (1 + b.xp),
+    disparo: pos.disparo * (mods.disparo ?? 1) * (1 + b.disparo) * (1 + PASIVAS.balonOro.porNivel * p.balonOro),
+    xp: (1 + PASIVAS.cantera.porNivel * p.cantera + 0.05 * x.xp) * ent.mult.xp * (1 + b.xp) * ef.xp,
     cd: Math.max(0.35, (1 - PASIVAS.pulmones.porNivel * p.pulmones - 0.02 * x.recarga) * (1 - b.cd)),
-    armadura: Math.min(0.7, PASIVAS.espinilleras.porNivel * p.espinilleras + b.armadura),
+    armadura: Math.min(0.7, PASIVAS.espinilleras.porNivel * p.espinilleras + b.armadura + ef.armadura),
+    critico: Math.min(0.8, PASIVAS.trebol.porNivel * p.trebol + ef.critico + b.critico),
+    carga: 1 + PASIVAS.brazalete.porNivel * p.brazalete,
+    fuego: b.fuego,
     perfora: b.perfora,
     aturde: b.aturde,
     cdArbitro: Math.min(0.6, b.cdArbitro),
@@ -62,6 +68,17 @@ export function recalcular(jugador) {
   jugador.radioIman = JUGADOR.radioImanBase * (1 + PASIVAS.iman.porNivel * p.iman);
   jugador.regen = PASIVAS.masaje.porNivel * p.masaje + b.regen;
   jugador.puedeDisparar = pos.disparo > 0;
+
+  // Poderes de oro (cómo cambian el juego, más allá de los números)
+  jugador.poder = {
+    oro: p.balonOro,
+    oroPerfora: p.balonOro >= 5 ? 2 : p.balonOro >= 3 ? 1 : 0,
+    fuego: p.botaOro,
+    guantes: Math.ceil(p.guanteOro / 2), // cargas máximas: 1, 1, 2, 2, 3
+    guantesCada: Math.max(5, 16 - 2 * p.guanteOro), // segundos por carga
+    prorroga: p.prorroga,
+  };
+  if (jugador.guantes) jugador.guantes.max = jugador.poder.guantes;
 }
 
 /** Elige hasta 3 mejoras distintas entre las que se pueden ofrecer. */
@@ -128,6 +145,7 @@ export function aplicarMejora(mundo, id) {
     j.pasivas[opcion.clave] = opcion.nivelNuevo;
     recalcular(j);
     if (opcion.clave === 'pasion') curar(mundo, PASIVAS.pasion.porNivel);
+    if (opcion.clave === 'guanteOro') j.guantes.cargas = Math.min(j.guantes.max, j.guantes.cargas + 1);
   } else {
     j.extras[opcion.clave] += 1;
     recalcular(j);

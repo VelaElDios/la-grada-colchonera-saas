@@ -6,6 +6,8 @@ const session = require('express-session');
 
 const defaultConfig = require('./config');
 const { createMemoryUserRepository } = require('./repositories/memoryUserRepository');
+const { createMemoryJuegoRepository } = require('./repositories/memoryJuegoRepository');
+const { createJuegoService } = require('./services/juegoService');
 const { createPasswordHasher } = require('./services/passwordHasher');
 const { createUserService } = require('./services/userService');
 const { createAccountConfirmationService } = require('./services/accountConfirmationService');
@@ -20,6 +22,8 @@ const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 function createApp({
   config = defaultConfig,
   userRepository = createMemoryUserRepository(),
+  juegoRepository = createMemoryJuegoRepository(), // progreso del juego (club, contratos, ranking)
+  juegoOpciones = {}, // reloj y azar del juego (solo las pruebas los cambian)
   passwordHasher = createPasswordHasher(),
   sessionStore, // dónde se guardan las sesiones (sin indicarlo: en memoria)
   logger = createLogger({ level: config.logLevel || 'info' }),
@@ -36,6 +40,8 @@ function createApp({
     mailer,
     tokenSigner: createTokenSigner({ secret: config.sessionSecret }),
   });
+
+  const juegoService = createJuegoService({ juegoRepository, ...juegoOpciones });
 
   const app = express();
 
@@ -71,7 +77,7 @@ function createApp({
   }));
 
   // Capa API: toda la comunicación cliente-servidor pasa por /api
-  app.use('/api', createApiRouter({ userService, accountConfirmation, oauthClients, config, logger }));
+  app.use('/api', createApiRouter({ userService, accountConfirmation, juegoService, oauthClients, config, logger }));
 
   // El backend sirve el frontend (mismo origen)
   app.use(express.static(path.join(__dirname, '..', 'public')));

@@ -49,6 +49,13 @@ const ICONOS = {
   contragolpe: `<path d="M13 2L5 14h6l-1 8 8-12h-6z" ${trazo}/><path d="M2 8h3M2 12h2M2 16h3" ${trazo}/>`,
   candado: `<rect x="5" y="11" width="14" height="9" rx="2" ${trazo}/><path d="M8 11V8a4 4 0 018 0v3" ${trazo}/>`,
   estrellaLlena: `<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.9L12 16.9 6.8 19.7l1-5.9L3.5 9.7l5.9-.8z" fill="currentColor" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/>`,
+  balonOro: `<circle cx="11" cy="13" r="8" ${trazo}/><path d="M11 9l2.6 1.9-1 3.1H9.4l-1-3.1z" ${trazo}/><path d="M19 2.5v4M17 4.5h4" ${trazo}/>`,
+  botaOro: `<path d="M4 9h5v6l6 2.6c1.2.5 1.7 1.2 1.7 2.4V21H3V9z" ${trazo}/><path d="M17.5 2.5c2.2 2 3.4 3.6 2 6.4-.6-1-1.2-1.4-2-1.4-.2 1.2-1.2 1.8-2 1.8-.9-2.6.2-5.2 2-6.8z" ${trazo}/>`,
+  guanteOro: `<path d="M7 21v-5l-3-3.5V8.5a1.6 1.6 0 013.2 0V12M7.2 12V5a1.6 1.6 0 013.2 0v6M10.4 11V3.8a1.6 1.6 0 013.2 0V11M13.6 11V5.5a1.6 1.6 0 013.2 0V15c0 3.5-1.6 6-4.5 6H7" ${trazo}/>`,
+  brazalete: `<rect x="3" y="8" width="18" height="8" rx="2" ${trazo}/><path d="M14.6 10.6a3 3 0 100 2.8" ${trazo}/>`,
+  trebol: `<circle cx="9" cy="8.5" r="3.2" ${trazo}/><circle cx="15" cy="8.5" r="3.2" ${trazo}/><circle cx="9" cy="14" r="3.2" ${trazo}/><circle cx="15" cy="14" r="3.2" ${trazo}/><path d="M12 14l1.5 7" ${trazo}/>`,
+  champions: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M12 7l1.4 3 3.2.4-2.4 2.2.6 3.2-2.8-1.7-2.8 1.7.6-3.2-2.4-2.2 3.2-.4z" ${trazo}/>`,
+  bengala: `<path d="M4.5 20.5L12 13" ${trazo}/><path d="M13 4c3.2 1 5.4 4.2 4.4 8.2-2-.5-3.2-2-3.2-3.2-1.2 1.2-3 2.2-3 2.2-1.2-3.2 0-5.2 1.8-7.2z" ${trazo}/>`,
   reloj: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M12 7v5l3 2" ${trazo}/>`,
 };
 

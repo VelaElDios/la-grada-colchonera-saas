@@ -1,5 +1,7 @@
 // Daño, muertes, recompensas y efectos visuales sencillos (números flotantes y partículas).
-import { MUNDO, EQUIPOS, JEFES, MOVIMIENTO } from './config.js';
+import {
+  MUNDO, EQUIPOS, JEFES, MOVIMIENTO, CURAS, ELITES,
+} from './config.js';
 
 const MAX_TEXTOS = 40;
 const MAX_PARTICULAS = 260;
@@ -51,7 +53,10 @@ export function multiplicadorDano(jugador, tipo) {
  */
 export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo = 'cuerpo') {
   if (enemigo.muerto) return;
-  const cantidad = Math.max(1, Math.round(base * multiplicadorDano(mundo.jugador, tipo)));
+  let cantidad = Math.max(1, Math.round(base * multiplicadorDano(mundo.jugador, tipo)));
+  // Golpe crítico (Trébol y suerte): el doble de daño
+  const critico = (mundo.jugador.mult.critico ?? 0) > 0 && mundo.rng.siguiente() < mundo.jugador.mult.critico;
+  if (critico) cantidad *= 2;
   enemigo.vida -= cantidad;
   enemigo.flash = 0.1;
   crearParticulas(mundo, enemigo.x, enemigo.y, '#ffffff', 3, 110); // chispas del golpe
@@ -59,9 +64,29 @@ export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo =
     enemigo.kx += empuje[0] * velEmpuje * enemigo.freno;
     enemigo.ky += empuje[1] * velEmpuje * enemigo.freno;
   }
-  if (!mundo.sinNumeros) crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), enemigo.jefe ? '#ffd166' : '#ffffff');
+  if (!mundo.sinNumeros) {
+    crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, critico ? `${cantidad}!` : String(cantidad), critico ? '#ff9a3c' : enemigo.jefe ? '#ffd166' : '#ffffff');
+  }
   if (enemigo.vida <= 0) matar(mundo, enemigo);
   else mundo.eventos.push({ tipo: 'golpe' });
+}
+
+/** Daño que no depende de tus multiplicadores (quemaduras): ya viene calculado. */
+export function danoFijo(mundo, enemigo, cantidad, color = '#ff9a3c') {
+  if (enemigo.muerto) return;
+  enemigo.vida -= cantidad;
+  enemigo.flash = Math.max(enemigo.flash, 0.05);
+  if (!mundo.sinNumeros && mundo.textos.length < 24) crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), color);
+  if (enemigo.vida <= 0) matar(mundo, enemigo);
+}
+
+/** Prende fuego a un rival (Bota de Oro, bengalas): `dano` por golpe cada medio segundo durante 3 s. No se acumula: gana el más fuerte. */
+export function quemar(mundo, enemigo, dano, segundos = 3) {
+  if (enemigo.muerto) return;
+  const d = Math.max(1, Math.round(dano * (enemigo.jefe ? 0.6 : 1) * (1 + (mundo.jugador.mult.fuego ?? 0))));
+  const q = enemigo.quemado;
+  if (!q || d >= q.dano) enemigo.quemado = { t: segundos, tick: q ? q.tick : 0.5, dano: d };
+  else q.t = Math.max(q.t, segundos);
 }
 
 /**
@@ -80,6 +105,7 @@ export function aturdir(mundo, enemigo, segundos) {
 }
 
 function colorDe(enemigo) {
+  if (enemigo.elite) return ELITES.tipos[enemigo.elite].color;
   if (enemigo.jefe) return JEFES[enemigo.jefe].aspecto.camiseta.c;
   return EQUIPOS[enemigo.tipo]?.kit.camiseta.c ?? '#ffffff';
 }
@@ -98,7 +124,10 @@ function matar(mundo, enemigo) {
     mundo.congelar = Math.max(mundo.congelar, 0.14);
     mundo.jugador.jefes += 1;
     mundo.eventos.push({ tipo: 'jefe-derrotado', nombre: enemigo.nombre });
-  } else if (mundo.rng.siguiente() < 0.018) {
+  } else if (enemigo.elite) {
+    for (let i = 0; i < 2; i += 1) soltarGema(mundo, enemigo.x, enemigo.y, enemigo.xp);
+    if (mundo.rng.siguiente() < 0.08 && mundo.curas.length < CURAS.maximo) mundo.curas.push({ x: enemigo.x, y: enemigo.y });
+  } else if (mundo.rng.siguiente() < CURAS.probabilidad && mundo.curas.length < CURAS.maximo) {
     mundo.curas.push({ x: enemigo.x, y: enemigo.y });
   }
   mundo.eventos.push({ tipo: 'baja' });

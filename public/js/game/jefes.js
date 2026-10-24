@@ -31,6 +31,13 @@ export function danarJugador(mundo, cantidad) {
     mundo.eventos.push({ tipo: 'escudo' });
     return 0;
   }
+  if (j.guantes && j.guantes.cargas > 0) { // Guante de Oro: una carga detiene el golpe entero
+    j.guantes.cargas -= 1;
+    j.invul = 0.7;
+    mundo.eventos.push({ tipo: 'escudo' });
+    mundo.ondas.push({ x: j.x, y: j.y, radio: 70, vida: 0.35, total: 0.35, color: '#ffd166' });
+    return 0;
+  }
   const real = Math.max(1, Math.round(cantidad * (1 - j.mult.armadura)));
   j.vida -= real;
   j.invul = JUGADOR.invulnerabilidad;
