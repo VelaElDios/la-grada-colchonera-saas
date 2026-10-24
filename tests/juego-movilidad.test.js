@@ -16,7 +16,7 @@ async function buscar(semilla, que) {
       const c = T.celda(t, cx, cy);
       if (que === 'barro' && c.zona?.tipo === 'barro') return { T, t, zona: c.zona };
       if (que === 'lluvia' && c.zona?.tipo === 'lluvia') return { T, t, zona: c.zona };
-      if (que === 'grada' && c.grada) return { T, t, grada: c.grada };
+      if (que === 'grada') { const g = c.obstaculos.find((o) => o.tipo === 'grada'); if (g) return { T, t, grada: g }; }
     }
   }
   throw new Error(`no hay ${que} cerca del inicio`);
@@ -45,8 +45,9 @@ test('el terreno es siempre el mismo para una semilla y no hay gradas encima del
       const ca = T.celda(a, cx, cy);
       assert.deepEqual(ca, T.celda(b, cx, cy));
       if (JSON.stringify(ca) !== JSON.stringify(T.celda(c, cx, cy))) distintas++;
-      if (ca.grada) {
-        assert.ok(Math.hypot(ca.grada.x, ca.grada.y) - Math.max(ca.grada.w, ca.grada.h) / 2 > TERRENO.claroInicial - 1);
+      for (const o of ca.obstaculos) {
+        const d = Math.hypot(Math.max(Math.abs(o.x) - o.w / 2, 0), Math.max(Math.abs(o.y) - o.h / 2, 0));
+        assert.ok(d >= TERRENO.claroInicial - 1, `${o.tipo} demasiado cerca de la salida`);
       }
     }
   }
@@ -301,4 +302,88 @@ test('el jugador acelera y frena con un poco de inercia, y la cámara 3/4 sigue 
   mundo.camara = null;
   R.actualizarCamara(mundo, 1 / 60);
   assert.ok(Number.isFinite(mundo.camara.x) && Number.isFinite(mundo.camara.y));
+});
+
+
+test('el mapa tiene varios biomas y estructuras variadas, y todo cabe dentro de su celda', async () => {
+  const T = await cargar('terreno.js');
+  const { TERRENO } = await cargar('config.js');
+  const t = T.crearTerreno(11);
+  const biomas = new Set();
+  const tipos = new Set();
+  for (let cx = -12; cx <= 12; cx++) {
+    for (let cy = -12; cy <= 12; cy++) {
+      const c = T.celda(t, cx, cy);
+      biomas.add(c.bioma);
+      for (const o of c.obstaculos) {
+        tipos.add(o.tipo);
+        assert.ok(o.x - o.w / 2 >= cx * TERRENO.celda && o.x + o.w / 2 <= (cx + 1) * TERRENO.celda, 'cabe en su celda (x)');
+        assert.ok(o.y - o.h / 2 >= cy * TERRENO.celda && o.y + o.h / 2 <= (cy + 1) * TERRENO.celda, 'cabe en su celda (y)');
+      }
+    }
+  }
+  assert.equal(biomas.size, 4, [...biomas].join());
+  for (const tipo of ['grada', 'cartel', 'porteria', 'banquillo', 'foco']) assert.ok(tipos.has(tipo), `hay ${tipo}`);
+});
+
+test('las estructuras no encierran a nadie: casi todo el campo se puede alcanzar desde la salida', async () => {
+  const T = await cargar('terreno.js');
+  for (const semilla of [1, 2, 3]) {
+    const t = T.crearTerreno(semilla);
+    const paso = 40;
+    const R = 60; // celdas de 40 → ±2400
+    const libre = (i, k) => !T.tocaGrada(t, i * paso, k * paso, 16);
+    const visto = new Set(['0,0']);
+    const cola = [[0, 0]];
+    let totalLibres = 0;
+    for (let i = -R; i <= R; i++) for (let k = -R; k <= R; k++) if (libre(i, k)) totalLibres++;
+    while (cola.length) {
+      const [i, k] = cola.pop();
+      for (const [a, b] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+        const n = [i + a, k + b];
+        const clave = n.join();
+        if (Math.abs(n[0]) > R || Math.abs(n[1]) > R || visto.has(clave) || !libre(...n)) continue;
+        visto.add(clave);
+        cola.push(n);
+      }
+    }
+    assert.ok(visto.size / totalLibres > 0.97, `semilla ${semilla}: alcanzable ${(100 * visto.size / totalLibres).toFixed(1)} %`);
+  }
+});
+
+test('un rival atascado en el fondo de un corral acaba saliendo y rodeando la grada', async () => {
+  const T = await cargar('terreno.js');
+  let corral = null;
+  const t0 = T.crearTerreno(5);
+  for (let cx = -15; cx <= 15 && !corral; cx++) {
+    for (let cy = -15; cy <= 15 && !corral; cy++) {
+      const c = T.celda(t0, cx, cy);
+      const g = c.obstaculos.find((o) => o.tipo === 'grada' && o.w < 450);
+      const lados = c.obstaculos.filter((o) => o.tipo === 'cartel');
+      if (g && lados.length === 2 && c.obstaculos.length >= 3) corral = { g, lados, c };
+    }
+  }
+  assert.ok(corral, 'hay algún corral');
+  const { m, mundo } = await mundoLimpio(5);
+  const { crearEnemigo } = await cargar('oleadas.js');
+  const { g } = corral;
+  // Rival «dentro» del corral (entre los carteles) y jugador al otro lado de la grada
+  const cx = corral.lados.reduce((a, o) => a + o.x, 0) / 2;
+  const cy = corral.lados.reduce((a, o) => a + o.y, 0) / 2;
+  const e = crearEnemigo('madrid', cx, cy, 1);
+  mundo.enemigos.push(e);
+  mundo.enemigos[0].vida = 1e9;
+  const horizontal = g.w > g.h;
+  mundo.jugador.x = horizontal ? g.x : g.x + (cx < g.x ? 1 : -1) * 500;
+  mundo.jugador.y = horizontal ? g.y + (cy < g.y ? 1 : -1) * 500 : g.y;
+  const inicio = Math.hypot(e.x - mundo.jugador.x, e.y - mundo.jugador.y);
+  for (let i = 0; i < 60 * 12; i++) {
+    const x = mundo.jugador.x; const y = mundo.jugador.y;
+    m.avanzar(mundo, PASO, { x: 0, y: 0 });
+    mundo.jugador.x = x; mundo.jugador.y = y;
+    if (mundo.estado === 'mejora') m.elegirMejora(mundo, mundo.opciones[0].id);
+    if (!mundo.enemigos.includes(e)) break;
+  }
+  const fin = Math.hypot(e.x - mundo.jugador.x, e.y - mundo.jugador.y);
+  assert.ok(fin < inicio * 0.8 || !mundo.enemigos.includes(e), `el rival avanza hacia ti (${inicio.toFixed(0)} → ${fin.toFixed(0)})`);
 });

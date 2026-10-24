@@ -30,6 +30,8 @@ const ICONOS = {
   jugar: `<path d="M8 5l12 7-12 7z" ${trazo}/>`,
   camiseta: `<path d="M8 3l-5 3 2 4 3-1v11h8V9l3 1 2-4-5-3a4 4 0 01-8 0z" ${trazo}/>`,
   trofeo: `<path d="M7 4h10v5a5 5 0 01-10 0zM7 6H4v2a3 3 0 003 3M17 6h3v2a3 3 0 01-3 3M12 14v4M8 21h8M9 18h6" ${trazo}/>`,
+  pantalla: `<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" ${trazo}/>`,
+  pantallaSalir: `<path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" ${trazo}/>`,
   ajustes: `<circle cx="12" cy="12" r="3.2" ${trazo}/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M18.7 5.3l-2.1 2.1M7.4 16.6l-2.1 2.1" ${trazo}/>`,
   ayuda: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M9.5 9.5a2.5 2.5 0 114 2c-1 .8-1.5 1.2-1.5 2.5M12 17.2l.01 0" ${trazo}/>`,
   volver: `<path d="M10 6l-6 6 6 6M4 12h16" ${trazo}/>`,
