@@ -204,3 +204,10 @@ test('el dibujo de las ultras no falla (lienzo de mentira)', async () => {
   dibujarUltrasPantalla(ctx, mundo, 800, 600, 1);
   assert.equal(j.ultras.length, 6);
 });
+
+test('todos los módulos del juego se pueden cargar (si uno falla al importarse, la pantalla de jugar no abre)', async () => {
+  const fs = require('node:fs');
+  for (const f of fs.readdirSync(JUEGO).filter((n) => n.endsWith('.js'))) {
+    await assert.doesNotReject(() => cargar(f), f);
+  }
+});

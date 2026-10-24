@@ -156,7 +156,7 @@ const PLANTILLA = `
           <h2 id="juego-t-entr" class="pantalla__titulo">Mejora a tus jugadores</h2>
         </div>
         <p class="vest__aviso">Cada jugador gana puntos <strong>eliminando rivales</strong> (los primeros salen baratos, los últimos cuestan mucho) y <strong>1 punto extra por cada 3 jefes</strong>. Sube su <strong>vida, defensa, disparo y suerte</strong>.</p>
-        ${usuario?.role === 'admin' && servidor?.desbloquear ? '<button type="button" class="btn btn--secundario" data-accion="desbloquear">Modo pruebas: desbloquearlo todo</button>' : ''}
+        <button type="button" class="btn btn--secundario" data-accion="desbloquear" data-campo="boton-pruebas" hidden>Modo pruebas: desbloquearlo todo</button>
       </div>
       <div class="vest vest--entrena">
         <ul class="plantilla" data-campo="entrena-lista" aria-label="Tu plantilla"></ul>
@@ -286,6 +286,8 @@ const textoPartida = (f) => `${formatearTiempo(f.tiempo)} · ${PERSONAJES[f.pers
 export function montarJuego(contenedor, { usuario, alSalir, servidor = null }) {
   contenedor.classList.add('juego');
   contenedor.innerHTML = PLANTILLA;
+  const botonPruebas = contenedor.querySelector('[data-campo="boton-pruebas"]');
+  if (botonPruebas && usuario?.role === 'admin' && servidor?.desbloquear) botonPruebas.hidden = false;
 
   const q = (sel) => contenedor.querySelector(sel);
   const lienzo = q('.juego__lienzo');
