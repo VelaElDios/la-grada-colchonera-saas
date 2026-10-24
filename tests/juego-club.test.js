@@ -445,3 +445,28 @@ test('el juego y la API cliente conocen el club: menú, entrenamiento, contratar
   const jugar = fs.readFileSync(path.join(__dirname, '..', 'public', 'js', 'ui', 'vistas', 'jugar.js'), 'utf8');
   assert.match(jugar, /servidor/);
 });
+
+test('Entrenamiento: solo sale el jugador elegido para jugar (los demás se cambian en el Vestuario)', async () => {
+  const ui = await cargar('club-ui.js');
+  const { lista } = ui.htmlEntrenamiento(clubDePrueba(), 'musso', retrato);
+  assert.equal((lista.match(/ficha__nombre/g) || []).length, 1, 'un solo jugador');
+  assert.match(lista, /Musso/);
+  assert.doesNotMatch(lista, /data-entrena-jugador/, 'no se puede elegir a otro desde aquí');
+  assert.match(lista, /data-accion="vestuario"/);
+});
+
+test('Ranking de la grada: avatar de cada aficionado (y nada raro se cuela como avatar)', async () => {
+  const ui = await cargar('club-ui.js');
+  const pedidos = [];
+  const html = ui.htmlRankingGrada({
+    filas: [
+      { posicion: 1, alias: 'El Capi', avatar: 'p:koke', personaje: 'koke', tiempo: 1500, nivel: 80, jefes: 9, esTuyo: false },
+      { posicion: 2, alias: 'vela', avatar: '"><script>', personaje: 'kun', tiempo: 900, nivel: 50, jefes: 5, esTuyo: true },
+    ],
+    tuMejor: null,
+  }, (a) => { pedidos.push(a); return `data:image/png;base64,${a === 'p:koke' ? 'AAA' : 'BBB'}`; });
+  assert.deepEqual(pedidos, ['p:koke'], 'solo se piden avatares con forma válida');
+  assert.match(html, /class="ranking__avatar" src="data:image\/png;base64,AAA"/);
+  assert.match(html, /ranking__avatar--vacio[^>]*>V</);
+  assert.doesNotMatch(html, /<script>/);
+});

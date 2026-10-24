@@ -1,7 +1,7 @@
 // Simulación del juego: sin dibujar nada y sin tocar el DOM, así se puede probar con node:test.
 // Estados: 'jugando' → 'mejora' (elegir mejora al subir de nivel) → 'jugando' ... → 'fin'.
 import {
-  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir, CURAS, AYUDA_INICIAL, CURTIDOS,
+  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir, CURAS, AYUDA_INICIAL, CURTIDOS, AMBIENTES, ambienteDe,
 } from './config.js';
 import { crearRng, crearCuadricula, normalizar } from './util.js';
 import {
@@ -52,6 +52,8 @@ export function crearMundo({
     tiempo: 0,
     estado: 'jugando',
     oleada: 1,
+    ambiente: 0, // índice de AMBIENTES (cambia cada 5 minutos)
+    cambioAmbiente: null, // { t0 } mientras se ve el cartel del cambio de pantalla
     temporizadorAparicion: 0.6,
     jugador: {
       personaje: clavePersonaje,
@@ -433,7 +435,7 @@ function actualizarPremios(mundo, dt) {
     const d = mundo.rng.rango(PREMIOS.distMin, PREMIOS.distMax);
     const x = j.x + Math.cos(ang) * d;
     const y = j.y + Math.sin(ang) * d;
-    if (!tocaGrada(mundo.terreno, x, y, 30)) {
+    if (!tocaGrada(mundo.terreno, x, y, 30, true)) {
       const tipos = Object.entries(PREMIOS.tipos);
       let punto = mundo.rng.siguiente() * tipos.reduce((suma, [, t]) => suma + t.peso, 0);
       let tipo = tipos[0][0];
@@ -555,6 +557,14 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   if (!mundo.avisoCurtidos && mundo.tiempo >= CURTIDOS.desde * 60) {
     mundo.avisoCurtidos = true;
     mundo.eventos.push({ tipo: 'aviso', texto: '¡Se han adaptado a tus armas! Solo las ULTRAS los atraviesan' });
+  }
+  // Cada 5 minutos, cambio de pantalla: otro ambiente y rivales más fuertes
+  const ambiente = ambienteDe(mundo.tiempo / 60);
+  if (ambiente !== mundo.ambiente) {
+    mundo.ambiente = ambiente;
+    mundo.cambioAmbiente = { t0: mundo.tiempo };
+    mundo.eventos.push({ tipo: 'ambiente', indice: ambiente, clave: AMBIENTES[ambiente].clave, nombre: AMBIENTES[ambiente].nombre });
+    if (!mundo.efectosReducidos) mundo.sacudida = Math.max(mundo.sacudida, 0.35);
   }
   const oleada = oleadaEn(mundo.tiempo);
   if (oleada !== mundo.oleada) {

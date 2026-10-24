@@ -26,6 +26,7 @@ export function crearEntrada(zona, { alPausar, activo }) {
   const palo = base.firstElementChild;
 
   function alBajarTecla(ev) {
+    if (ev.target?.closest?.('input, textarea, select')) return; // escribiendo (por ejemplo, el mote)
     if (ev.code === 'Escape' || ev.code === 'KeyP') {
       if (!ev.repeat) alPausar();
       return;

@@ -11,7 +11,7 @@ describe('Migraciones de la base de datos', () => {
 
   test('crea las tablas de usuarios y de sesiones', async () => {
     const applied = await migrate(pool);
-    assert.deepEqual(applied, ['001_crear_tabla_usuarios.sql', '002_crear_tabla_sesiones.sql', '003_crear_tablas_juego.sql']);
+    assert.deepEqual(applied, ['001_crear_tabla_usuarios.sql', '002_crear_tabla_sesiones.sql', '003_crear_tablas_juego.sql', '004_identidad_en_el_juego.sql']);
 
     const { rows } = await pool.query('SELECT COUNT(*)::int AS total FROM users');
     assert.equal(rows[0].total, 0);

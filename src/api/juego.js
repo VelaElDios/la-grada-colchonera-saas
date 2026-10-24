@@ -34,6 +34,13 @@ function createJuegoRouter({ juegoService }) {
     res.json(await juegoService.desbloquearTodo(req.user));
   });
 
+  // Mote y avatar: { apodo, avatar } (cualquiera de los dos)
+  router.put('/identidad', async (req, res) => {
+    const usuario = await juegoService.ponerIdentidad(req.user, req.body ?? {});
+    req.log.info('juego.identidad', 'Mote o avatar cambiado', { userId: req.user.id });
+    res.json(usuario);
+  });
+
   // Clasificación multijugador
   router.get('/ranking', async (req, res) => {
     res.json(await juegoService.ranking(req.user, Number(req.query.limite) || 20));

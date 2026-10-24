@@ -1,7 +1,7 @@
 // Interfaz que se superpone al juego (vida, experiencia, tiempo, oleada, armas, ulti y barra de jefe...).
 // Solo toca el DOM cuando un valor cambia, para no gastar rendimiento en cada fotograma.
 import {
-  ARMAS, PASIVAS, EXTRAS, ENTRENADORES, MOVIMIENTO, SINERGIAS, ULTRAS,
+  ARMAS, PASIVAS, EXTRAS, ENTRENADORES, MOVIMIENTO, SINERGIAS, ULTRAS, AMBIENTES,
 } from './config.js';
 import { xpSiguiente } from './mundo.js';
 import { formatearTiempo } from './util.js';
@@ -29,6 +29,7 @@ export function crearHud(raiz) {
     ritmoBarra: q('ritmo-barra'),
     ritmoTexto: q('ritmo-texto'),
     zona: q('zona'),
+    ambiente: q('ambiente'),
   };
   const ultimo = {};
   let temporizadorAviso = 0;
@@ -149,6 +150,15 @@ export function crearHud(raiz) {
       poner('vidaTexto', el.vidaTexto, `${Math.ceil(j.vida)} / ${j.vidaMax}`);
       poner('tiempo', el.tiempo, formatearTiempo(mundo.tiempo));
       poner('oleada', el.oleada, String(mundo.oleada));
+      if (el.ambiente) {
+        const amb = AMBIENTES[mundo.ambiente ?? 0];
+        if (ultimo.ambiente !== amb.clave) {
+          ultimo.ambiente = amb.clave;
+          el.ambiente.textContent = amb.nombre;
+          el.ambiente.dataset.ambiente = amb.clave;
+          el.ambiente.style.setProperty('--color-ambiente', amb.color);
+        }
+      }
       poner('bajas', el.bajas, String(j.bajas));
       poner('nivel', el.nivel, `Nivel ${j.nivel}`);
       const xpPct = Math.min(100, (j.xp / xpSiguiente(mundo)) * 100);

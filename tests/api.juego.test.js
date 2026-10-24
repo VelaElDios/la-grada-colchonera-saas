@@ -190,4 +190,35 @@ describe('API /api/juego', () => {
     assert.ok(Object.keys(perfil.jugadores).length >= 30, 'tiene a casi todos los jugadores');
     assert.ok(Object.values(perfil.jugadores).every((j) => j.puntosLibres > 10));
   });
+
+  test('mote y avatar: se validan, no se repiten y salen en /auth/me y en el ranking', async () => {
+    const put = (c, body) => srv.request('PUT', '/juego/identidad', { cookie: c, body });
+    const { cookie } = await nuevoUsuario('mote1');
+    const otro = await nuevoUsuario('mote2');
+    const [mio] = Object.keys((await get(cookie, '/perfil')).body.jugadores);
+
+    assert.equal((await put(cookie, { apodo: 'x' })).status, 400, 'muy corto');
+    assert.equal((await put(cookie, { apodo: 'yo@correo.es' })).status, 400, 'nada de correos');
+    assert.equal((await put(cookie, { avatar: 'p:messi' })).status, 400, 'jugador que no existe o no tienes');
+    assert.equal((await put(cookie, { avatar: 'e:mourinho' })).status, 400);
+
+    let r = await put(cookie, { apodo: '  El   Niño ', avatar: `p:${mio}` });
+    assert.equal(r.status, 200, JSON.stringify(r.body));
+    assert.equal(r.body.apodo, 'El Niño');
+    assert.equal(r.body.avatar, `p:${mio}`);
+    assert.equal(r.body.apodoClave, undefined, 'no se publica la clave interna');
+    const yo = await srv.request('GET', '/auth/me', { cookie });
+    assert.equal(yo.body.apodo, 'El Niño');
+
+    assert.equal((await put(otro.cookie, { apodo: 'el nino' })).status, 409, 'el mismo mote sin tildes ni mayúsculas');
+    assert.equal((await put(otro.cookie, { avatar: 'e:cholo' })).status, 200, 'los entrenadores valen para todos');
+
+    // El ranking usa el mote y el avatar (también si se cambian después del récord)
+    await jugar(cookie, mio, { tiempo: 5000 });
+    r = await put(cookie, { apodo: 'Niño Torres' });
+    assert.equal(r.status, 200);
+    const fila = (await get(cookie, '/ranking')).body.filas.find((f) => f.esTuyo);
+    assert.equal(fila.alias, 'Niño Torres');
+    assert.equal(fila.avatar, `p:${mio}`);
+  });
 });

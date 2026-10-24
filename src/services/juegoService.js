@@ -29,13 +29,20 @@ function cargarReglas() {
 const azarSeguro = () => randomInt(0, 1_000_000) / 1_000_000;
 const entero = (v) => Number.isInteger(v);
 
-/** Alias público: la parte del correo anterior a la @ (no se publica la dirección completa). */
+/** Alias público: el mote si tiene; si no, la parte del correo anterior a la @ (nunca la dirección completa). */
 function aliasDe(user) {
+  if (user.apodo) return user.apodo;
   const local = String(user.email || 'jugador').split('@')[0].replace(/[^\p{L}\p{N}._-]/gu, '');
   return (local || 'jugador').slice(0, 20);
 }
 
-function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => Date.now() }) {
+const APODO_VALIDO = /^[\p{L}\p{N}][\p{L}\p{N} ._-]{1,14}[\p{L}\p{N}._-]$/u;
+/** Mote normalizado para compararlo: sin tildes, en minúsculas y sin espacios repetidos. */
+const claveApodo = (apodo) => apodo.normalize('NFD').replace(/\p{M}/gu, '').toLowerCase().replace(/\s+/g, ' ');
+
+function createJuegoService({
+  juegoRepository, userRepository = null, azar = azarSeguro, ahora = () => Date.now(),
+}) {
   /** Lee el perfil (lo crea con el equipo inicial la primera vez), lo transforma y lo guarda con control de versión. */
   async function conPerfil(user, transformar) {
     const { club, config } = await cargarReglas();
@@ -135,7 +142,7 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
       const previo = await juegoRepository.getRecord(user.id);
       if (!previo || tiempo > previo.tiempo || (tiempo === previo.tiempo && nivel > previo.nivel)) {
         await juegoRepository.guardarRecord(user.id, {
-          alias: aliasDe(user), personaje: partida.personaje, entrenador: partida.entrenador, tiempo, nivel, jefes, bajas,
+          alias: aliasDe(user), avatar: user.avatar ?? null, personaje: partida.personaje, entrenador: partida.entrenador, tiempo, nivel, jefes, bajas,
         });
         record = true;
       }
@@ -188,6 +195,48 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
       return reglas(datos);
     },
 
+    /**
+     * Mote y avatar del aficionado. El mote es único (sin distinguir mayúsculas ni tildes) y es lo que sale
+     * en el ranking y en la cabecera; el avatar es la cara de un jugador que tengas fichado o de un entrenador.
+     */
+    async ponerIdentidad(user, { apodo, avatar } = {}) {
+      if (!userRepository) throw new Error('ponerIdentidad necesita el repositorio de usuarios');
+      const { config } = await cargarReglas();
+      const cambios = {};
+      if (apodo !== undefined) {
+        const limpio = typeof apodo === 'string' ? apodo.trim().replace(/\s+/g, ' ') : '';
+        if (!APODO_VALIDO.test(limpio)) {
+          throw new ValidationError('El mote debe tener entre 3 y 16 caracteres: letras, números, espacios, puntos, guiones o guiones bajos');
+        }
+        const clave = claveApodo(limpio);
+        const otro = await userRepository.findByApodo(clave);
+        if (otro && otro.id !== user.id) throw new ConflictError('Ese mote ya lo lleva otro aficionado. Prueba con otro.');
+        cambios.apodo = limpio;
+        cambios.apodoClave = clave;
+      }
+      if (avatar !== undefined) {
+        const m = typeof avatar === 'string' ? /^(p|e):([a-z0-9]+)$/.exec(avatar) : null;
+        if (!m) throw new ValidationError('Avatar no válido');
+        if (m[1] === 'e' && !config.ENTRENADORES[m[2]]) throw new ValidationError('Ese entrenador no existe');
+        if (m[1] === 'p') {
+          const perfil = await juegoRepository.getPerfil(user.id);
+          if (!config.PERSONAJES[m[2]] || !perfil?.datos.jugadores[m[2]]) throw new ValidationError('Solo puedes ponerte la cara de un jugador que tengas fichado');
+        }
+        cambios.avatar = avatar;
+      }
+      if (!Object.keys(cambios).length) throw new ValidationError('No hay nada que cambiar');
+      let actualizado;
+      try {
+        actualizado = await userRepository.update(user.id, cambios);
+      } catch (error) {
+        if (error.code === '23505') throw new ConflictError('Ese mote ya lo lleva otro aficionado. Prueba con otro.');
+        throw error;
+      }
+      await juegoRepository.actualizarIdentidad(user.id, { alias: aliasDe(actualizado), avatar: actualizado.avatar ?? null });
+      const { passwordHash, apodoClave, ...publico } = actualizado;
+      return publico;
+    },
+
     /** Clasificación: las mejores partidas (una por usuario), con quién y a qué nivel. */
     async ranking(user, limite = 20) {
       const lista = await juegoRepository.mejoresRecords(Math.min(Math.max(limite, 1), 100));
@@ -200,6 +249,7 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
         nivel: r.nivel,
         jefes: r.jefes,
         fecha: r.createdAt,
+        avatar: r.avatar ?? null,
         esTuyo: r.userId === user.id,
       }));
       const mio = await juegoRepository.getRecord(user.id);
@@ -208,4 +258,4 @@ function createJuegoService({ juegoRepository, azar = azarSeguro, ahora = () => 
   };
 }
 
-module.exports = { createJuegoService, aliasDe };
+module.exports = { createJuegoService, aliasDe, claveApodo };

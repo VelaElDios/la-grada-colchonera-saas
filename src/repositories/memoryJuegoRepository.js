@@ -34,6 +34,12 @@ function createMemoryJuegoRepository() {
       records.set(userId, { ...record, userId, createdAt: new Date().toISOString() });
     },
 
+    /** Cambia el mote y el avatar con los que sale en el ranking (si tiene récord). */
+    async actualizarIdentidad(userId, { alias, avatar }) {
+      const r = records.get(userId);
+      if (r) records.set(userId, { ...r, alias, avatar: avatar ?? null });
+    },
+
     /** Los mejores récords: más tiempo primero y, a igualdad, más nivel. */
     async mejoresRecords(limite) {
       return [...records.values()]

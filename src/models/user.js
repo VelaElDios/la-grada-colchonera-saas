@@ -22,7 +22,7 @@ const AUTH_PROVIDERS = Object.freeze({
  * listo para salir de la capa de lógica.
  */
 function toPublicUser(user) {
-  const { passwordHash, ...publicUser } = user;
+  const { passwordHash, apodoClave, ...publicUser } = user;
   return publicUser;
 }
 

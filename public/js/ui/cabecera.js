@@ -1,5 +1,6 @@
 // Cabecera con la navegación. Se repinta cuando cambia el usuario o la ruta.
-import { h, inicial } from './dom.js';
+import { h } from './dom.js';
+import { nodoAvatar, nombreVisible } from './avatar.js';
 import { estado, alCambiarUsuario, esAdmin } from './estado.js';
 
 const ENLACES_INVITADO = [['/', 'Inicio'], ['/entrar', 'Entrar'], ['/registro', 'Crear cuenta']];
@@ -58,8 +59,8 @@ export function montarCabecera(raiz, { alSalir }) {
       extras.push(h(
         'div',
         { class: 'nav__usuario' },
-        h('span', { class: 'avatar avatar--pequeno', attrs: { 'aria-hidden': 'true' } }, inicial(estado.usuario.email)),
-        h('span', { class: 'nav__email', title: estado.usuario.email }, estado.usuario.email),
+        nodoAvatar(estado.usuario, 'pequeno'),
+        h('span', { class: `nav__email${estado.usuario.apodo ? ' nav__email--mote' : ''}`, title: estado.usuario.email }, nombreVisible(estado.usuario)),
         h('button', { class: 'btn btn--fantasma btn--pequeno', type: 'button', onClick: alSalir }, 'Salir'),
       ));
     }

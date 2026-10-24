@@ -13,6 +13,9 @@ const COLUMNS = {
   status: 'status',
   authProvider: 'auth_provider',
   deletedAt: 'deleted_at',
+  apodo: 'apodo',
+  apodoClave: 'apodo_clave',
+  avatar: 'avatar',
 };
 
 const toIso = (value) => (value instanceof Date ? value.toISOString() : new Date(value).toISOString());
@@ -29,6 +32,8 @@ function toUser(row) {
     createdAt: toIso(row.created_at),
     ...(row.password_hash ? { passwordHash: row.password_hash } : {}),
     ...(row.deleted_at ? { deletedAt: toIso(row.deleted_at) } : {}),
+    ...(row.apodo ? { apodo: row.apodo, apodoClave: row.apodo_clave } : {}),
+    ...(row.avatar ? { avatar: row.avatar } : {}),
   };
 }
 
@@ -65,6 +70,11 @@ function createPostgresUserRepository(pool) {
 
     async findByEmail(email) {
       const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      return toUser(rows[0]);
+    },
+
+    async findByApodo(apodoClave) {
+      const { rows } = await pool.query('SELECT * FROM users WHERE apodo_clave = $1', [apodoClave]);
       return toUser(rows[0]);
     },
 

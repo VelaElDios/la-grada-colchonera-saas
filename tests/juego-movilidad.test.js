@@ -7,16 +7,30 @@ const { pathToFileURL } = require('node:url');
 const cargar = (nombre) => import(pathToFileURL(path.join(__dirname, '..', 'public', 'js', 'game', nombre)).href);
 const PASO = 1 / 60;
 
-/** Busca en el terreno la primera celda con lo que se pide. */
+/**
+ * Busca en el terreno un sitio con lo que se pide: un punto bien dentro de una zona de barro o de lluvia
+ * (sin obstáculos alrededor) o una grada.
+ */
 async function buscar(semilla, que) {
   const T = await cargar('terreno.js');
   const t = T.crearTerreno(semilla);
-  for (let cx = -8; cx <= 8; cx++) {
-    for (let cy = -8; cy <= 8; cy++) {
-      const c = T.celda(t, cx, cy);
-      if (que === 'barro' && c.zona?.tipo === 'barro') return { T, t, zona: c.zona };
-      if (que === 'lluvia' && c.zona?.tipo === 'lluvia') return { T, t, zona: c.zona };
-      if (que === 'grada') { const g = c.obstaculos.find((o) => o.tipo === 'grada'); if (g) return { T, t, grada: g }; }
+  if (que === 'grada') {
+    for (let r = 0; r < 14; r++) {
+      for (let cx = -r; cx <= r; cx++) {
+        for (let cy = -r; cy <= r; cy++) {
+          const g = T.celda(t, cx, cy).obstaculos.find((o) => o.tipo === 'grada');
+          if (g) return { T, t, grada: g };
+        }
+      }
+    }
+    throw new Error('no hay gradas cerca del inicio');
+  }
+  for (let r = 0; r < 120; r++) {
+    for (let i = -r; i <= r; i++) {
+      for (const [x, y] of [[i * 40, -r * 40], [i * 40, r * 40], [-r * 40, i * 40], [r * 40, i * 40]]) {
+        const dentro = [[0, 0], [-40, 0], [40, 0], [0, -40], [0, 40]].every(([dx, dy]) => T.zonaEn(t, x + dx, y + dy) === que);
+        if (dentro && !T.tocaGrada(t, x, y, 50, true)) return { T, t, zona: { tipo: que, x, y } };
+      }
     }
   }
   throw new Error(`no hay ${que} cerca del inicio`);
@@ -308,25 +322,63 @@ test('el jugador acelera y frena con un poco de inercia, y la cámara 3/4 sigue 
 });
 
 
-test('el mapa tiene varios biomas y estructuras variadas, y todo cabe dentro de su celda', async () => {
+test('el mapa mezcla barrios distintos (estadios, gradas, plazas, entrenamiento, parques y prados) y todo cabe en su celda', async () => {
   const T = await cargar('terreno.js');
   const { TERRENO } = await cargar('config.js');
   const t = T.crearTerreno(11);
-  const biomas = new Set();
+  const lotes = new Set();
   const tipos = new Set();
-  for (let cx = -12; cx <= 12; cx++) {
-    for (let cy = -12; cy <= 12; cy++) {
+  const niveles = new Set();
+  for (let cx = -14; cx <= 14; cx++) {
+    for (let cy = -14; cy <= 14; cy++) {
       const c = T.celda(t, cx, cy);
-      biomas.add(c.bioma);
+      lotes.add(c.bioma);
       for (const o of c.obstaculos) {
         tipos.add(o.tipo);
-        assert.ok(o.x - o.w / 2 >= cx * TERRENO.celda && o.x + o.w / 2 <= (cx + 1) * TERRENO.celda, 'cabe en su celda (x)');
-        assert.ok(o.y - o.h / 2 >= cy * TERRENO.celda && o.y + o.h / 2 <= (cy + 1) * TERRENO.celda, 'cabe en su celda (y)');
+        if (o.tipo === 'talud') niveles.add(o.nivel);
+        assert.ok(o.x - o.w / 2 >= cx * TERRENO.celda - 1e-6 && o.x + o.w / 2 <= (cx + 1) * TERRENO.celda + 1e-6, `${o.tipo} cabe en su celda (x)`);
+        assert.ok(o.y - o.h / 2 >= cy * TERRENO.celda - 1e-6 && o.y + o.h / 2 <= (cy + 1) * TERRENO.celda + 1e-6, `${o.tipo} cabe en su celda (y)`);
       }
     }
   }
-  assert.equal(biomas.size, 4, [...biomas].join());
-  for (const tipo of ['grada', 'cartel', 'porteria', 'banquillo', 'foco']) assert.ok(tipos.has(tipo), `hay ${tipo}`);
+  for (const l of ['estadio', 'grada', 'plaza', 'entrenamiento', 'parque', 'prado']) assert.ok(lotes.has(l), `hay ${l}`);
+  for (const tipo of ['grada', 'tienda', 'kiosco', 'arbol', 'porteria', 'foco', 'talud', 'farola']) assert.ok(tipos.has(tipo), `hay ${tipo}`);
+  assert.ok(niveles.has(1), 'hay mesetas');
+});
+
+test('las gradas miran al campo que tienen al lado y las mesetas tienen escaleras', async () => {
+  const T = await cargar('terreno.js');
+  const t = T.crearTerreno(4);
+  let gradas = 0;
+  let escaleras = 0;
+  for (let cx = -10; cx <= 10; cx++) {
+    for (let cy = -10; cy <= 10; cy++) {
+      const c = T.celda(t, cx, cy);
+      if (c.bioma === 'grada') {
+        const [i, k] = { e: [1, 0], o: [-1, 0], s: [0, 1], n: [0, -1] }[c.lote.mira];
+        assert.equal(T.loteDe(t, cx + i, cy + k).tipo, 'estadio', 'la grada da a un estadio');
+        gradas += c.obstaculos.filter((o) => o.tipo === 'grada').length;
+      }
+      escaleras += c.suelo.filter((a) => a.tipo === 'escalera' || a.tipo === 'rampa').length;
+    }
+  }
+  assert.ok(gradas > 0 && escaleras > 10, `gradas ${gradas}, escaleras ${escaleras}`);
+});
+
+test('el barro nunca está sobre el asfalto ni sobre el césped de un estadio, y los balones pasan por encima de los taludes', async () => {
+  const T = await cargar('terreno.js');
+  const t = T.crearTerreno(4);
+  for (let x = -4000; x <= 4000; x += 53) {
+    for (let y = -4000; y <= 4000; y += 59) {
+      if (T.zonaEn(t, x, y) === 'barro') assert.equal(T.pavimentado(t, x, y), false, `barro en el asfalto (${x}, ${y})`);
+    }
+  }
+  let talud = null;
+  for (let cx = -10; cx <= 10 && !talud; cx++) for (let cy = -10; cy <= 10 && !talud; cy++) talud = T.celda(t, cx, cy).obstaculos.find((o) => o.tipo === 'talud');
+  assert.ok(talud, 'hay algún talud');
+  assert.equal(T.tocaGrada(t, talud.x, talud.y, 2), false, 'un balón pasa por encima');
+  assert.equal(T.tocaGrada(t, talud.x, talud.y, 2, true), true, 'andando no se pasa');
+  assert.equal(T.rayoLibre(t, talud.x, talud.y - 100, talud.x, talud.y + 100, 400, 10), false);
 });
 
 test('las estructuras no encierran a nadie: casi todo el campo se puede alcanzar desde la salida', async () => {
@@ -354,39 +406,103 @@ test('las estructuras no encierran a nadie: casi todo el campo se puede alcanzar
   }
 });
 
-test('un rival atascado en el fondo de un corral acaba saliendo y rodeando la grada', async () => {
+test('un rival al pie de un talud lo rodea hasta subir por la escalera', async () => {
   const T = await cargar('terreno.js');
-  let corral = null;
+  let talud = null;
   const t0 = T.crearTerreno(5);
-  for (let cx = -15; cx <= 15 && !corral; cx++) {
-    for (let cy = -15; cy <= 15 && !corral; cy++) {
-      const c = T.celda(t0, cx, cy);
-      const g = c.obstaculos.find((o) => o.tipo === 'grada' && o.w < 450);
-      const lados = c.obstaculos.filter((o) => o.tipo === 'cartel');
-      if (g && lados.length === 2 && c.obstaculos.length >= 3) corral = { g, lados, c };
+  for (let r = 0; r < 16 && !talud; r++) {
+    for (let cx = -r; cx <= r && !talud; cx++) {
+      for (let cy = -r; cy <= r && !talud; cy++) {
+        talud = T.celda(t0, cx, cy).obstaculos.find((o) => o.tipo === 'talud' && o.lado === 's' && o.w >= 160 && Math.hypot(o.x, o.y) > 900);
+      }
     }
   }
-  assert.ok(corral, 'hay algún corral');
+  assert.ok(talud, 'hay algún talud largo');
   const { m, mundo } = await mundoLimpio(5);
   const { crearEnemigo } = await cargar('oleadas.js');
-  const { g } = corral;
-  // Rival «dentro» del corral (entre los carteles) y jugador al otro lado de la grada
-  const cx = corral.lados.reduce((a, o) => a + o.x, 0) / 2;
-  const cy = corral.lados.reduce((a, o) => a + o.y, 0) / 2;
-  const e = crearEnemigo('madrid', cx, cy, 1);
+  // Rival abajo, jugador arriba de la meseta
+  const e = crearEnemigo('madrid', talud.x, talud.y + talud.h / 2 + 30, 1);
+  e.vida = 1e9;
   mundo.enemigos.push(e);
-  mundo.enemigos[0].vida = 1e9;
-  const horizontal = g.w > g.h;
-  mundo.jugador.x = horizontal ? g.x : g.x + (cx < g.x ? 1 : -1) * 500;
-  mundo.jugador.y = horizontal ? g.y + (cy < g.y ? 1 : -1) * 500 : g.y;
+  mundo.jugador.x = talud.x;
+  mundo.jugador.y = talud.y - talud.h / 2 - 60;
   const inicio = Math.hypot(e.x - mundo.jugador.x, e.y - mundo.jugador.y);
-  for (let i = 0; i < 60 * 12; i++) {
+  let minimo = inicio;
+  for (let i = 0; i < 60 * 14; i++) {
     const x = mundo.jugador.x; const y = mundo.jugador.y;
     m.avanzar(mundo, PASO, { x: 0, y: 0 });
     mundo.jugador.x = x; mundo.jugador.y = y;
     if (mundo.estado === 'mejora') m.elegirMejora(mundo, mundo.opciones[0].id);
     if (!mundo.enemigos.includes(e)) break;
+    minimo = Math.min(minimo, Math.hypot(e.x - x, e.y - y));
   }
-  const fin = Math.hypot(e.x - mundo.jugador.x, e.y - mundo.jugador.y);
-  assert.ok(fin < inicio * 0.8 || !mundo.enemigos.includes(e), `el rival avanza hacia ti (${inicio.toFixed(0)} → ${fin.toFixed(0)})`);
+  assert.ok(minimo < 50 || !mundo.enemigos.includes(e), `el rival llega hasta ti (${inicio.toFixed(0)} → ${minimo.toFixed(0)})`);
+});
+
+test('cada 5 minutos cambia el ambiente (pretemporada → Copa → Liga → Champions → Mundial) y los rivales salen más fuertes', async () => {
+  const { AMBIENTES, ambienteDe, fuerzaAmbiente } = await cargar('config.js');
+  const { crearEnemigo } = await cargar('oleadas.js');
+  assert.deepEqual(AMBIENTES.map((a) => a.clave), ['inicio', 'copa', 'liga', 'champions', 'mundial']);
+  assert.deepEqual([0, 4.9, 5, 10, 15, 20, 45].map(ambienteDe), [0, 0, 1, 2, 3, 4, 4]);
+  for (let i = 1; i < AMBIENTES.length; i++) assert.ok(AMBIENTES[i].fuerza > AMBIENTES[i - 1].fuerza);
+  assert.ok(fuerzaAmbiente(21).vida > fuerzaAmbiente(4).vida);
+  // Justo antes y justo después del cambio, el rival de la misma oleada sale con más vida
+  const antes = crearEnemigo('madrid', 0, 0, 10); // oleada 10 → 4,5 min
+  const despues = crearEnemigo('madrid', 0, 0, 11); // oleada 11 → 5 min
+  assert.ok(despues.vidaMax / antes.vidaMax > 1.06, `${antes.vidaMax} → ${despues.vidaMax}`);
+
+  const { m, mundo } = await mundoLimpio(3);
+  assert.equal(mundo.ambiente, 0);
+  mundo.tiempo = 299.99;
+  m.avanzar(mundo, PASO, { x: 0, y: 0 });
+  assert.equal(mundo.ambiente, 1);
+  const ev = mundo.eventos.find((e) => e.tipo === 'ambiente');
+  assert.ok(ev && ev.clave === 'copa' && ev.nombre === 'Final de la Copa del Rey');
+  assert.ok(mundo.cambioAmbiente && mundo.cambioAmbiente.t0 > 299);
+});
+
+test('en la final del Mundial todos tienen camiseta de selección: tu jugador, los rivales y los jefes que son jugadores', async () => {
+  const {
+    PERSONAJES, EQUIPOS, JEFES, SELECCIONES, SELECCION_DE_EQUIPO, SELECCION_DE_JEFE,
+  } = await cargar('config.js');
+  const { conSeleccion, aspectoDe } = await cargar('sprites.js');
+  for (const [clave, p] of Object.entries(PERSONAJES)) assert.ok(SELECCIONES[p.nacionalidad], `${clave}: falta la selección ${p.nacionalidad}`);
+  for (const e of Object.keys(EQUIPOS)) assert.ok(SELECCIONES[SELECCION_DE_EQUIPO[e]], `rival ${e}`);
+  for (const [j, pais] of Object.entries(SELECCION_DE_JEFE)) assert.ok(JEFES[j] && SELECCIONES[pais], `jefe ${j}`);
+  assert.ok(SELECCIONES.Dinamarca, 'la selección de reserva existe');
+  const fran = conSeleccion(aspectoDe('personaje', 'griezmann'), 'Francia');
+  assert.equal(fran.camiseta.c, SELECCIONES.Francia.camiseta.c);
+  assert.equal(fran.pelo, PERSONAJES.griezmann.aspecto.pelo, 'el pelo no cambia');
+  const traje = conSeleccion(aspectoDe('jefe', 'guardiola'), 'España');
+  assert.equal(traje.camiseta.p, 'traje', 'los entrenadores siguen de traje');
+});
+
+test('el suelo se pinta por celdas y cambia de colores con cada ambiente (con un lienzo falso)', async () => {
+  const imagenes = [];
+  const contexto = () => new Proxy({}, {
+    get: (obj, k) => {
+      if (k === 'createImageData') return (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) });
+      if (k === 'putImageData') return (img) => imagenes.push(img.data);
+      if (k in obj) return obj[k];
+      return () => {};
+    },
+    set: (obj, k, v) => { obj[k] = v; return true; },
+  });
+  const anterior = globalThis.document;
+  globalThis.document = { createElement: () => ({ width: 0, height: 0, getContext: contexto }) };
+  try {
+    const RM = await cargar('render-mundo.js');
+    const T = await cargar('terreno.js');
+    const { AMBIENTES } = await cargar('config.js');
+    const terreno = T.crearTerreno(21);
+    const celdas = [T.celda(terreno, 0, 0)];
+    const lienzoFalso = contexto();
+    for (const amb of AMBIENTES) RM.dibujarSuelo(lienzoFalso, { terreno, jugador: { personaje: 'koke' } }, celdas, amb);
+    assert.equal(imagenes.length, AMBIENTES.length, 'una textura por ambiente');
+    const pixel = (d) => [d[0], d[1], d[2]].join();
+    assert.ok(new Set(imagenes.map((d) => pixel(d.subarray(4000)))).size >= 4, 'cada ambiente tiene su color');
+    assert.ok(imagenes.every((d) => d[3] === 255), 'la textura es opaca');
+  } finally {
+    globalThis.document = anterior;
+  }
 });

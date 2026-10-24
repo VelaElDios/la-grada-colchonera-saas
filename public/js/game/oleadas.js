@@ -1,7 +1,7 @@
 // Oleadas: cuántos rivales salen, de qué equipo y con qué fuerza según avanza la partida.
 // La partida es infinita: los rivales ganan vida, daño y velocidad sin parar (ver ESCALADO en config.js).
 import {
-  EQUIPOS, JEFES, ORDEN_JEFES, MUNDO, ESCALADO, ESCALADO_JEFE, ELITES, minutosDeOleada, PIELES, PELOS,
+  EQUIPOS, JEFES, ORDEN_JEFES, MUNDO, ESCALADO, ESCALADO_JEFE, ELITES, minutosDeOleada, PIELES, PELOS, fuerzaAmbiente,
 } from './config.js';
 
 let contadorId = 1;
@@ -19,7 +19,8 @@ export function crearEnemigo(tipo, x, y, oleada, elite = null) {
   const m = minutosDeOleada(oleada);
   const id = contadorId++;
   const el = elite ? ELITES.tipos[elite] : null;
-  const vida = Math.max(1, Math.round(base.vida * ESCALADO.vida(m) * (el ? el.vida : 1)));
+  const fa = fuerzaAmbiente(m);
+  const vida = Math.max(1, Math.round(base.vida * ESCALADO.vida(m) * fa.vida * (el ? el.vida : 1)));
   return {
     id,
     tipo,
@@ -31,7 +32,7 @@ export function crearEnemigo(tipo, x, y, oleada, elite = null) {
     vida,
     vidaMax: vida,
     vel: base.velocidad * ESCALADO.velocidad(m) * MUNDO.velRivales * (el ? el.vel : 1),
-    dano: Math.max(1, Math.round(base.dano * ESCALADO.dano(m) * (el ? el.dano : 1))),
+    dano: Math.max(1, Math.round(base.dano * ESCALADO.dano(m) * fa.dano * (el ? el.dano : 1))),
     xp: Math.max(1, Math.round(base.xp * ESCALADO.xp(m) * (el ? el.xp : 1))),
     // Reparto estable (sin azar) para que no todos embistan o disparen a la vez
     cdEmbestida: base.embiste ? base.embiste.cada * (0.3 + ((id * 37) % 100) / 140) : 0,
@@ -62,7 +63,8 @@ export function crearJefe(indice, x, y, oleada, claveElegida = null) {
   const ciclo = Math.floor(indice / ORDEN_JEFES.length);
   const def = JEFES[clave];
   const m = minutosDeOleada(oleada);
-  const vida = Math.round(def.vida * ESCALADO_JEFE.vida(m, indice) * (1 + 0.25 * ciclo));
+  const fa = fuerzaAmbiente(m);
+  const vida = Math.round(def.vida * ESCALADO_JEFE.vida(m, indice) * fa.vida * (1 + 0.25 * ciclo));
   return {
     id: contadorId++,
     tipo: clave,
@@ -74,7 +76,7 @@ export function crearJefe(indice, x, y, oleada, claveElegida = null) {
     vida,
     vidaMax: vida,
     vel: def.velocidad * Math.min(1.35, ESCALADO.velocidad(m)) * MUNDO.velRivales,
-    dano: Math.max(1, Math.round(def.dano * ESCALADO_JEFE.dano(m, indice))),
+    dano: Math.max(1, Math.round(def.dano * ESCALADO_JEFE.dano(m, indice) * fa.dano)),
     xp: Math.round(def.xp * ESCALADO.xp(m)),
     freno: def.freno,
     kx: 0,

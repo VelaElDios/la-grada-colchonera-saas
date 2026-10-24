@@ -35,23 +35,91 @@ export const MOVIMIENTO = {
   presionRadio: 440,
 };
 
-// Campo infinito con zonas fijas (siempre las mismas para una partida): barro, lluvia y gradas.
+// Campo infinito generado con ruido (como un mundo de Minecraft): cada partida es un mundo distinto, pero el
+// mismo para una semilla. Un «distrito» (ruido de baja frecuencia) decide si cada parcela es estadio, plaza con
+// tiendas, campo de entrenamiento, parque o prado; otro ruido levanta mesetas con escaleras; otro decide dónde
+// hay barro, por dónde pasa un camino y dónde llueve. Todo se mezcla con continuidad: nada va pegado a trozos.
 export const TERRENO = {
-  celda: 640,
+  celda: 640, // una parcela por celda
+  baldosa: 80, // las alturas van por baldosas (bloques)
   barro: 0.5, // multiplicador de tu velocidad dentro del barro
   lluvia: 1.7, // multiplicador de la velocidad de los balones (tuyos y de los rivales) bajo la lluvia
-  probLluvia: 0.2,
-  probBarro: 0.18,
-  probGrada: 0.42,
-  claroInicial: 320, // radio alrededor del inicio sin gradas
+  claroInicial: 320, // radio alrededor del inicio sin obstáculos
+  escalaDistrito: 2600, // tamaño de los barrios (estadios, entrenamiento, parques, prados)
+  escalaAltura: 1100, // tamaño de las mesetas
+  escalaHumedad: 700, // charcos de barro
+  escalaNubes: 650, // zonas de lluvia
+  escalaBosque: 900, // arboledas
+  umbralBarro: 0.87,
+  umbralLluvia: 0.86,
+  alturas: [0.67, 0.84], // ruido de altura para subir a nivel 1 y 2
+  frente: 36, // fondo del talud que se ve de frente (cara sur de una meseta)
+  borde: 12, // grosor de los taludes laterales
+  cadaEscalera: 6, // cada cuántas baldosas de borde hay una escalera (de 2 baldosas de ancho)
 };
 
-// Biomas del campo: cambian cada pocos pasos y deciden cuántas estructuras (gradas, corrales, pasillos…) hay.
-export const BIOMAS = {
-  abierto: { peso: 0.3, estructura: 0.4, focos: 0, lluvia: 0.2, barro: 0.14, pesos: { foco: 0.2, hilera: 0.3, muralla: 0.25, banquillos: 0.1, miniCampo: 0.15 } },
-  estadio: { peso: 0.3, estructura: 0.92, focos: 0.45, lluvia: 0.1, barro: 0.06, pesos: { muralla: 0.28, corral: 0.32, pasillo: 0.28, hilera: 0.12 } },
-  cantera: { peso: 0.2, estructura: 0.6, focos: 0.2, lluvia: 0.06, barro: 0.4, pesos: { hilera: 0.25, foco: 0.1, corral: 0.25, muralla: 0.2, pasillo: 0.2 } },
-  entrenamiento: { peso: 0.2, estructura: 0.75, focos: 0.1, lluvia: 0.14, barro: 0.1, pesos: { miniCampo: 0.4, banquillos: 0.2, hilera: 0.2, foco: 0.1, muralla: 0.1 } },
+/**
+ * Ambientes: cada 5 minutos la partida «cambia de pantalla». El mapa es el mismo, pero cambia la decoración,
+ * los colores, la luz y la afición; y los rivales salen más fuertes (`fuerza`, sobre lo que ya crecen con el tiempo).
+ * En la final del Mundial todos visten la camiseta de su selección.
+ */
+export const AMBIENTES = [
+  { clave: 'inicio', nombre: 'Partido de pretemporada', lugar: 'Ciudad deportiva, a mediodía', desde: 0, fuerza: 1, color: '#4ade80' },
+  { clave: 'copa', nombre: 'Final de la Copa del Rey', lugar: 'Estadio neutral, tarde de sol', desde: 5, fuerza: 1.08, color: '#ffc400' },
+  { clave: 'liga', nombre: 'Final de Liga', lugar: 'Última jornada, al atardecer', desde: 10, fuerza: 1.18, color: '#ff8a3c' },
+  { clave: 'champions', nombre: 'Final de la Champions', lugar: 'Noche europea bajo los focos', desde: 15, fuerza: 1.36, color: '#7fb0ff' },
+  { clave: 'mundial', nombre: 'Final del Mundial', lugar: 'Con la camiseta de tu selección', desde: 20, fuerza: 1.62, color: '#ffd166' },
+];
+/** Cuánto más fuertes salen los rivales en el ambiente del minuto `m`: vida ×fuerza y daño algo menos. */
+export const fuerzaAmbiente = (m) => {
+  const f = AMBIENTES[ambienteDe(m)].fuerza;
+  return { vida: f, dano: 1 + (f - 1) * 0.75 };
+};
+/** Índice del ambiente para un minuto de partida. */
+export const ambienteDe = (minutos) => {
+  let i = 0;
+  AMBIENTES.forEach((a, k) => { if (minutos >= a.desde) i = k; });
+  return i;
+};
+
+/** Camisetas de las selecciones (para la final del Mundial) y colores de su afición. */
+export const SELECCIONES = {
+  'España': { camiseta: { c: '#c60b1e', c2: '#ffc400', p: 'cuello' }, pantalon: '#1b2a5c', medias: '#c60b1e', colores: ['#c60b1e', '#ffc400'] },
+  Argentina: { camiseta: { c: '#75aadb', c2: '#ffffff', p: 'franjas' }, pantalon: '#1b1b1b', medias: '#ffffff', colores: ['#75aadb', '#ffffff'] },
+  Uruguay: { camiseta: { c: '#5cb8e6', c2: '#ffffff', p: 'cuello' }, pantalon: '#111111', medias: '#111111', colores: ['#5cb8e6', '#ffffff'] },
+  Francia: { camiseta: { c: '#1d2b6b', c2: '#ffffff', p: 'cuello' }, pantalon: '#ffffff', medias: '#c8102e', colores: ['#1d2b6b', '#ffffff', '#c8102e'] },
+  Eslovenia: { camiseta: { c: '#ffffff', c2: '#1b6ec2', p: 'mangas' }, pantalon: '#ffffff', medias: '#1b6ec2', colores: ['#ffffff', '#1b6ec2', '#2fa84f'] },
+  'Corea del Sur': { camiseta: { c: '#e30613', c2: '#1b2a5c', p: 'cuello' }, pantalon: '#1b2a5c', medias: '#e30613', colores: ['#e30613', '#ffffff', '#1b2a5c'] },
+  Nigeria: { camiseta: { c: '#0a8f4a', c2: '#ffffff', p: 'mangas' }, pantalon: '#0a8f4a', medias: '#0a8f4a', colores: ['#0a8f4a', '#ffffff'] },
+  Brasil: { camiseta: { c: '#ffd800', c2: '#0a8f4a', p: 'cuello' }, pantalon: '#1f4fbf', medias: '#ffffff', colores: ['#ffd800', '#0a8f4a', '#1f4fbf'] },
+  Colombia: { camiseta: { c: '#ffd800', c2: '#1f3f8f', p: 'cuello' }, pantalon: '#1f3f8f', medias: '#e30613', colores: ['#ffd800', '#1f3f8f', '#e30613'] },
+  Croacia: { camiseta: { c: '#ffffff', c2: '#e30613', p: 'cuadros' }, pantalon: '#ffffff', medias: '#1f3f8f', colores: ['#e30613', '#ffffff', '#1f3f8f'] },
+  'Bélgica': { camiseta: { c: '#c8102e', c2: '#111111', p: 'cuello' }, pantalon: '#c8102e', medias: '#c8102e', colores: ['#111111', '#ffd800', '#c8102e'] },
+  Inglaterra: { camiseta: { c: '#ffffff', c2: '#1b2a5c', p: 'cuello' }, pantalon: '#1b2a5c', medias: '#ffffff', colores: ['#ffffff', '#c8102e'] },
+  Montenegro: { camiseta: { c: '#c8102e', c2: '#d4af37', p: 'cuello' }, pantalon: '#c8102e', medias: '#c8102e', colores: ['#c8102e', '#d4af37'] },
+  Ghana: { camiseta: { c: '#ffffff', c2: '#111111', p: 'cuello' }, pantalon: '#ffffff', medias: '#ffffff', colores: ['#c8102e', '#ffd800', '#0a8f4a'] },
+  Serbia: { camiseta: { c: '#c8102e', c2: '#1b2a5c', p: 'cuello' }, pantalon: '#1b2a5c', medias: '#ffffff', colores: ['#c8102e', '#1b2a5c', '#ffffff'] },
+  Portugal: { camiseta: { c: '#a3151f', c2: '#0a6b3a', p: 'cuello' }, pantalon: '#0a6b3a', medias: '#a3151f', colores: ['#a3151f', '#0a6b3a', '#ffd800'] },
+  Alemania: { camiseta: { c: '#ffffff', c2: '#111111', p: 'cuello' }, pantalon: '#111111', medias: '#ffffff', colores: ['#111111', '#c8102e', '#ffc400'] },
+  'Países Bajos': { camiseta: { c: '#ff7a00', c2: '#111111', p: 'cuello' }, pantalon: '#ff7a00', medias: '#ff7a00', colores: ['#ff7a00', '#ffffff'] },
+  Italia: { camiseta: { c: '#1f5fbf', c2: '#ffffff', p: 'cuello' }, pantalon: '#ffffff', medias: '#1f5fbf', colores: ['#0a8f4a', '#ffffff', '#c8102e'] },
+  'Japón': { camiseta: { c: '#1b2f78', c2: '#ffffff', p: 'cuello' }, pantalon: '#ffffff', medias: '#1b2f78', colores: ['#ffffff', '#c8102e'] },
+  'Estados Unidos': { camiseta: { c: '#ffffff', c2: '#1b2a5c', p: 'mangas' }, pantalon: '#1b2a5c', medias: '#ffffff', colores: ['#1b2a5c', '#ffffff', '#c8102e'] },
+  'México': { camiseta: { c: '#0a6b3a', c2: '#ffffff', p: 'cuello' }, pantalon: '#ffffff', medias: '#c8102e', colores: ['#0a6b3a', '#ffffff', '#c8102e'] },
+  Marruecos: { camiseta: { c: '#c1272d', c2: '#006233', p: 'cuello' }, pantalon: '#006233', medias: '#c1272d', colores: ['#c1272d', '#006233'] },
+  Senegal: { camiseta: { c: '#ffffff', c2: '#0a8f4a', p: 'cuello' }, pantalon: '#ffffff', medias: '#ffffff', colores: ['#0a8f4a', '#ffd800', '#e30613'] },
+  Dinamarca: { camiseta: { c: '#c8102e', c2: '#ffffff', p: 'cuello' }, pantalon: '#ffffff', medias: '#c8102e', colores: ['#c8102e', '#ffffff'] },
+  Gales: { camiseta: { c: '#c8102e', c2: '#0a8f4a', p: 'cuello' }, pantalon: '#c8102e', medias: '#c8102e', colores: ['#c8102e', '#ffffff', '#0a8f4a'] },
+};
+/** En el Mundial cada equipo rival juega como una selección (y no repite la tuya: entonces sale Dinamarca). */
+export const SELECCION_DE_EQUIPO = {
+  madrid: 'Alemania', barca: 'Países Bajos', bayern: 'Italia', liverpool: 'Inglaterra', city: 'Argentina', united: 'Brasil',
+  chelsea: 'Francia', arsenal: 'Portugal', juventus: 'Uruguay', milan: 'Bélgica', inter: 'Croacia', psg: 'Japón',
+  dortmund: 'Estados Unidos', ajax: 'México', benfica: 'Marruecos', napoli: 'Senegal',
+};
+/** Los jefes que son jugadores también se ponen la de su selección (los entrenadores siguen de traje). */
+export const SELECCION_DE_JEFE = {
+  cristiano: 'Portugal', messi: 'Argentina', vinicius: 'Brasil', yamal: 'España', neymar: 'Brasil', bale: 'Gales', benzema: 'Francia', suarez: 'Uruguay',
 };
 
 // Premios repartidos por el campo: hay que ir a por ellos.

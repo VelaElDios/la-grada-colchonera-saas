@@ -2,7 +2,7 @@
 // Cada muñeco se dibuja una vez en una cuadrícula de 16×20 y luego se reutiliza (caché) a cualquier tamaño.
 // Este módulo solo toca el DOM cuando se llama a una función (no al importarlo).
 import {
-  EQUIPOS, PIELES, PELOS, PERSONAJES, ENTRENADORES, JEFES,
+  EQUIPOS, PIELES, PELOS, PERSONAJES, ENTRENADORES, JEFES, SELECCIONES,
 } from './config.js';
 
 export const ANCHO = 16;
@@ -91,6 +91,9 @@ function pintarCamiseta(ctx, k) {
       break;
     case 'mitad':
       rect(ctx, c2, 8, 10, 4, 5);
+      break;
+    case 'cuadros': // a cuadros (Croacia)
+      for (let i = 0; i < 8; i += 1) for (let r = 0; r < 5; r += 1) if ((i + r) % 2 === 1) rect(ctx, c2, 4 + i, 10 + r, 1, 1);
       break;
     case 'banda':
       rect(ctx, c2, 7, 10, 2, 5);
@@ -190,6 +193,13 @@ export function aspectoDe(tipo, clave, piel = 0, pelo = 0) {
   return aspectoRival(clave, piel, pelo);
 }
 
+/** El mismo muñeco con la equipación de una selección (pelo, piel y botas no cambian). */
+export function conSeleccion(aspecto, pais) {
+  const s = SELECCIONES[pais];
+  if (!s || aspecto.camiseta.p === 'traje') return aspecto;
+  return { ...aspecto, camiseta: { ...s.camiseta }, pantalon: s.pantalon, medias: s.medias };
+}
+
 /** Devuelve (y guarda en caché) los dos fotogramas del muñeco y su versión «destello» (blanca). */
 export function obtenerSprite(claveCache, aspecto) {
   let s = cache.get(claveCache);
@@ -242,4 +252,40 @@ export function retratoUrl(claveCache, aspecto, factor = 5) {
   cx.imageSmoothingEnabled = false;
   cx.drawImage(s.frames[0], 0, 0, ANCHO * factor, ALTO * factor);
   return c.toDataURL('image/png');
+}
+
+const avatares = new Map();
+/** Aspecto para un avatar: 'p:clave' (jugador) o 'e:clave' (entrenador). Null si no existe. */
+export function aspectoAvatar(avatar) {
+  const [tipo, clave] = String(avatar || '').split(':');
+  if (tipo === 'p' && PERSONAJES[clave]) return PERSONAJES[clave].aspecto;
+  if (tipo === 'e' && ENTRENADORES[clave]) return ENTRENADORES[clave].aspecto;
+  return null;
+}
+
+/**
+ * Avatar redondo: la cara y un poco de la camiseta del jugador o entrenador (data URL de `tam` píxeles).
+ * Devuelve null si el avatar no existe.
+ */
+export function avatarUrl(avatar, tam = 64) {
+  const clave = `${avatar}:${tam}`;
+  if (avatares.has(clave)) return avatares.get(clave);
+  const aspecto = aspectoAvatar(avatar);
+  if (!aspecto) return null;
+  const s = obtenerSprite(`av:${avatar}`, aspecto);
+  const c = lienzo(tam, tam);
+  const cx = c.getContext('2d');
+  cx.imageSmoothingEnabled = false;
+  // Fondo con los colores de la camiseta
+  const g = cx.createLinearGradient(0, 0, 0, tam);
+  g.addColorStop(0, '#1d2348');
+  g.addColorStop(1, aspecto.camiseta.c);
+  cx.fillStyle = g;
+  cx.fillRect(0, 0, tam, tam);
+  // Cabeza y hombros (las 15 primeras filas del muñeco), centrados y algo bajos
+  const escala = tam / 13;
+  cx.drawImage(s.frames[0], 0, 0, ANCHO, 14, (tam - ANCHO * escala) / 2, tam * 0.1, ANCHO * escala, 14 * escala);
+  const url = c.toDataURL('image/png');
+  avatares.set(clave, url);
+  return url;
 }

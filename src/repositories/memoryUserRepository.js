@@ -4,6 +4,7 @@
 //   create(data)        -> usuario creado (con id y createdAt)
 //   findById(id)        -> usuario | null
 //   findByEmail(email)  -> usuario | null
+//   findByApodo(clave)  -> usuario | null (por el mote normalizado)
 //   findAll()           -> lista de usuarios
 //   update(id, changes) -> usuario actualizado | null
 //
@@ -32,6 +33,13 @@ function createMemoryUserRepository() {
     async findByEmail(email) {
       for (const user of users.values()) {
         if (user.email === email) return copy(user);
+      }
+      return null;
+    },
+
+    async findByApodo(apodoClave) {
+      for (const user of users.values()) {
+        if (user.apodoClave && user.apodoClave === apodoClave) return copy(user);
       }
       return null;
     },

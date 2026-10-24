@@ -1,5 +1,5 @@
 import { h } from '../dom.js';
-import { estado } from '../estado.js';
+import { estado, ponerUsuario } from '../estado.js';
 import { api } from '../../api.js';
 import { estadoError, spinner } from '../componentes.js';
 
@@ -19,10 +19,13 @@ export async function montar(raiz, { navegar }) {
       finalizarAlCerrar: (id, resultado) => api.finalizarPartidaAlCerrar(id, resultado),
       contratar: () => api.contratarJugador(),
       desbloquear: () => api.desbloquearJuego(),
+      identidad: (cambios) => api.ponerIdentidad(cambios),
       entrenar: (personaje, estadistica) => api.entrenarJugador(personaje, estadistica),
       ranking: () => api.getRankingJuego(20),
     };
-    juego = montarJuego(contenedor, { usuario: estado.usuario, alSalir: () => navegar('/'), servidor });
+    juego = montarJuego(contenedor, {
+      usuario: { ...estado.usuario }, alSalir: () => navegar('/'), servidor, alCambiarUsuario: (u) => ponerUsuario(u),
+    });
   } catch (error) {
     console.error('[grada] no se pudo cargar el juego', error);
     raiz.replaceChildren(

@@ -83,5 +83,16 @@ for (const { name, setup } of IMPLEMENTATIONS) {
       assert.equal((await repo.update(user.id, { role: 'admin' })).role, 'admin');
       assert.equal((await repo.findById(user.id)).role, 'admin');
     });
+
+    test('el mote se guarda normalizado y se busca por él; no se repite', async () => {
+      const a = await repo.create(nuevoUsuario('a@grada.es'));
+      const b = await repo.create(nuevoUsuario('b@grada.es'));
+      const conMote = await repo.update(a.id, { apodo: 'El Niño', apodoClave: 'el nino', avatar: 'p:torres' });
+      assert.equal(conMote.apodo, 'El Niño');
+      assert.equal(conMote.avatar, 'p:torres');
+      assert.equal((await repo.findByApodo('el nino')).id, a.id);
+      assert.equal(await repo.findByApodo('nadie'), null);
+      if (name === 'PostgreSQL') await assert.rejects(repo.update(b.id, { apodo: 'EL NIÑO', apodoClave: 'el nino' }));
+    });
   });
 }
