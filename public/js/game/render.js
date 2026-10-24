@@ -2,6 +2,50 @@
 // Solo lee el estado del mundo: no cambia nada de la simulación.
 import { obtenerSprite, dibujarSprite, aspectoDe } from './sprites.js';
 import { visibles as terrenoVisible } from './terreno.js';
+import { CAMARA } from './config.js';
+
+// ---------------------------------------------------------------------------------------------
+// Cámara 3/4: el suelo se aplasta en vertical (como si lo vieras desde arriba y de lado) y los
+// muñecos, objetos y textos se dibujan «de pie» sobre él. Lo que está más arriba se ve algo más pequeño.
+// ---------------------------------------------------------------------------------------------
+const INC = CAMARA.inclinacion;
+let profCamY = 0; // y del mundo en el centro de la pantalla
+let profMitad = 400; // mitad del alto visible, en unidades del mundo
+
+/** Dibuja `fn` de pie sobre el punto (x, y) del suelo, con la escala de profundidad. */
+function recto(ctx, x, y, fn, ancla = 0) {
+  const d = Math.max(-1, Math.min(1, (y - profCamY) / profMitad));
+  const f = 1 + CAMARA.profundidad * d;
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(f, f / INC);
+  ctx.translate(-x, -y);
+  fn();
+  ctx.restore();
+}
+
+/** Estira o aplasta lo que dibuja `fn` tomando como punto fijo los pies (x, yPies) y lo inclina `giro` rad. */
+function deformar(ctx, x, yPies, sx, sy, giro, fn) {
+  ctx.save();
+  ctx.translate(x, yPies);
+  if (giro) ctx.rotate(giro);
+  ctx.scale(sx, sy);
+  ctx.translate(-x, -yPies);
+  fn();
+  ctx.restore();
+}
+
+/** Mueve la cámara con suavidad hacia el jugador, mirando un poco hacia donde corre. */
+export function actualizarCamara(mundo, dt) {
+  const j = mundo.jugador;
+  const k = CAMARA.adelanto / 190;
+  const tx = j.x + (j.vx || 0) * k;
+  const ty = j.y + (j.vy || 0) * k;
+  if (!mundo.camara) mundo.camara = { x: j.x, y: j.y };
+  const a = 1 - Math.exp(-CAMARA.suavizado * Math.max(0, Math.min(0.1, dt)));
+  mundo.camara.x += (tx - mundo.camara.x) * a;
+  mundo.camara.y += (ty - mundo.camara.y) * a;
+}
 
 const ROJO = '#c8102e';
 const ROJO_CLARO = '#ff4d63';
@@ -65,18 +109,18 @@ function dibujarCesped(ctx, cam, ancho, alto, escala) {
   }
   ctx.imageSmoothingEnabled = false;
   const s = TAM_CELDA * escala;
-  patron.setTransform(new DOMMatrix().translate(ancho / 2 - cam.x * escala, alto / 2 - cam.y * escala).scale(s));
+  patron.setTransform(new DOMMatrix().translate(ancho / 2 - cam.x * escala, alto / 2 - cam.y * escala * INC).scale(s, s * INC));
   ctx.fillStyle = patron;
   ctx.fillRect(0, 0, ancho, alto);
 
   // Líneas de campo de píxeles muy tenues cada cierto tramo
   const paso = 1024;
   const visibleX = ancho / escala;
-  const visibleY = alto / escala;
+  const visibleY = alto / (escala * INC);
   ctx.fillStyle = 'rgba(255,255,255,0.18)';
   const grosor = Math.max(2, Math.round(TAM_CELDA * escala));
   for (let y = Math.floor((cam.y - visibleY / 2) / paso) * paso; y < cam.y + visibleY / 2 + paso; y += paso) {
-    const py = Math.round((y - cam.y) * escala + alto / 2);
+    const py = Math.round((y - cam.y) * escala * INC + alto / 2);
     ctx.fillRect(0, py, ancho, grosor);
   }
   for (let x = Math.floor((cam.x - visibleX / 2) / paso) * paso; x < cam.x + visibleX / 2 + paso; x += paso) {
@@ -135,19 +179,25 @@ function dibujarBalon(ctx, x, y, r, oscuro = false) {
   ctx.fillRect(x - u, y - u, u * 2, u * 2);
 }
 
-function dibujarProyectil(ctx, p) {
-  if (p.grande) {
-    // estela de píxeles
-    const l = Math.hypot(p.vx, p.vy) || 1;
-    for (let i = 1; i <= 3; i += 1) {
-      ctx.globalAlpha = 0.35 / i;
-      ctx.fillStyle = '#ffd166';
-      const r = p.r * (1 - i * 0.18);
-      ctx.fillRect(p.x - (p.vx / l) * i * 9 - r * 0.7, p.y - (p.vy / l) * i * 9 - r * 0.7, r * 1.4, r * 1.4);
-    }
-    ctx.globalAlpha = 1;
+/** Estela de cuadraditos detrás de un balón, tanto más larga cuanto más rápido va. */
+function estela(ctx, p, color, n) {
+  const v = Math.hypot(p.vx, p.vy) || 1;
+  const largo = Math.min(14, 5 + v / 90);
+  for (let i = 1; i <= n; i += 1) {
+    ctx.globalAlpha = 0.4 / i;
+    ctx.fillStyle = color;
+    const r = p.r * (1 - i * 0.16);
+    ctx.fillRect(p.x - (p.vx / v) * i * largo - r * 0.7, p.y - (p.vy / v) * i * largo - r * 0.7, r * 1.4, r * 1.4);
   }
-  dibujarBalon(ctx, p.x, p.y, p.r, false);
+  ctx.globalAlpha = 1;
+}
+
+function dibujarProyectil(ctx, p) {
+  sombra(ctx, p.x, p.y + p.r * 1.6, p.r * 0.9, p.r * 0.3);
+  recto(ctx, p.x, p.y, () => {
+    estela(ctx, p, p.grande ? '#ffd166' : '#ffffff', p.grande ? 4 : 3);
+    dibujarBalon(ctx, p.x, p.y, p.r, false);
+  });
 }
 
 function dibujarBanderin(ctx, b, t) {
@@ -268,7 +318,11 @@ function dibujarAvisoJefe(ctx, a) {
 }
 
 function dibujarDisparoEnemigo(ctx, d) {
-  dibujarBalon(ctx, d.x, d.y, d.r, true);
+  sombra(ctx, d.x, d.y + d.r * 1.6, d.r * 0.9, d.r * 0.3);
+  recto(ctx, d.x, d.y, () => {
+    estela(ctx, d, '#ff5b3a', 3);
+    dibujarBalon(ctx, d.x, d.y, d.r, true);
+  });
 }
 
 
@@ -407,9 +461,13 @@ function dibujarGrada(ctx, g) {
 const COLOR_PREMIO = { cura: '#4ade80', xp: '#5cc8ff', energia: '#ffd166', iman: '#ff7b8b' };
 
 function dibujarPremio(ctx, p, t) {
+  sombra(ctx, p.x, p.y + 14, 11, 3.5);
+  recto(ctx, p.x, p.y + 14, () => dibujarPremioRecto(ctx, p, t));
+}
+
+function dibujarPremioRecto(ctx, p, t) {
   const bote = Math.sin(t * 4 + p.x) * 3;
   const y = p.y + bote;
-  sombra(ctx, p.x, p.y + 14, 11, 3.5);
   ctx.globalAlpha = 0.22 + 0.1 * Math.sin(t * 6 + p.y);
   ctx.fillStyle = COLOR_PREMIO[p.tipo];
   ctx.beginPath();
@@ -457,7 +515,7 @@ function dibujarFlechasPremios(ctx, mundo, cam, ancho, alto, escala, t) {
   const m = 26;
   mundo.premios.forEach((p) => {
     const sx = ancho / 2 + (p.x - cam.x) * escala;
-    const sy = alto / 2 + (p.y - cam.y) * escala;
+    const sy = alto / 2 + (p.y - cam.y) * escala * INC;
     if (sx > 0 && sx < ancho && sy > 0 && sy < alto) return;
     const dx = sx - ancho / 2;
     const dy = sy - alto / 2;
@@ -534,16 +592,7 @@ function dibujarEnemigo(ctx, e, t) {
     ctx.fillStyle = 'rgba(143,216,255,.35)';
     ctx.fillRect(e.x - alto * 0.3, e.y + alto * 0.38, alto * 0.6, alto * 0.1);
   }
-  dibujarSprite(ctx, sprite, e.x, e.y - bote - altura, alto, frame, (e.mx || 0) < 0, e.flash > 0);
-
-  // Rival normal que va a embestir: se agacha y aparece un «!»
-  if (e.aviso > 0) {
-    ctx.fillStyle = '#ff3b3b';
-    ctx.fillRect(e.x - 2, e.y - alto / 2 - 16, 4, 9);
-    ctx.fillRect(e.x - 2, e.y - alto / 2 - 5, 4, 4);
-  }
-
-  // Aviso de embestida (Messi, el autobús de Mourinho): línea roja hacia donde va a salir
+  // Aviso de embestida (Messi, el autobús de Mourinho): línea roja en el suelo hacia donde va a salir
   if (quieto) {
     ctx.save();
     ctx.globalAlpha = 0.55;
@@ -555,6 +604,25 @@ function dibujarEnemigo(ctx, e, t) {
     ctx.lineTo(e.x + e.dirX * (e.largoAviso || 340), e.y + e.dirY * (e.largoAviso || 340));
     ctx.stroke();
     ctx.restore();
+  }
+  recto(ctx, e.x, e.y + alto * 0.46, () => dibujarEnemigoRecto(ctx, e, t, sprite, alto, frame, bote, altura, quieto));
+}
+
+function dibujarEnemigoRecto(ctx, e, t, sprite, alto, frame, bote, altura, quieto) {
+  // Al recibir un golpe se aplasta un instante; al correr se inclina hacia delante
+  const golpe = Math.min(1, (e.flash || 0) / 0.1);
+  const corre = quieto ? 0 : Math.sin(t * 9 + e.anim) * 0.04;
+  const inclina = quieto ? 0 : (e.mx || 0) * -0.05 + corre;
+  const pies = e.y + alto * 0.46 - altura;
+  deformar(ctx, e.x, pies, 1 + 0.18 * golpe, 1 - 0.16 * golpe, inclina, () => {
+    dibujarSprite(ctx, sprite, e.x, e.y - bote - altura, alto, frame, (e.mx || 0) < 0, e.flash > 0);
+  });
+
+  // Rival normal que va a embestir: se agacha y aparece un «!»
+  if (e.aviso > 0) {
+    ctx.fillStyle = '#ff3b3b';
+    ctx.fillRect(e.x - 2, e.y - alto / 2 - 16, 4, 9);
+    ctx.fillRect(e.x - 2, e.y - alto / 2 - 5, 4, 4);
   }
 
   if (e.jefe || (e.vida < e.vidaMax && e.r >= 19)) {
@@ -584,10 +652,21 @@ function dibujarJugador(ctx, j, t) {
     ctx.restore();
   }
   sombra(ctx, j.x, j.y + alto * 0.46, alto * 0.27, alto * 0.07);
-  if (parpadeo) ctx.globalAlpha = 0.55;
-  const bote = j.moviendo ? Math.abs(Math.sin(t * 10)) * 1.5 : 0;
-  dibujarSprite(ctx, sprite, j.x, j.y - bote, alto, frame, j.dirX < 0, j.flash > 0);
-  ctx.globalAlpha = 1;
+  recto(ctx, j.x, j.y + alto * 0.46, () => {
+    if (parpadeo) ctx.globalAlpha = 0.55;
+    const vel = Math.hypot(j.vx || 0, j.vy || 0);
+    const rapido = Math.min(1, vel / 190);
+    const bote = j.moviendo ? Math.abs(Math.sin(t * 10)) * (1.5 + 2 * rapido) : Math.sin(t * 2.5) * 0.6;
+    // Se inclina hacia donde corre, se estira al acelerar y se aplasta al recibir un golpe
+    const giro = Math.max(-1, Math.min(1, (j.vx || 0) / 190)) * 0.14;
+    const golpe = Math.min(1, (j.flash || 0) / 0.12);
+    const sy = 1 + 0.06 * rapido - 0.14 * golpe;
+    const sx = 1 - 0.04 * rapido + 0.16 * golpe;
+    deformar(ctx, j.x, j.y + alto * 0.46, sx, sy, giro, () => {
+      dibujarSprite(ctx, sprite, j.x, j.y - bote, alto, frame, j.dirX < 0, j.flash > 0);
+    });
+    ctx.globalAlpha = 1;
+  });
 }
 
 /**
@@ -607,19 +686,22 @@ export function dibujar(ctx, mundo, vista) {
     tremorX = (Math.random() - 0.5) * mundo.sacudida * 26;
     tremorY = (Math.random() - 0.5) * mundo.sacudida * 26;
   }
-  const cam = { x: j.x + tremorX, y: j.y + tremorY };
+  if (!mundo.camara) mundo.camara = { x: j.x, y: j.y };
+  const cam = { x: mundo.camara.x + tremorX, y: mundo.camara.y + tremorY };
+  profCamY = cam.y;
+  profMitad = alto / escala / INC / 2;
 
   dibujarCesped(ctx, cam, ancho, alto, escala);
 
   ctx.save();
   ctx.translate(ancho / 2, alto / 2);
-  ctx.scale(escala, escala);
+  ctx.scale(escala, escala * INC);
   ctx.translate(-cam.x, -cam.y);
   ctx.imageSmoothingEnabled = false;
 
   // Solo se dibuja lo que cae dentro de la pantalla
   const mx = ancho / escala / 2 + 80;
-  const my = alto / escala / 2 + 80;
+  const my = alto / (escala * INC) / 2 + 80;
   const visible = (o) => Math.abs(o.x - cam.x) < mx && Math.abs(o.y - cam.y) < my;
 
   const area = terrenoVisible(mundo.terreno, cam.x - mx, cam.y - my, cam.x + mx, cam.y + my);
@@ -628,8 +710,8 @@ export function dibujar(ctx, mundo, vista) {
 
   mundo.avisosJefe.forEach((a) => dibujarAvisoJefe(ctx, a));
   mundo.premios.forEach((p) => visible(p) && dibujarPremio(ctx, p, t));
-  mundo.gemas.forEach((g) => visible(g) && dibujarGema(ctx, g, t));
-  mundo.curas.forEach((c) => visible(c) && dibujarCura(ctx, c, t));
+  mundo.gemas.forEach((g) => visible(g) && recto(ctx, g.x, g.y, () => dibujarGema(ctx, g, t)));
+  mundo.curas.forEach((c) => visible(c) && recto(ctx, c.x, c.y, () => dibujarCura(ctx, c, t)));
   mundo.ondas.forEach((o) => dibujarOnda(ctx, o));
 
   // Los rivales más abajo en pantalla se dibujan delante
@@ -643,11 +725,11 @@ export function dibujar(ctx, mundo, vista) {
 
   if (mundo.estado !== 'fin') dibujarJugador(ctx, j, t);
   mundo.tajos.forEach(dibujarTajo.bind(null, ctx));
-  j.banderines.forEach((b) => dibujarBanderin(ctx, b, t));
+  j.banderines.forEach((b) => recto(ctx, b.x, b.y, () => dibujarBanderin(ctx, b, t)));
   mundo.proyectiles.forEach((p) => dibujarProyectil(ctx, p));
   mundo.disparosEnemigos.forEach((d) => dibujarDisparoEnemigo(ctx, d));
   mundo.rayos.forEach((r) => dibujarRayo(ctx, r));
-  mundo.tarjetas.forEach((tr) => dibujarTarjeta(ctx, tr));
+  mundo.tarjetas.forEach((tr) => recto(ctx, tr.x, tr.y, () => dibujarTarjeta(ctx, tr)));
 
   mundo.particulas.forEach((p) => {
     ctx.globalAlpha = Math.max(0, p.vida / p.total);
@@ -660,11 +742,19 @@ export function dibujar(ctx, mundo, vista) {
   ctx.font = '700 14px "Plus Jakarta Sans", system-ui, sans-serif';
   mundo.textos.forEach((tx) => {
     ctx.globalAlpha = Math.min(1, (tx.vida / tx.total) * 1.5);
-    ctx.lineWidth = 3;
-    ctx.strokeStyle = 'rgba(0,0,0,.6)';
-    ctx.strokeText(tx.texto, tx.x, tx.y);
-    ctx.fillStyle = tx.color;
-    ctx.fillText(tx.texto, tx.x, tx.y);
+    const edad = 1 - tx.vida / tx.total;
+    const pop = 1 + 0.7 * Math.max(0, 1 - edad * 7); // nace grande y se encoge de golpe
+    recto(ctx, tx.x, tx.y, () => {
+      ctx.save();
+      ctx.translate(tx.x, tx.y);
+      ctx.scale(pop, pop);
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,.6)';
+      ctx.strokeText(tx.texto, 0, 0);
+      ctx.fillStyle = tx.color;
+      ctx.fillText(tx.texto, 0, 0);
+      ctx.restore();
+    });
   });
   ctx.globalAlpha = 1;
   ctx.restore();

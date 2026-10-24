@@ -252,6 +252,7 @@ test('las habilidades nuevas de los jefes existen: espiral, muro, salto de Crist
     jefe.vida = jefe.vidaMax * [1, 0.5, 0.2][fase - 1];
     const visto = {};
     for (let i = 0; i < segundos * 60; i++) {
+      if (mundo.estado === 'mejora') m.elegirMejora(mundo, mundo.opciones[0].id);
       m.avanzar(mundo, PASO, { x: 0, y: 0 });
       mundo.jugador.x = 0; mundo.jugador.y = 0;
       cuando(mundo, jefe, visto);
@@ -282,4 +283,22 @@ test('una partida con rivales, gradas, barro y lluvia corriendo no genera valore
   assert.ok(Number.isFinite(mundo.jugador.x) && Number.isFinite(mundo.jugador.y));
   assert.ok(mundo.enemigos.length <= 320 && mundo.disparosEnemigos.length <= 90);
   for (const e of mundo.enemigos) assert.ok(Number.isFinite(e.x) && Number.isFinite(e.y));
+});
+
+test('el jugador acelera y frena con un poco de inercia, y la cámara 3/4 sigue sin errores', async () => {
+  const { m, mundo } = await mundoLimpio(7);
+  const j = mundo.jugador;
+  m.avanzar(mundo, PASO, { x: 1, y: 0 });
+  const primera = j.vx;
+  for (let i = 0; i < 60; i++) m.avanzar(mundo, PASO, { x: 1, y: 0 });
+  assert.ok(primera > 0 && primera < j.vx * 0.6, 'arranca poco a poco');
+  const corriendo = j.vx;
+  m.avanzar(mundo, PASO, { x: 0, y: 0 });
+  assert.ok(j.vx > 0 && j.vx < corriendo, 'al soltar la tecla sigue un instante y frena');
+  for (let i = 0; i < 60; i++) m.avanzar(mundo, PASO, { x: 0, y: 0 });
+  assert.ok(Math.abs(j.vx) < 1, 'acaba parándose');
+  const R = await cargar('render.js');
+  mundo.camara = null;
+  R.actualizarCamara(mundo, 1 / 60);
+  assert.ok(Number.isFinite(mundo.camara.x) && Number.isFinite(mundo.camara.y));
 });

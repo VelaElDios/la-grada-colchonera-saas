@@ -42,6 +42,7 @@ export function lanzarUlti(mundo) {
     mundo.ondas.push({ x: j.x, y: j.y, radio: 220, vida: 0.6, total: 0.6, ulti: true });
   }
 
+  mundo.congelar = Math.max(mundo.congelar, 0.1);
   j.ulti.carga = 0;
   j.ulti.usos += 1;
   j.ulti.max = Math.min(ULTI.tope, ULTI.base + ULTI.incremento * j.ulti.usos);
