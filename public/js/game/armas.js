@@ -11,7 +11,7 @@ const ALCANCE_BALON = 520;
 const ARBITRO = new Set(['silbato', 'tarjeta', 'var']);
 
 /** Tiempo hasta el siguiente disparo: tiene en cuenta mejoras de recarga, combinaciones y la Furia Roja. */
-const recarga = (j, base, clave) => base * j.mult.cd * (j.furia > 0 ? 0.5 : 1) * (ARBITRO.has(clave) ? 1 - (j.mult.cdArbitro ?? 0) : 1);
+const recarga = (j, base, clave) => Math.max(ARMAS[clave]?.cdMin ?? 0, base * j.mult.cd * (j.furia > 0 ? 0.5 : 1) * (ARBITRO.has(clave) ? 1 - (j.mult.cdArbitro ?? 0) : 1));
 
 /** Programa algo que el jugador hace dentro de `t` segundos (remates escalonados, caída de vaselinas...). */
 export function programarJugador(mundo, t, hacer) {
@@ -528,7 +528,7 @@ export function actualizarFuegos(mundo, dt) {
   }
 }
 
-/** Quemaduras (Bota de Oro y bengalas): un golpe de fuego cada medio segundo mientras dure. */
+/** Quemaduras (Botas en llamas y bengalas): un golpe de fuego cada medio segundo mientras dure. */
 export function actualizarQuemaduras(mundo, dt) {
   for (let i = 0; i < mundo.enemigos.length; i += 1) {
     const e = mundo.enemigos[i];

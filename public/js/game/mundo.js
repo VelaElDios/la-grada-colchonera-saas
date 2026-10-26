@@ -1,7 +1,7 @@
 // Simulación del juego: sin dibujar nada y sin tocar el DOM, así se puede probar con node:test.
 // Estados: 'jugando' → 'mejora' (elegir mejora al subir de nivel) → 'jugando' ... → 'fin'.
 import {
-  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PREMIOS, FISICA, xpParaSubir, CURAS, AYUDA_INICIAL, CURTIDOS, AMBIENTES, ambienteDe,
+  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PIES, PREMIOS, FISICA, xpParaSubir, CURAS, AYUDA_INICIAL, CURTIDOS, AMBIENTES, ambienteDe,
 } from './config.js';
 import { crearRng, crearCuadricula, normalizar } from './util.js';
 import {
@@ -62,6 +62,8 @@ export function crearMundo({
       x: 0,
       y: 0,
       r: JUGADOR.radio,
+      pies: JUGADOR.radio * PIES.alto, // con el terreno se choca con los pies (ver PIES en config.js)
+      rPies: JUGADOR.radio * PIES.radio,
       vida: 1,
       vidaMax: 1,
       velBase: posicion.vel,
@@ -103,7 +105,7 @@ export function crearMundo({
       bonoAnimo: ENTRENADORES.cholo.ulti.bonoDano,
       entrenamiento: entrenamiento ? { ...entrenamiento } : null, // estadísticas del club { vida, defensa, disparo, suerte }
       poder: { oro: 0, oroPerfora: 0, fuego: 0, guantes: 0, guantesCada: 16, prorroga: 0 },
-      guantes: { cargas: 0, max: 0, t: 0 }, // Guante de Oro: golpes que puede parar
+      guantes: { cargas: 0, max: 0, t: 0 }, // Paradón: golpes que puede parar
       prorrogas: 0, // veces que ya se ha levantado
     },
     enemigos: [],
@@ -277,7 +279,7 @@ function moverEnemigos(mundo, dt) {
         e.rayoT -= dt;
         if (e.rayoT <= 0) {
           e.rayoT = 0.15;
-          if ((e.rodeoT > 0.4 && rayoLibre(terreno, e.x, e.y, j.x, j.y, 400, e.r)) || e.rodeoT > 7) e.rodeo = 0;
+          if ((e.rodeoT > 0.4 && rayoLibre(terreno, e.x, e.y + (e.pies ?? 0), j.x, j.y + (j.pies ?? 0), 400, e.rPies ?? e.r)) || e.rodeoT > 7) e.rodeo = 0;
         }
         if (e.rodeo && !(Number.isFinite(e.nx) && Number.isFinite(e.ny))) e.rodeo = 0; // sin pared a la que seguir, no rodea (evitaba NaN)
         if (e.rodeo) {

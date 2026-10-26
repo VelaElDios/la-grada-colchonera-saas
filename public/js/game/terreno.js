@@ -184,12 +184,19 @@ const ALTO = {
 };
 /** Obstáculos «bajos»: no se pueden cruzar andando, pero los balones pasan por encima. */
 const BAJOS = new Set(['talud', 'valla', 'banco', 'roca', 'fuente']);
+/**
+ * Obstáculos «macizos»: su colisión es TODO lo que se ve (base + altura dibujada), para que nunca puedas meterte
+ * detrás de un tejado o de una grada y desaparecer. En ellos `y`/`h` describen el rectángulo completo que se ve
+ * y `hBase` el fondo de la base (lo que usa el dibujo). Árboles, focos y farolas solo chocan por la base.
+ */
+export const MACIZOS = new Set(['grada', 'tienda', 'kiosco', 'monumento', 'pantalla', 'porteria', 'banquillo', 'cartel', 'banco', 'roca']);
 
 /** Contenido de la celda (cx, cy). Se calcula una vez y se guarda. */
 export function celda(t, cx, cy) {
-  const clave = `${cx},${cy}`;
-  let c = t.celdas.get(clave);
+  const numero = (cx + 32768) * 65536 + (cy + 32768); // clave numérica: más rápida que un texto
+  let c = t.celdas.get(numero);
   if (c) return c;
+  const clave = `${cx},${cy}`;
   const s = t.semilla;
   const L = T();
   const ox = cx * L;
@@ -204,8 +211,13 @@ export function celda(t, cx, cy) {
   const choca = (a, b, margen) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 + margen && Math.abs(a.y - b.y) < (a.h + b.h) / 2 + margen;
   const dentro = (o) => o.x - o.w / 2 >= ox && o.x + o.w / 2 <= ox + L && o.y - o.h / 2 >= oy && o.y + o.h / 2 <= oy + L;
   /** Mete un obstáculo si cabe en la celda y no estorba (salida, pasillo del menú, otros obstáculos). */
+  /** En los macizos, (x, y) es el centro de todo lo que se ve y `h` el fondo de la base: se ve y choca h + alto. */
   const meter = (tipo, x, y, w, h, extra = {}, margen = 18) => {
     const o = { tipo, x, y, w, h, alto: ALTO[tipo] ?? 20, bajo: BAJOS.has(tipo), id: nuevaId(), semilla: Math.floor(r() * 1e6), ...extra };
+    if (MACIZOS.has(tipo)) {
+      o.hBase = h;
+      o.h = h + o.alto;
+    }
     if (!dentro(o)) return null;
     if (tipo !== 'talud' && distOrigen(o) < TERRENO.claroInicial) return null;
     if (t.pasillo && Math.abs(o.y) < t.pasillo + o.h / 2 + 40) return null;
@@ -291,10 +303,10 @@ export function celda(t, cx, cy) {
     // Campo vertical con porterías arriba y abajo, focos en las esquinas y vallas publicitarias detrás de cada portería
     const campo = { tipo: 'campo', x: mx, y: my, w: 470, h: 560 };
     c.suelo.push(campo);
-    meter('porteria', mx, oy + 40 + 18, 130, 34, {}, 4);
-    meter('porteria', mx, oy + L - 40 - 18, 130, 34, {}, 4);
+    meter('porteria', mx, oy + 40, 130, 34, {}, 4);
+    meter('porteria', mx, oy + L - 81, 130, 34, {}, 4);
     for (const [fx, fy] of [[ox + 26, oy + 30], [ox + L - 26, oy + 30], [ox + 26, oy + L - 30], [ox + L - 26, oy + L - 30]]) meter('foco', fx, fy, 40, 40);
-    for (const fila of [oy + 14, oy + L - 14]) {
+    for (const fila of [oy + 20, oy + L - 20]) {
       for (const xx of [ox + 80, ox + L - 80]) meter('cartel', xx, fila, 130, 20, {}, 4);
     }
     meter('banquillo', ox + 50, my, 44, 120, { vertical: true, alto: 14 }, 4);
@@ -304,14 +316,15 @@ export function celda(t, cx, cy) {
     // Grada a lo largo del lado que da al estadio, con un vomitorio en medio; detrás, explanada con puestos
     const fondo = 150;
     const hueco = 130;
-    const largo = (L - 60 - hueco) / 2;
+    const largo = (L - 60 - hueco) / 2; // lo que se ve de cada pieza
     const m = lote.mira;
     const piezas = [];
     if (m === 'e' || m === 'o') {
       const x = m === 'e' ? ox + L - 24 - fondo / 2 : ox + 24 + fondo / 2;
-      piezas.push([x, oy + 30 + largo / 2, fondo, largo], [x, oy + L - 30 - largo / 2, fondo, largo]);
+      piezas.push([x, oy + 30 + largo / 2, fondo, largo - ALTO.grada], [x, oy + L - 30 - largo / 2, fondo, largo - ALTO.grada]);
     } else {
-      const y = m === 's' ? oy + L - 24 - fondo / 2 : oy + 24 + fondo / 2;
+      const visto = fondo + ALTO.grada;
+      const y = m === 's' ? oy + L - 24 - visto / 2 : oy + 24 + visto / 2;
       piezas.push([ox + 30 + largo / 2, y, largo, fondo], [ox + L - 30 - largo / 2, y, largo, fondo]);
     }
     piezas.forEach(([x, y, w, h]) => meter('grada', x, y, w, h, { mira: m }, 4));
@@ -338,17 +351,17 @@ export function celda(t, cx, cy) {
       for (const [dx, dy] of [[-150, -140], [150, -140], [-150, 150], [150, 150]]) meter('farola', mx + jx + dx, my + jy + dy, 12, 10);
       for (const [dx, dy] of [[0, 120], [-150, 10], [150, 10]]) meter('banco', mx + jx + dx, my + jy + dy, 56, 16);
       for (const [dx, dy] of [[-230, 200], [230, 200], [-230, -170], [230, -170]]) if (r() < 0.7) meter('arbol', mx + jx + dx, my + jy + dy, 22, 14, { maceta: true, copa: 30 + 8 * r() });
-      if (r() < 0.5) meter('tienda', mx + (r() < 0.5 ? -160 : 160), oy + 64, 210, 96);
+      if (r() < 0.5) meter('tienda', mx + (r() < 0.5 ? -160 : 160), oy + 100, 210, 96);
     } else if (variante === 'tiendas') {
       // Calle comercial: fila de tiendas deportivas mirando a una calle peatonal, puestos y farolas
-      const cyCalle = oy + 250 + r() * 140;
+      const cyCalle = oy + 290 + r() * 100;
       c.suelo.push({ tipo: 'calle', x: mx, y: cyCalle, w: L, h: 170 });
       const n = r() < 0.5 ? 2 : 3;
       const ancho = n === 3 ? 180 : 220;
-      for (let i = 0; i < n; i += 1) meter('tienda', ox + (L / n) * (i + 0.5), cyCalle - 85 - 52, ancho, 96, { marca: i + Math.floor(r() * 5) });
+      for (let i = 0; i < n; i += 1) meter('tienda', ox + (L / n) * (i + 0.5), cyCalle - 85 - 92, ancho, 96, { marca: i + Math.floor(r() * 5) });
       for (let i = 0; i < 4; i += 1) meter('farola', ox + 80 + i * 160, cyCalle + 70, 12, 10);
       meter('kiosco', ox + 140 + r() * 360, cyCalle + 150, 86, 54);
-      for (let i = 0; i < 3; i += 1) meter('arbol', ox + 90 + i * 230 + r() * 40, cyCalle + 230 + r() * 50, 22, 14, { copa: 32 + 10 * r() });
+      for (let i = 0; i < 3; i += 1) meter('arbol', ox + 90 + i * 230 + r() * 40, cyCalle + 200 + r() * 30, 22, 14, { copa: 32 + 10 * r() });
     } else if (variante === 'pista') {
       // Pista de fútbol sala enjaulada (con puertas), con focos
       const w = 260;
@@ -421,7 +434,8 @@ export function celda(t, cx, cy) {
       if (caminoEn(t, x, y)) {
         if ((lote.tipo === 'parque' || lote.tipo === 'entrenamiento') && azar(s, bx + i, by + k, 84) < 0.2) {
           const lado = azar(s, bx + i, by + k, 85) < 0.5 ? -1 : 1;
-          if (!caminoEn(t, x, y + lado * 34)) meter(azar(s, bx + i, by + k, 86) < 0.6 ? 'banco' : 'farola', x, y + lado * 34, 56, 16);
+          const banco = azar(s, bx + i, by + k, 86) < 0.6;
+          if (!caminoEn(t, x, y + lado * 34)) meter(banco ? 'banco' : 'farola', x, y + lado * 34, banco ? 56 : 12, banco ? 16 : 10);
         }
         continue;
       }
@@ -435,7 +449,7 @@ export function celda(t, cx, cy) {
   }
   if (r() < 0.18 && lote.tipo !== 'estadio') adorno('balon', ox + L * (0.1 + 0.8 * r()), oy + L * (0.1 + 0.8 * r()));
 
-  t.celdas.set(clave, c);
+  t.celdas.set(numero, c);
   if (t.celdas.size > 3000) t.celdas.delete(t.celdas.keys().next().value);
   return c;
 }
@@ -469,12 +483,24 @@ export function zonaEn(t, x, y) {
 }
 
 /** Llama a `fn` con cada obstáculo de las celdas que rodean el punto. */
-export function obstaculosCerca(t, x, y, fn) {
-  const cx = celdaDe(x);
-  const cy = celdaDe(y);
-  for (let i = cx - 1; i <= cx + 1; i += 1) {
-    for (let k = cy - 1; k <= cy + 1; k += 1) {
-      for (const o of celda(t, i, k).obstaculos) fn(o);
+/**
+ * Llama a `fn` con cada obstáculo que puede tocar el círculo (x, y, r). Como cada obstáculo cabe entero en su
+ * celda, basta con mirar las celdas que pisa ese círculo (casi siempre una) y descartar lo que queda lejos.
+ */
+export function obstaculosCerca(t, x, y, fn, r = 64) {
+  const L = TERRENO.celda;
+  const x0 = Math.floor((x - r) / L);
+  const x1 = Math.floor((x + r) / L);
+  const y0 = Math.floor((y - r) / L);
+  const y1 = Math.floor((y + r) / L);
+  for (let i = x0; i <= x1; i += 1) {
+    for (let k = y0; k <= y1; k += 1) {
+      const lista = celda(t, i, k).obstaculos;
+      for (let n = 0; n < lista.length; n += 1) {
+        const o = lista[n];
+        if (Math.abs(o.x - x) > o.w / 2 + r || Math.abs(o.y - y) > o.h / 2 + r) continue;
+        fn(o);
+      }
     }
   }
 }
@@ -504,15 +530,19 @@ export function resolver(t, ent, tx = 0, ty = 0, deslizar = 0) {
   let choco = false;
   let sumaNx = 0;
   let sumaNy = 0;
-  obstaculosCerca(t, ent.x, ent.y, (g) => {
+  // Se choca con los PIES (como se ve en la vista 3/4): un círculo algo por debajo del centro del muñeco
+  const pies = ent.pies ?? 0;
+  const r = ent.rPies ?? ent.r;
+  obstaculosCerca(t, ent.x, ent.y + pies, (g) => {
+    const ey = ent.y + pies;
     const hx = g.w / 2;
     const hy = g.h / 2;
     const px = Math.max(g.x - hx, Math.min(ent.x, g.x + hx));
-    const py = Math.max(g.y - hy, Math.min(ent.y, g.y + hy));
+    const py = Math.max(g.y - hy, Math.min(ey, g.y + hy));
     const dx = ent.x - px;
-    const dy = ent.y - py;
+    const dy = ey - py;
     const d2 = dx * dx + dy * dy;
-    if (d2 >= ent.r * ent.r) return;
+    if (d2 >= r * r) return;
     choco = true;
     let nx;
     let ny;
@@ -520,15 +550,15 @@ export function resolver(t, ent, tx = 0, ty = 0, deslizar = 0) {
       const d = Math.sqrt(d2);
       nx = dx / d;
       ny = dy / d;
-      ent.x = px + nx * ent.r;
-      ent.y = py + ny * ent.r;
+      ent.x = px + nx * r;
+      ent.y = py + ny * r - pies;
     } else {
-      // El centro está dentro del obstáculo: se sale por el lado más cercano
+      // Los pies están dentro del obstáculo: se sale por el lado más cercano
       const sx = ent.x < g.x ? -1 : 1;
-      const sy = ent.y < g.y ? -1 : 1;
+      const sy = ey < g.y ? -1 : 1;
       const salX = hx - Math.abs(ent.x - g.x);
-      const salY = hy - Math.abs(ent.y - g.y);
-      if (salX < salY) { nx = sx; ny = 0; ent.x = g.x + sx * (hx + ent.r); } else { nx = 0; ny = sy; ent.y = g.y + sy * (hy + ent.r); }
+      const salY = hy - Math.abs(ey - g.y);
+      if (salX < salY) { nx = sx; ny = 0; ent.x = g.x + sx * (hx + r); } else { nx = 0; ny = sy; ent.y = g.y + sy * (hy + r) - pies; }
     }
     if (deslizar > 0) {
       // Tangente a la pared. La primera vez se elige el sentido que acerca al objetivo y después se mantiene
@@ -543,7 +573,7 @@ export function resolver(t, ent, tx = 0, ty = 0, deslizar = 0) {
       ent.x += tgx * deslizar;
       ent.y += tgy * deslizar;
     }
-  });
+  }, r + 2);
   if (sumaNx || sumaNy) {
     const l = Math.hypot(sumaNx, sumaNy);
     ent.nx = sumaNx / l;
@@ -563,7 +593,7 @@ export function tocaGrada(t, x, y, r = 0, bajos = false) {
     const px = Math.max(g.x - g.w / 2, Math.min(x, g.x + g.w / 2));
     const py = Math.max(g.y - g.h / 2, Math.min(y, g.y + g.h / 2));
     if ((x - px) ** 2 + (y - py) ** 2 <= r * r) toca = true;
-  });
+  }, r + 1);
   return toca;
 }
 

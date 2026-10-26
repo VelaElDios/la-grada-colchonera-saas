@@ -308,18 +308,32 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
   .detalle__stats { grid-template-columns: 1fr; }
 }
 
-/* ---------- Combinaciones (las metas) ---------- */
-.combos__cuenta { font-weight: 800; color: var(--ambar); }
-.combos { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--s-2); max-height: min(42vh, 360px); overflow-y: auto; }
-.combo { display: grid; grid-template-columns: auto 1fr; gap: 4px var(--s-3); padding: var(--s-3); border-radius: var(--r-md); background: rgb(255 255 255 / 0.05); border: 1px solid var(--borde); color: var(--gris-300); }
+/* ---------- Combinaciones (las metas) y ultras: todas a la vista ---------- */
+.pantalla__caja--combos { width: min(100%, 1120px); }
+.combos__filtros { display: flex; flex-wrap: wrap; gap: 8px; }
+.combos__cuenta { font-weight: 800; color: var(--ambar); text-transform: none; letter-spacing: 0; font-size: var(--t-sm); margin-left: 8px; }
+.combos { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--s-2); }
+.combo { display: grid; grid-template-columns: auto 1fr; gap: 4px var(--s-3); padding: var(--s-3); border-radius: var(--r-md); background: rgb(255 255 255 / 0.05); border: 1px solid var(--borde); color: var(--gris-300); align-items: start; }
 .combo--hecha { background: rgb(255 209 102 / 0.1); border-color: rgb(255 209 102 / 0.7); color: #fff; }
-.combo__icono { grid-row: 1 / span 2; display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-md); background: rgb(0 0 0 / 0.25); }
+.combo--imposible { opacity: 0.55; }
+.combo__icono { display: grid; place-items: center; width: 40px; height: 40px; border-radius: var(--r-md); background: rgb(0 0 0 / 0.25); color: #9fd8ff; }
 .combo--hecha .combo__icono { color: var(--ambar); }
-.combo__cuerpo { display: grid; gap: 2px; font-size: var(--t-sm); }
-.combo__cuerpo strong { color: #fff; }
-.combo__cuerpo small { font-size: 11px; color: var(--gris-300); }
-.combo__marca { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #8ee6a0; }
-.combo--imposible .combo__marca { color: var(--gris-300); }
+.combo__cuerpo { display: grid; gap: 4px; font-size: var(--t-sm); min-width: 0; }
+.combo__cabeza { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.combo__cabeza strong { color: #fff; font-size: var(--t-base); }
+.combo__estado { font-style: normal; font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #8ee6a0; white-space: nowrap; }
+.combo--hecha .combo__estado { color: var(--ambar); }
+.combo--imposible .combo__estado { color: var(--gris-300); }
+.combo__bonus { color: #e8ecff; }
+.combo__titulo { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; color: var(--color-ultra, var(--ambar)); }
+.combo__pide { font-size: var(--t-xs); color: var(--gris-300); }
+.combo__reqs { display: flex; flex-wrap: wrap; gap: 4px; }
+.combo__ultras { font-size: 11px; color: #ffd24a; }
+.req { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: var(--r-pill); font-size: 11px; background: rgb(255 255 255 / 0.08); border: 1px solid rgb(255 255 255 / 0.12); color: #dfe4ff; white-space: nowrap; }
+.req b { color: #fff; }
+.req--tuyo { border-color: rgb(142 230 160 / 0.6); color: #c8f5d2; }
+.req--no { border-style: dashed; color: var(--gris-300); text-decoration: line-through; text-decoration-color: rgb(255 120 140 / 0.7); }
+.req--hecha { border-color: #ffd24a; background: rgb(255 210 74 / 0.18); color: #fff3c4; }
 .pieza--sinergia { border-color: rgb(255 209 102 / 0.95); box-shadow: 0 0 8px rgb(255 209 102 / 0.5); }
 .opcion__sinergia { display: block; margin-top: 2px; font-size: 11px; font-weight: 800; color: var(--ambar); }
 @media (max-width: 700px) { .combos { grid-template-columns: 1fr; } }
@@ -337,9 +351,14 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .club-estado[data-estado="error"], .club-estado[data-estado="libre"] { background: rgb(251 191 36 / 0.16); color: var(--ambar); }
 
 .rareza { display: inline-block; margin-left: 6px; padding: 1px 8px; border-radius: var(--r-pill); font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; background: rgb(255 255 255 / 0.12); color: #fff; vertical-align: middle; }
+.rareza--comun { background: #23936b; }
 .rareza--raro { background: #2c6fd6; }
 .rareza--epico { background: #8a3fd1; }
 .rareza--leyenda { background: linear-gradient(90deg, #ffb703, #ff7b39); color: #2a1200; }
+.rareza-color--comun { --rareza: #3fbf8f; --rareza-2: #1f8a62; }
+.rareza-color--raro { --rareza: #5a9dff; --rareza-2: #2c6fd6; }
+.rareza-color--epico { --rareza: #b57cff; --rareza-2: #7a34c4; }
+.rareza-color--leyenda { --rareza: #ffcf4a; --rareza-2: #ff7b39; }
 
 .ficha--bloqueada { opacity: 0.55; }
 .ficha--bloqueada .ficha__retrato { filter: grayscale(1) brightness(0.45); }
@@ -379,21 +398,24 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .contrato__cuenta { font-size: var(--t-lg); }
 .contrato__cuenta strong { font-size: 2rem; color: var(--ambar); margin-right: 4px; }
 .contrato__sub { font-size: var(--t-sm); color: var(--gris-300); }
-.contrato__progreso { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
-.contrato__progreso span { height: 12px; border-radius: 6px; background: rgb(255 255 255 / 0.12); }
-.contrato__progreso span.lleno { background: linear-gradient(90deg, #ff4d63, #ffd166); }
-.contrato__canjear { width: 100%; padding-block: var(--s-4); font-size: var(--t-lg); }
+.contrato__texto { flex: 1; min-width: 0; }
+.contrato__pips { display: flex; gap: 6px; }
+.contrato__pip { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: rgb(255 255 255 / 0.08); color: var(--gris-300); border: 2px solid rgb(255 255 255 / 0.14); }
+.contrato__pip--hecho { background: radial-gradient(circle at 35% 30%, #ffe08a, #ff9f1c); color: #4a2500; border-color: #ffd166; box-shadow: 0 0 12px rgb(255 209 102 / 0.45); }
+.contrato__canjear { width: 100%; padding-block: var(--s-4); font-size: var(--t-lg); display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
 .contrato__canjear:disabled { opacity: 0.4; cursor: not-allowed; }
-.probs { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
-.prob { display: grid; grid-template-columns: 8rem 1fr 4.5rem; align-items: center; gap: var(--s-3); font-size: var(--t-sm); }
-.prob small { color: var(--gris-300); }
-.prob b { text-align: right; font-variant-numeric: tabular-nums; }
-.prob__barra { display: block; height: 10px; border-radius: 5px; background: rgb(255 255 255 / 0.12); overflow: hidden; }
-.prob__barra span { display: block; height: 100%; background: #9aa6c8; }
-.prob.rareza--raro .prob__barra span { background: #2c6fd6; }
-.prob.rareza--epico .prob__barra span { background: #8a3fd1; }
-.prob.rareza--leyenda .prob__barra span { background: linear-gradient(90deg, #ffb703, #ff7b39); }
-.prob.rareza--comun .prob__barra span, .prob.rareza--raro, .prob.rareza--epico, .prob.rareza--leyenda { background: none; color: inherit; margin: 0; padding: 0; }
+.contrato__explica { margin: -6px 0 0; font-size: var(--t-xs); color: var(--gris-300); }
+.reparto { display: flex; height: 14px; border-radius: 7px; overflow: hidden; background: rgb(255 255 255 / 0.08); box-shadow: inset 0 0 0 1px rgb(255 255 255 / 0.12); }
+.reparto__tramo { min-width: 4px; background: linear-gradient(180deg, var(--rareza), var(--rareza-2)); }
+.reparto__tramo + .reparto__tramo { border-left: 2px solid rgb(7 11 34 / 0.85); }
+.rareza-tarjetas { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--s-2); }
+.rareza-tarjeta { position: relative; display: grid; justify-items: center; gap: 2px; padding: var(--s-3) var(--s-2) var(--s-2); border-radius: var(--r-md); background: linear-gradient(180deg, color-mix(in srgb, var(--rareza) 22%, transparent), rgb(255 255 255 / 0.03)); border: 1px solid color-mix(in srgb, var(--rareza) 60%, transparent); text-align: center; }
+.rareza-tarjeta__gema { width: 18px; height: 18px; transform: rotate(45deg); border-radius: 4px; background: linear-gradient(135deg, #fff 0 18%, var(--rareza) 19% 60%, var(--rareza-2) 61%); box-shadow: 0 0 10px color-mix(in srgb, var(--rareza) 70%, transparent); margin-bottom: 4px; }
+.rareza-tarjeta__nombre { font-size: var(--t-xs); font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; color: var(--rareza); }
+.rareza-tarjeta__pct { font-size: var(--t-lg); font-variant-numeric: tabular-nums; color: #fff; }
+.rareza-tarjeta small { font-size: 11px; color: var(--gris-300); }
+.rareza-tarjeta--vacia { opacity: 0.45; }
+@media (max-width: 560px) { .rareza-tarjetas { grid-template-columns: repeat(2, 1fr); } .contrato__ficha { flex-wrap: wrap; } }
 .contrato__detalle summary { cursor: pointer; font-size: var(--t-xs); color: var(--gris-300); }
 .prob-jugadores { margin: var(--s-2) 0 0; padding: 0; list-style: none; display: grid; gap: 4px; max-height: 180px; overflow-y: auto; }
 .prob-jugador { display: grid; grid-template-columns: 28px 1fr auto 4.5rem; align-items: center; gap: var(--s-2); font-size: var(--t-xs); }
@@ -403,7 +425,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .fichado { display: grid; grid-template-columns: auto 1fr; gap: var(--s-4); align-items: center; padding: var(--s-4); border-radius: var(--r-md); background: linear-gradient(135deg, rgb(251 191 36 / 0.22), rgb(200 16 46 / 0.2)); border: 2px solid var(--ambar); animation: aparecer var(--t-media) var(--ease); }
 .fichado--epico { border-color: #b57cff; background: linear-gradient(135deg, rgb(138 63 209 / 0.3), rgb(200 16 46 / 0.2)); }
 .fichado--raro { border-color: #6aa4ff; background: linear-gradient(135deg, rgb(44 111 214 / 0.3), rgb(200 16 46 / 0.2)); }
-.fichado--comun { border-color: var(--borde-fuerte); background: rgb(255 255 255 / 0.08); }
+.fichado--comun { border-color: #3fbf8f; background: linear-gradient(135deg, rgb(63 191 143 / 0.22), rgb(200 16 46 / 0.15)); }
 .fichado img { image-rendering: pixelated; object-fit: contain; }
 .fichado h3 { font-size: var(--t-xl); }
 .fichado__sobre { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--ambar); font-weight: 800; }
@@ -425,7 +447,8 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 }
 
 /* --- Ultras --------------------------------------------------------------------------------- */
-.combos__subtitulo { margin: var(--espacio-5, 1.5rem) 0 .25rem; font-size: 1.05rem; letter-spacing: .04em; text-transform: uppercase; }
+.combos__subtitulo { margin: var(--s-3, 0.75rem) 0 0; font-size: 1.05rem; letter-spacing: .04em; text-transform: uppercase; }
+.combos--ultras { grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); }
 .combo--ultra { border-color: var(--color-ultra, #ffd24a); background: linear-gradient(120deg, color-mix(in srgb, var(--color-ultra, #ffd24a) 16%, transparent), transparent 70%); }
 .combo--ultra .combo__icono { color: var(--color-ultra, #ffd24a); }
 .combo--ultra.combo--hecha { box-shadow: 0 0 18px color-mix(in srgb, var(--color-ultra, #ffd24a) 55%, transparent); }
@@ -455,3 +478,9 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .cara:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .ranking__avatar { width: 32px; height: 32px; border-radius: 50%; image-rendering: pixelated; flex: none; }
 .ranking__avatar--vacio { display: grid; place-items: center; font-weight: 800; font-size: var(--t-xs); background: linear-gradient(135deg, var(--rojo), var(--azul-500)); }
+
+/* ---------- Firma del contrato (pixel art) ---------- */
+.firma { position: absolute; inset: 0; z-index: 40; display: grid; place-items: center; align-content: center; gap: 10px; background: rgb(4 7 20 / 0.86); backdrop-filter: blur(4px); cursor: pointer; animation: aparecer 0.25s ease; }
+.firma__lienzo { width: min(94vw, 900px, calc((100vh - 120px) * 1.6)); height: auto; aspect-ratio: 256 / 160; image-rendering: pixelated; border-radius: 6px; box-shadow: 0 20px 60px rgb(0 0 0 / 0.6); }
+.firma__pista { margin: 0; font-size: var(--t-xs); color: var(--gris-300); letter-spacing: 0.08em; text-transform: uppercase; }
+.firma--fuera { opacity: 0; transition: opacity 0.25s ease; }

@@ -84,17 +84,20 @@ export function recalcular(jugador) {
   if (jugador.guantes) jugador.guantes.max = jugador.poder.guantes;
 }
 
-/** Elige hasta 3 mejoras distintas entre las que se pueden ofrecer. */
-export function generarOpciones(mundo) {
+/** Todas las mejoras que se podrían ofrecer ahora mismo (sin barajar ni marcar). */
+export function mejorasDisponibles(mundo) {
   const j = mundo.jugador;
   const candidatas = [];
   const habilidades = PERSONAJES[j.personaje]?.habilidades;
+  const minutos = (mundo.tiempo ?? 0) / 60;
+  /** Las mejoras muy fuertes tienen niveles que no salen hasta cierto minuto (`desdeMinuto[nivel - 1]`). */
+  const aTiempo = (def, nivelNuevo) => minutos >= (def.desdeMinuto?.[nivelNuevo - 1] ?? 0);
 
   Object.entries(ARMAS).forEach(([clave, arma]) => {
     if (habilidades && !habilidades.includes(clave) && j.armas[clave].nivel === 0) return; // no es de su estilo
     if (arma.tipo === 'disparo' && !j.puedeDisparar) return; // el portero no dispara
     const nivel = j.armas[clave].nivel;
-    if (nivel >= NIVEL_MAXIMO) return;
+    if (nivel >= NIVEL_MAXIMO || !aTiempo(arma, nivel + 1)) return;
     candidatas.push({
       id: `arma:${clave}`, tipo: 'arma', clave, nivelNuevo: nivel + 1, nombre: arma.nombre, icono: arma.icono,
       descripcion: nivel === 0 ? arma.descripcion : arma.mejoras[nivel - 1],
@@ -102,7 +105,7 @@ export function generarOpciones(mundo) {
   });
   Object.entries(PASIVAS).forEach(([clave, pasiva]) => {
     const nivel = j.pasivas[clave];
-    if (nivel >= NIVEL_MAXIMO) return;
+    if (nivel >= NIVEL_MAXIMO || !aTiempo(pasiva, nivel + 1)) return;
     candidatas.push({
       id: `pasiva:${clave}`, tipo: 'pasiva', clave, nivelNuevo: nivel + 1, nombre: pasiva.nombre, icono: pasiva.icono, descripcion: pasiva.descripcion,
     });
@@ -116,6 +119,13 @@ export function generarOpciones(mundo) {
       });
     });
   }
+  return candidatas;
+}
+
+/** Elige hasta 3 mejoras distintas entre las que se pueden ofrecer. */
+export function generarOpciones(mundo) {
+  const j = mundo.jugador;
+  const candidatas = mejorasDisponibles(mundo);
 
   // Marca con ★ las que completan una combinación
   candidatas.forEach((c) => {

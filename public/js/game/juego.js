@@ -1,7 +1,7 @@
 // Montaje del juego: pantallas (menú, pausa, mejora, final), bucle principal y conexión entre
 // la simulación (mundo.js), el dibujo (render.js), el sonido y la interfaz superpuesta (hud.js).
 import {
-  MUNDO, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, SINERGIAS, ULTRAS,
+  MUNDO, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, PASIVAS, SINERGIAS, ULTRAS,
 } from './config.js';
 import { crearMundo, avanzar, elegirMejora, resumen, usarUlti } from './mundo.js';
 import { retratoUrl, aspectoDe, avatarUrl } from './sprites.js';
@@ -13,7 +13,8 @@ import { icono } from './iconos.js';
 import { formatearTiempo } from './util.js';
 import { leerStats, registrarPartida, registrarSinergia } from './marca.js';
 import { leerAjustes, guardarAjustes, ZOOM } from './ajustes.js';
-import { puntosLibres, esInicial } from './club.js';
+import { puntosLibres, esInicial, rareza } from './club.js';
+import { animarFirma } from './firma.js';
 import {
   esc, htmlRareza, htmlEntrenamiento, htmlContratar, htmlFichado, htmlRankingGrada, htmlRecompensas, porPosicion,
 } from './club-ui.js';
@@ -127,15 +128,19 @@ const PLANTILLA = `
   </section>
 
   <section class="pantalla" data-pantalla="combos" role="dialog" aria-modal="true" aria-labelledby="juego-t-combos" hidden>
-    <div class="pantalla__caja pantalla__caja--ancha">
-      <p class="pantalla__sobretitulo">Combinaciones</p>
+    <div class="pantalla__caja pantalla__caja--ancha pantalla__caja--combos">
+      <p class="pantalla__sobretitulo">Combinaciones y ultras</p>
       <h2 id="juego-t-combos" class="pantalla__titulo">Las metas de la grada</h2>
-      <p class="pantalla__texto">Junta ciertas habilidades a cierto nivel durante la partida y se activa una combinación con un bonus extra. Algunas son más fuertes que otras: ¡descúbrelas todas!</p>
-      <p class="combos__cuenta" data-campo="combos-cuenta"></p>
-      <ul class="combos" data-campo="combos"></ul>
-      <h3 class="combos__subtitulo">Ultras</h3>
-      <p class="combos__cuenta" data-campo="ultras-cuenta"></p>
+      <p class="pantalla__texto">Sube ciertas habilidades a cierto nivel durante la partida y se activa una <strong>combinación</strong> con un bonus. Junta varias combinaciones y desbloqueas una <strong>ULTRA</strong>. Aquí las tienes todas, con lo que pide cada una.</p>
+      <div class="combos__filtros" role="group" aria-label="Filtrar">
+        <button type="button" class="filtro" data-filtro-combos="todas" aria-pressed="true">Todas</button>
+        <button type="button" class="filtro" data-filtro-combos="posibles" aria-pressed="false" data-campo="filtro-posibles">Con mi jugador</button>
+        <button type="button" class="filtro" data-filtro-combos="hechas" aria-pressed="false">Conseguidas</button>
+      </div>
+      <h3 class="combos__subtitulo">Ultras <span class="combos__cuenta" data-campo="ultras-cuenta"></span></h3>
       <ul class="combos combos--ultras" data-campo="ultras"></ul>
+      <h3 class="combos__subtitulo">Combinaciones <span class="combos__cuenta" data-campo="combos-cuenta"></span></h3>
+      <ul class="combos" data-campo="combos"></ul>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Volver</button></div>
     </div>
   </section>
@@ -741,6 +746,17 @@ export function montarJuego(contenedor, {
       pintarContratar();
     }
     if (fichado) {
+      anunciar(`Firmando el contrato de ${PERSONAJES[fichado].nombre}…`);
+      // La firma del contrato (unos 5 s; se puede saltar) y después la carta del fichaje
+      ocupado = true;
+      await animarFirma(contenedor, {
+        nombre: PERSONAJES[fichado].nombre,
+        aspecto: aspectoDe('personaje', fichado),
+        rareza: rareza(fichado),
+        posicion: POSICIONES[PERSONAJES[fichado].posicion].nombre,
+      });
+      ocupado = false;
+      audio.reproducir('ultra');
       q('[data-campo="fichado"]').innerHTML = htmlFichado(fichado, (c) => retratoUrl(`p:${c}`, aspectoDe('personaje', c)));
       anunciar(`Nuevo fichaje: ${PERSONAJES[fichado].nombre}`);
     }
@@ -756,36 +772,49 @@ export function montarJuego(contenedor, {
       </button></li>`).join('');
   }
 
-  /** Panel de combinaciones: las descubiertas se explican; las que no, solo dan una pista. */
+  let filtroCombos = 'todas';
+
+  /** ¿Puede tu jugador conseguir esta combinación? (tiene sus habilidades y, si es portero, no pide disparos) */
+  function combinacionPosible(yo, c) {
+    if (c.distintas) return yo.habilidades.length >= c.distintas.cuantas;
+    return Object.keys(c.requiere).every((x) => !ARMAS[x] || (yo.habilidades.includes(x) && !(yo.posicion === 'portero' && ARMAS[x].tipo === 'disparo')));
+  }
+
+  /** Requisito como «chip»: icono, nombre y nivel; en verde si tu jugador puede aprenderlo. */
+  function chipRequisito(yo, clave, nivel) {
+    const def = ARMAS[clave] ?? PASIVAS[clave];
+    const tuyo = !ARMAS[clave] || (yo.habilidades.includes(clave) && !(yo.posicion === 'portero' && ARMAS[clave].tipo === 'disparo'));
+    return `<span class="req${tuyo ? ' req--tuyo' : ' req--no'}" title="${tuyo ? 'La puede aprender' : 'No la puede aprender'} ${esc(yo.nombre)}">${icono(def?.icono ?? 'mas', 14)}${esc(def?.nombre ?? clave)} <b>nv ${nivel}</b></span>`;
+  }
+
+  /** Panel de combinaciones: todas a la vista, con lo que piden, lo que dan y si tu jugador puede conseguirlas. */
   function pintarCombos() {
     const st = leerStats(usuario);
     const hechas = new Set(st.sinergias);
     const yo = PERSONAJES[eleccion.personaje];
-    const nombreDe = (k) => ARMAS[k]?.nombre ?? k;
-    const esPasiva = (k) => !ARMAS[k];
     const claves = Object.keys(SINERGIAS);
-    q('[data-campo="combos-cuenta"]').textContent = `${claves.filter((k) => hechas.has(k)).length} de ${claves.length} descubiertas`;
-    q('[data-campo="combos"]').innerHTML = claves.map((k) => {
+    q('[data-campo="filtro-posibles"]').textContent = `Con ${yo.nombre}`;
+    contenedor.querySelectorAll('[data-filtro-combos]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.filtroCombos === filtroCombos)));
+    q('[data-campo="combos-cuenta"]').textContent = `${claves.filter((k) => hechas.has(k)).length} de ${claves.length} conseguidas`;
+    const visibles = claves.filter((k) => (filtroCombos === 'hechas' ? hechas.has(k) : filtroCombos === 'posibles' ? combinacionPosible(yo, SINERGIAS[k]) : true));
+    q('[data-campo="combos"]').innerHTML = visibles.map((k) => {
       const c = SINERGIAS[k];
       const conocida = hechas.has(k);
-      const armasNecesarias = Object.keys(c.requiere).filter((x) => !esPasiva(x));
-      const posible = armasNecesarias.every((x) => yo.habilidades.includes(x));
+      const posible = combinacionPosible(yo, c);
       const requisitos = c.distintas
-        ? `${c.distintas.cuantas} habilidades distintas al nivel ${c.distintas.nivel}`
-        : Object.entries(c.requiere).map(([x, n]) => `${nombreDe(x)} <b>nv ${n}</b>`).join(' + ');
-      const pista = c.distintas
-        ? `Domina ${c.distintas.cuantas} habilidades a la vez.`
-        : `Necesita ${Object.keys(c.requiere).length} habilidades; una de ellas: ${nombreDe(Object.keys(c.requiere)[0])}.`;
+        ? `<span class="req req--tuyo">${c.distintas.cuantas} habilidades distintas <b>nv ${c.distintas.nivel}</b></span>`
+        : Object.entries(c.requiere).map(([x, n]) => chipRequisito(yo, x, n)).join('');
+      const ultras = Object.values(ULTRAS).filter((u) => u.de.includes(k)).map((u) => u.nombre);
       return `<li class="combo${conocida ? ' combo--hecha' : ''}${posible ? '' : ' combo--imposible'}">
-        <span class="combo__icono">${icono(conocida ? c.icono : 'candado', 24)}</span>
+        <span class="combo__icono">${icono(c.icono, 22)}</span>
         <span class="combo__cuerpo">
-          <strong>${conocida ? c.nombre : '???'}</strong>
-          <span>${conocida ? c.descripcion : pista}</span>
-          ${conocida ? `<small>${requisitos}</small>` : ''}
+          <span class="combo__cabeza"><strong>${esc(c.nombre)}</strong><em class="combo__estado">${conocida ? '★ Conseguida' : posible ? 'Posible' : 'No para él'}</em></span>
+          <span class="combo__bonus">${esc(c.descripcion)}</span>
+          <span class="combo__reqs">${requisitos}</span>
+          ${ultras.length ? `<small class="combo__ultras">Cuenta para: ${ultras.map(esc).join(' · ')}</small>` : ''}
         </span>
-        <span class="combo__marca">${posible ? `Posible con ${yo.nombre}` : `No para ${yo.nombre}`}</span>
       </li>`;
-    }).join('');
+    }).join('') || '<li class="panel__vacio">No hay ninguna con este filtro todavía.</li>';
   }
 
   /** Las seis ULTRAS: poderes de leyenda que se consiguen juntando varias combinaciones. */
@@ -795,22 +824,28 @@ export function montarJuego(contenedor, {
     const yo = PERSONAJES[eleccion.personaje];
     const claves = Object.keys(ULTRAS);
     q('[data-campo="ultras-cuenta"]').textContent = `${claves.filter((k) => hechas.has(`u:${k}`)).length} de ${claves.length} conseguidas`;
-    q('[data-campo="ultras"]').innerHTML = claves.map((k) => {
+    const visibles = claves.filter((k) => {
+      const u = ULTRAS[k];
+      const alcanzable = u.de.filter((c) => combinacionPosible(yo, SINERGIAS[c])).length >= u.cuantas;
+      return filtroCombos === 'hechas' ? hechas.has(`u:${k}`) : filtroCombos === 'posibles' ? alcanzable : true;
+    });
+    q('[data-campo="ultras"]').innerHTML = visibles.map((k) => {
       const u = ULTRAS[k];
       const conocida = hechas.has(`u:${k}`);
-      const posibles = u.de.filter((c) => Object.keys(SINERGIAS[c].requiere).filter((x) => ARMAS[x]).every((x) => yo.habilidades.includes(x))
-        && !(yo.posicion === 'portero' && Object.keys(SINERGIAS[c].requiere).some((x) => ARMAS[x]?.tipo === 'disparo')));
+      const posibles = u.de.filter((c) => combinacionPosible(yo, SINERGIAS[c]));
       const alcanzable = posibles.length >= u.cuantas;
+      const chips = u.de.map((c) => `<span class="req${hechas.has(c) ? ' req--hecha' : posibles.includes(c) ? ' req--tuyo' : ' req--no'}">${icono(SINERGIAS[c].icono, 14)}${esc(SINERGIAS[c].nombre)}</span>`).join('');
       return `<li class="combo combo--ultra${conocida ? ' combo--hecha' : ''}${alcanzable ? '' : ' combo--imposible'}" style="--color-ultra:${u.color}">
-        <span class="combo__icono">${icono(conocida ? u.icono : 'candado', 26)}</span>
+        <span class="combo__icono">${icono(u.icono, 26)}</span>
         <span class="combo__cuerpo">
-          <strong>${conocida ? u.nombre : '???'}</strong>
-          <span>${conocida ? u.descripcion : `Un poder de leyenda: junta ${u.cuantas} de estas combinaciones.`}</span>
-          <small>${u.de.map((c) => `${SINERGIAS[c].nombre}${posibles.includes(c) ? '' : ' ✗'}`).join(' · ')}</small>
+          <span class="combo__cabeza"><strong>${esc(u.nombre)}</strong><em class="combo__estado">${conocida ? '✦ Conseguida' : alcanzable ? `Posible con ${esc(yo.nombre)}` : `No para ${esc(yo.nombre)}`}</em></span>
+          <small class="combo__titulo">${esc(u.titulo)}</small>
+          <span class="combo__bonus">${esc(u.descripcion)}</span>
+          <span class="combo__pide">Junta <b>${u.cuantas}</b> de estas${u.minArmas ? ` (al menos ${u.minArmas} con armas)` : ''} y suma <b>${u.maestria}</b> niveles de armas:</span>
+          <span class="combo__reqs">${chips}</span>
         </span>
-        <span class="combo__marca">${alcanzable ? `Posible con ${yo.nombre}` : `No para ${yo.nombre}`}</span>
       </li>`;
-    }).join('');
+    }).join('') || '<li class="panel__vacio">Ninguna con este filtro todavía.</li>';
   }
 
   function elegirOpcion(tipo, clave) {
@@ -1176,6 +1211,13 @@ export function montarJuego(contenedor, {
     const mejora = ev.target.closest('[data-mejora]');
     if (mejora) {
       elegir(mejora.dataset.mejora);
+      return;
+    }
+    const filtroC = ev.target.closest('[data-filtro-combos]');
+    if (filtroC) {
+      filtroCombos = filtroC.dataset.filtroCombos;
+      pintarCombos();
+      pintarUltras();
       return;
     }
     const cara = ev.target.closest('[data-avatar]');

@@ -626,7 +626,7 @@ function dibujarJugador(ctx, j, t) {
   const parpadeo = j.invul > 0 && Math.floor(t * 20) % 2 === 0;
 
   if (j.escudo > 0) dibujarEscudo(ctx, j, t);
-  if (j.guantes.cargas > 0) { // Guante de Oro: un aro dorado por cada golpe que puede parar
+  if (j.guantes.cargas > 0) { // Paradón: un aro dorado por cada golpe que puede parar
     ctx.save();
     ctx.strokeStyle = '#ffd166';
     ctx.lineWidth = 2.5;

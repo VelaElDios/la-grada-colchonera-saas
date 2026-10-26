@@ -149,7 +149,7 @@ function createJuegoService({
       return { recompensas: resultado, record, perfil: await reglas(datos) };
     },
 
-    /** Gasta una ficha de contrato: un jugador nuevo al azar (nunca repetido; los de pocas habilidades salen más). */
+    /** Gasta una ficha de contrato: un jugador nuevo al azar (nunca repetido; los de rareza común salen más). */
     async contratar(user) {
       const { datos, resultado } = await conPerfil(user, (d, { club }) => {
         if (club.fichasDisponibles(d) < 1) throw new ConflictError('No tienes fichas de contrato (una por cada 3 jefes vencidos)');

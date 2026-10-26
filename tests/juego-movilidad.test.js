@@ -116,7 +116,7 @@ test('las gradas no se atraviesan: ni el jugador, ni los rivales, ni los balones
   j.x = grada.x - grada.w / 2 - 40;
   j.y = grada.y;
   for (let i = 0; i < 120; i++) m.avanzar(mundo, PASO, { x: 1, y: 0 });
-  assert.ok(j.x <= grada.x - grada.w / 2 - j.r + 1e-6, 'no entra en la grada');
+  assert.ok(j.x <= grada.x - grada.w / 2 - j.rPies + 1e-6, 'no entra en la grada (se choca con los pies)');
   // un balón rival se rompe al tocarla
   const d = { x: grada.x - grada.w / 2 - 30, y: grada.y, vx: 300, vy: 0, r: 6, dano: 1, vida: 5, rot: 0, giro: 0 };
   j.x = grada.x - 600; j.y = grada.y - 600;
@@ -505,4 +505,25 @@ test('el suelo se pinta por celdas y cambia de colores con cada ambiente (con un
   } finally {
     globalThis.document = anterior;
   }
+});
+
+test('lo que se ve es lo que choca: los edificios y gradas chocan en todo su dibujo y se choca con los pies', async () => {
+  const T = await cargar('terreno.js');
+  const { PIES } = await cargar('config.js');
+  const t = T.crearTerreno(4);
+  let tienda = null;
+  for (let cx = -10; cx <= 10 && !tienda; cx++) for (let cy = -10; cy <= 10 && !tienda; cy++) tienda = T.celda(t, cx, cy).obstaculos.find((o) => o.tipo === 'tienda');
+  assert.ok(tienda, 'hay alguna tienda');
+  assert.equal(tienda.h, tienda.hBase + tienda.alto, 'choca la base más lo que se levanta');
+  // Justo encima del borde de arriba del dibujo (el tejado) ya no se puede estar
+  assert.equal(T.tocaGrada(t, tienda.x, tienda.y - tienda.h / 2 + 4, 2, true), true);
+  // Un muñeco cuyos pies tocan el tejado sale despedido hacia arriba: nunca queda «escondido» detrás
+  const r = 14;
+  const ent = { x: tienda.x, y: tienda.y - tienda.h / 2 - r * PIES.alto + 3, r, pies: r * PIES.alto, rPies: r * PIES.radio };
+  assert.equal(T.resolver(t, ent), true);
+  assert.ok(ent.y + ent.pies <= tienda.y - tienda.h / 2 - ent.rPies + 1e-6);
+  // Los árboles solo chocan por el tronco
+  let arbol = null;
+  for (let cx = -10; cx <= 10 && !arbol; cx++) for (let cy = -10; cy <= 10 && !arbol; cy++) arbol = T.celda(t, cx, cy).obstaculos.find((o) => o.tipo === 'arbol');
+  assert.ok(arbol && arbol.hBase === undefined && arbol.w < 30);
 });

@@ -174,7 +174,7 @@ test('hay 36 jugadores, los 17 nuevos que se pidieron, cada uno con nacionalidad
 // Poderes de oro
 // ---------------------------------------------------------------------------------------------
 
-test('Balón de Oro: los balones son dorados, atraviesan más y pegan más', async () => {
+test('Toque dorado: los balones son dorados, atraviesan más y pegan más', async () => {
   const base = await mundoCon({ armas: { balon: 3 } });
   const oro = await mundoCon({ armas: { balon: 3 }, pasivas: { balonOro: 5 } });
   assert.ok(oro.j.mult.disparo > base.j.mult.disparo * 1.6);
@@ -187,7 +187,7 @@ test('Balón de Oro: los balones son dorados, atraviesan más y pegan más', asy
   assert.equal(oro.j.poder.oroPerfora, 2);
 });
 
-test('Bota de Oro: los balones queman y el fuego sigue haciendo daño después', async () => {
+test('Botas en llamas: los balones queman y el fuego sigue haciendo daño después', async () => {
   const { m, mundo, j } = await mundoCon({ armas: { balon: 4 }, pasivas: { botaOro: 3 } });
   await conRivales(mundo, 4);
   correr(m, mundo, 2);
@@ -205,7 +205,7 @@ test('Bota de Oro: los balones queman y el fuego sigue haciendo daño después',
   assert.equal(quemado.quemado, null, 'el fuego se apaga');
 });
 
-test('Guante de Oro: cada carga detiene un golpe entero y se recupera sola', async () => {
+test('Paradón: cada carga detiene un golpe entero y se recupera sola', async () => {
   const { m, mundo, j } = await mundoCon({ pasivas: { guanteOro: 4 } });
   assert.equal(j.poder.guantes, 2);
   j.guantes.cargas = 2;
@@ -469,4 +469,73 @@ test('Ranking de la grada: avatar de cada aficionado (y nada raro se cuela como 
   assert.match(html, /class="ranking__avatar" src="data:image\/png;base64,AAA"/);
   assert.match(html, /ranking__avatar--vacio[^>]*>V</);
   assert.doesNotMatch(html, /<script>/);
+});
+
+test('rarezas según lo que fue cada uno EN EL ATLETI, con más habilidades cuanto más raro', async () => {
+  const { PERSONAJES, RAREZAS } = await cargar('config.js');
+  const club = await cargar('club.js');
+  const rango = { comun: [8, 9], raro: [10, 11], epico: [12, 13], leyenda: [14, 16] };
+  for (const [k, p] of Object.entries(PERSONAJES)) {
+    assert.ok(RAREZAS[p.rareza], `${k} tiene rareza`);
+    const [a, b] = rango[p.rareza];
+    assert.ok(p.habilidades.length >= a && p.habilidades.length <= b, `${k}: ${p.habilidades.length} habilidades para ${p.rareza}`);
+  }
+  assert.equal(club.rareza('gabi').id, 'leyenda', 'el Capi es leyenda');
+  assert.equal(club.rareza('koke').id, 'leyenda');
+  assert.equal(club.rareza('kun').id, 'raro', 'el Kun estuvo poco');
+  assert.equal(club.rareza('musso').id, 'comun');
+  assert.ok(club.pesoContrato('musso') > club.pesoContrato('kun') && club.pesoContrato('kun') > club.pesoContrato('futre') && club.pesoContrato('futre') > club.pesoContrato('gabi'));
+  // El equipo inicial siempre sale de los comunes
+  let semilla = 0.3;
+  const azar = () => { semilla = (semilla * 9301 + 0.49297) % 1; return semilla; };
+  for (let i = 0; i < 20; i++) club.plantillaInicial(azar).forEach((k) => assert.equal(club.rareza(k).id, 'comun', k));
+});
+
+test('el regate y los poderes fuertes no salen hasta bien avanzada la partida, y el regate tiene una recarga mínima', async () => {
+  const { ARMAS, PASIVAS } = await cargar('config.js');
+  const { crearMundo } = await cargar('mundo.js');
+  const { mejorasDisponibles, recalcular } = await cargar('mejoras.js');
+  const mundo = crearMundo({ semilla: 3, personaje: 'griezmann' });
+  const j = mundo.jugador;
+  j.armas.regate.nivel = 2;
+  recalcular(j);
+  const ofertas = (minuto) => {
+    mundo.tiempo = minuto * 60;
+    return new Set(mejorasDisponibles(mundo).map((o) => o.id));
+  };
+  assert.equal(ofertas(5).has('arma:regate'), false, 'regate nivel 3 antes del minuto 8: no');
+  assert.equal(ofertas(5).has('pasiva:prorroga'), false, 'la prórroga tampoco');
+  assert.equal(ofertas(2).has('pasiva:balonOro'), false, 'el toque dorado no sale al principio');
+  assert.ok(ofertas(9).has('arma:regate'), 'desde el minuto 8, sí');
+  j.armas.regate.nivel = 4;
+  assert.equal(ofertas(15).has('arma:regate'), false, 'el regate definitivo (nivel 5) no sale hasta el minuto 18');
+  assert.ok(ofertas(19).has('arma:regate'));
+  assert.equal(ARMAS.regate.desdeMinuto[4], 18);
+  assert.ok(ARMAS.regate.cdMin >= 4);
+  assert.equal(PASIVAS.balonOro.nombre, 'Toque dorado', 'los nombres de los premios se reservan para las ultras');
+  // La recarga del regate no baja de su mínimo aunque recargues muy rápido
+  const { actualizarArmas } = await cargar('armas.js');
+  j.mult.cd = 0.35;
+  j.armas.regate = { nivel: 5, cd: 0 };
+  let regates = 0;
+  for (let i = 0; i < 60 * 20; i++) {
+    const antes = j.armas.regate.cd;
+    actualizarArmas(mundo, 1 / 60);
+    if (j.armas.regate.cd > antes) regates += 1;
+    j.dash = null;
+  }
+  assert.ok(regates <= Math.ceil(20 / ARMAS.regate.cdMin) + 1, `${regates} regates en 20 s`);
+});
+
+test('Contratar: una tarjeta por rareza (todas con su color), un reparto en una sola barra y bien dicho «1 jefe»', async () => {
+  const ui = await cargar('club-ui.js');
+  const html = ui.htmlContratar(clubDePrueba({ jefesTotal: 14 }), retrato); // 14 % 3 = 2 → falta 1
+  for (const id of ['comun', 'raro', 'epico', 'leyenda']) assert.match(html, new RegExp(`rareza-tarjeta rareza-color--${id}`));
+  assert.match(html, /class="reparto"/);
+  assert.match(html, /Te falta <b>1<\/b> jefe para la siguiente/);
+  assert.equal((html.match(/contrato__pip--hecho/g) || []).length, 2);
+  const otra = ui.htmlContratar(clubDePrueba({ jefesTotal: 12 }), retrato);
+  assert.match(otra, /Te faltan <b>3<\/b> jefes/);
+  const css = require('node:fs').readFileSync(require('node:path').join(__dirname, '..', 'public', 'css', 'juego.css'), 'utf8');
+  assert.match(css, /\.rareza--comun \{ background: #/, 'la rareza común también tiene color');
 });

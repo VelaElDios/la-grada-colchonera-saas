@@ -1,7 +1,7 @@
 // Oleadas: cuántos rivales salen, de qué equipo y con qué fuerza según avanza la partida.
 // La partida es infinita: los rivales ganan vida, daño y velocidad sin parar (ver ESCALADO en config.js).
 import {
-  EQUIPOS, JEFES, ORDEN_JEFES, MUNDO, ESCALADO, ESCALADO_JEFE, ELITES, minutosDeOleada, PIELES, PELOS, fuerzaAmbiente,
+  EQUIPOS, JEFES, ORDEN_JEFES, MUNDO, ESCALADO, ESCALADO_JEFE, ELITES, minutosDeOleada, PIELES, PELOS, fuerzaAmbiente, PIES,
 } from './config.js';
 
 let contadorId = 1;
@@ -29,6 +29,8 @@ export function crearEnemigo(tipo, x, y, oleada, elite = null) {
     x,
     y,
     r: base.radio * (el ? el.radio : 1),
+    pies: base.radio * (el ? el.radio : 1) * PIES.alto,
+    rPies: base.radio * (el ? el.radio : 1) * PIES.radio,
     vida,
     vidaMax: vida,
     vel: base.velocidad * ESCALADO.velocidad(m) * MUNDO.velRivales * (el ? el.vel : 1),
@@ -73,6 +75,8 @@ export function crearJefe(indice, x, y, oleada, claveElegida = null) {
     x,
     y,
     r: def.radio,
+    pies: def.radio * PIES.alto,
+    rPies: def.radio * PIES.radio,
     vida,
     vidaMax: vida,
     vel: def.velocidad * Math.min(1.35, ESCALADO.velocidad(m)) * MUNDO.velRivales,

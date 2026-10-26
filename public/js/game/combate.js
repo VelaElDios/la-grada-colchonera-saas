@@ -82,7 +82,7 @@ export function danoFijo(mundo, enemigo, cantidad, color = '#ff9a3c') {
   if (enemigo.vida <= 0) matar(mundo, enemigo);
 }
 
-/** Prende fuego a un rival (Bota de Oro, bengalas): `dano` por golpe cada medio segundo durante 3 s. No se acumula: gana el más fuerte. */
+/** Prende fuego a un rival (Botas en llamas, bengalas): `dano` por golpe cada medio segundo durante 3 s. No se acumula: gana el más fuerte. */
 export function quemar(mundo, enemigo, dano, segundos = 3) {
   if (enemigo.muerto) return;
   const d = Math.max(1, Math.round(dano * (enemigo.jefe ? 0.6 : 1) * (1 + (mundo.jugador.mult.fuego ?? 0))));
