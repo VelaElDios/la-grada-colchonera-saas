@@ -15,15 +15,70 @@ const rect = (ctx, color, x, y, w = 1, h = 1) => {
   ctx.fillRect(x, y, w, h);
 };
 
+/** Aclara (k > 1) u oscurece (k < 1) un color '#rrggbb'; los demás formatos se devuelven tal cual. */
+export function tono(color, k) {
+  const m = /^#([0-9a-f]{6})$/i.exec(color ?? '');
+  if (!m) return color;
+  const n = parseInt(m[1], 16);
+  const canal = (v) => Math.max(0, Math.min(255, Math.round(k > 1 ? v + (255 - v) * (k - 1) : v * k)));
+  return `#${[n >> 16, (n >> 8) & 255, n & 255].map((v) => canal(v).toString(16).padStart(2, '0')).join('')}`;
+}
+
 /** Rectángulo con las 4 esquinas recortadas (forma redondeada en píxeles). */
 function redondeado(ctx, color, x, y, w, h) {
   rect(ctx, color, x + 1, y, w - 2, h);
   rect(ctx, color, x, y + 1, w, h - 2);
 }
 
+/** Peinados que tapan las orejas. */
+const TAPAN_OREJAS = new Set(['largo', 'melena', 'flequillo']);
+
 function pintarPelo(ctx, pelo, piel) {
   const { c, e } = pelo;
+  const luz = tono(c, 1.2);
+  const sombra = tono(c, 0.7);
   switch (e) {
+    case 'melena': // por los hombros, más ancha que la cabeza
+      rect(ctx, c, 3, 1, 10, 3);
+      rect(ctx, c, 2, 3, 2, 7);
+      rect(ctx, c, 12, 3, 2, 7);
+      rect(ctx, c, 4, 4, 2, 1);
+      rect(ctx, c, 10, 4, 1, 1);
+      rect(ctx, sombra, 2, 8, 1, 2);
+      rect(ctx, sombra, 13, 8, 1, 2);
+      rect(ctx, sombra, 4, 3, 8, 1);
+      rect(ctx, luz, 5, 1, 3, 1);
+      return piel;
+    case 'flequillo': // flequillo recto sobre la frente y algo largo por los lados
+      rect(ctx, c, 3, 1, 10, 3);
+      rect(ctx, c, 3, 4, 1, 4);
+      rect(ctx, c, 12, 4, 1, 4);
+      rect(ctx, c, 4, 4, 1, 1);
+      rect(ctx, c, 6, 4, 1, 1);
+      rect(ctx, c, 9, 4, 2, 1);
+      rect(ctx, sombra, 4, 3, 8, 1);
+      rect(ctx, luz, 5, 1, 2, 1);
+      rect(ctx, luz, 9, 2, 1, 1);
+      return piel;
+    case 'mono': // recogido en un moño arriba
+      rect(ctx, c, 3, 1, 10, 2);
+      rect(ctx, c, 3, 3, 1, 2);
+      rect(ctx, c, 12, 3, 1, 2);
+      rect(ctx, c, 5, 0, 5, 1);
+      rect(ctx, luz, 6, 0, 2, 1);
+      rect(ctx, sombra, 4, 2, 8, 1);
+      rect(ctx, luz, 4, 1, 1, 1);
+      return piel;
+    case 'raya': // corto con la raya a un lado
+      rect(ctx, c, 3, 1, 10, 2);
+      rect(ctx, c, 3, 3, 1, 2);
+      rect(ctx, c, 12, 3, 1, 2);
+      rect(ctx, c, 7, 3, 5, 1);
+      rect(ctx, c, 4, 3, 1, 1);
+      rect(ctx, tono(piel, 0.9), 6, 1, 1, 1); // la raya
+      rect(ctx, luz, 8, 1, 3, 1);
+      rect(ctx, sombra, 3, 4, 1, 1);
+      return piel;
     case 'calvo':
       rect(ctx, c, 3, 3, 1, 2);
       rect(ctx, c, 12, 3, 1, 2);
@@ -74,6 +129,11 @@ function pintarPelo(ctx, pelo, piel) {
       rect(ctx, c, 4, 3, 2, 1);
       rect(ctx, c, 10, 3, 2, 1);
   }
+  // Brillo arriba y sombra en el lado derecho (no en los calvos ni en los rapados)
+  if (e !== 'calvo' && e !== 'rapado') {
+    rect(ctx, luz, 5, 1, 2, 1);
+    rect(ctx, sombra, 12, 3, 1, 1);
+  }
   return piel;
 }
 
@@ -110,12 +170,19 @@ function pintarCamiseta(ctx, k) {
       break;
     default: // liso
   }
+  // volumen: sombra abajo y a la derecha, algo de luz a la izquierda
+  rect(ctx, 'rgba(0,0,0,0.2)', 11, 10, 1, 5);
+  rect(ctx, 'rgba(0,0,0,0.16)', 4, 14, 7, 1);
+  rect(ctx, 'rgba(255,255,255,0.12)', 4, 10, 1, 4);
   // brazos
   const manga = p === 'mangas' || p === 'traje' ? (p === 'mangas' ? c2 : c) : c;
   rect(ctx, manga, 3, 11, 1, 2);
   rect(ctx, manga, 12, 11, 1, 2);
+  rect(ctx, 'rgba(0,0,0,0.2)', 12, 11, 1, 2);
   rect(ctx, k.guantes ?? k.piel, 3, 13, 1, 2);
   rect(ctx, k.guantes ?? k.piel, 12, 13, 1, 2);
+  if (k.tatuaje) rect(ctx, k.tatuaje, 12, 13, 1, 2); // brazo tatuado
+  if (k.brazalete) rect(ctx, '#ffd400', 3, 12, 1, 1); // brazalete de capitán
 }
 
 /** Dibuja un muñeco en el contexto `ctx` (cuadrícula de 16×20). `frame` 0 o 1 mueve los pies. */
@@ -144,19 +211,53 @@ function pintarChibi(ctx, a, frame) {
   // Torso
   pintarCamiseta(ctx, a);
 
-  // Cabeza
+  // Pantalón con algo de sombra
+  rect(ctx, 'rgba(0,0,0,0.22)', 4, 16, 8, 1);
+  rect(ctx, 'rgba(255,255,255,0.35)', 4, 19 - izq, 1, 1); // brillo de las botas
+  rect(ctx, 'rgba(255,255,255,0.35)', 9, 19 - der, 1, 1);
+
+  // Cabeza (con orejas si el pelo no las tapa)
+  const orejas = !TAPAN_OREJAS.has(a.pelo.e);
+  if (orejas) {
+    rect(ctx, CONTORNO, 1, 4, 2, 4);
+    rect(ctx, CONTORNO, 13, 4, 2, 4);
+  }
   redondeado(ctx, CONTORNO, 2, 0, 12, 10);
   redondeado(ctx, piel, 3, 1, 10, 8);
+  if (orejas) {
+    rect(ctx, piel, 2, 5, 1, 2);
+    rect(ctx, tono(piel, 0.85), 13, 5, 1, 2);
+  }
+  // volumen de la cara: sombra a la derecha y en la barbilla, nariz
+  rect(ctx, tono(piel, 0.88), 12, 3, 1, 5);
+  rect(ctx, tono(piel, 0.88), 4, 8, 8, 1);
+  rect(ctx, tono(piel, 0.84), 8, 6, 1, 1);
   pintarPelo(ctx, a.pelo, piel);
+  if (a.cinta) {
+    rect(ctx, a.cinta, 3, 3, 10, 1); // cinta en la frente
+    rect(ctx, 'rgba(0,0,0,0.2)', 11, 3, 2, 1);
+  }
   rect(ctx, 'rgba(255,120,120,0.35)', 4, 7, 1, 1); // mejillas
   rect(ctx, 'rgba(255,120,120,0.35)', 11, 7, 1, 1);
+  if (a.pecas) {
+    ['4,6', '6,7', '9,7', '11,6'].forEach((p) => { const [x, y] = p.split(',').map(Number); rect(ctx, 'rgba(150,80,40,0.55)', x, y, 1, 1); });
+  }
   if (a.barba) {
     rect(ctx, a.barba, 4, 7, 8, 2);
     rect(ctx, a.barba, 3, 6, 1, 2);
     rect(ctx, a.barba, 12, 6, 1, 2);
-    rect(ctx, '#8a5a44', 7, 7, 2, 1); // boca
+  }
+  if (a.dientes) {
+    rect(ctx, '#5a2a20', 6, 7, 4, 1); // boca grande y dientes
+    rect(ctx, '#ffffff', 7, 7, 2, 1);
   } else {
-    rect(ctx, '#9a4b3a', 7, 7, 2, 1); // boca
+    rect(ctx, a.barba ? '#8a5a44' : '#9a4b3a', 7, 7, 2, 1); // boca
+  }
+  if (a.pendiente && orejas) rect(ctx, a.pendiente, 2, 7, 1, 1);
+  if (a.cejas) { // cejas marcadas (mirada seria)
+    const ceja = a.pelo.e === 'calvo' ? tono(piel, 0.6) : tono(a.pelo.c, 0.8);
+    rect(ctx, ceja, 4, 4, 2, 1);
+    rect(ctx, ceja, 10, 4, 2, 1);
   }
   if (a.gafas) {
     rect(ctx, '#111111', 4, 4, 3, 3);

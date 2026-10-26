@@ -239,7 +239,7 @@ export const PERSONAJES = {
     estilo: 'El muro del Metropolitano: aguanta de todo y sabe ponerse de escudo.', armaInicial: 'bufanda', mods: { vida: 1.05 },
     habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'cabezazo', 'barrera', 'despeje', 'entrada', 'contragolpe', 'champions', 'bengala', 'pared'],
   }, {
-    piel: '#f2c6a0', pelo: { c: '#2b1b12', e: 'corto' },
+    piel: '#f2c6a0', pelo: { c: '#2b1b12', e: 'corto' }, barba: 'rgba(43,27,18,0.3)',
     camiseta: { c: '#d8e43a', c2: '#111111', p: 'cuello' }, pantalon: '#111111', medias: '#111111', botas: '#ff7bb0', guantes: '#ff7a1a',
   }),
   musso: jugador('Musso', 'portero', {
@@ -254,7 +254,7 @@ export const PERSONAJES = {
     estilo: 'El patrón de la zaga: cabezazos, entradas y un muro que no se mueve.', armaInicial: 'bufanda', mods: { vida: 1.08, cuerpo: 1.1 },
     habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'cabezazo', 'entrada', 'barrera', 'despeje', 'contragolpe', 'balon', 'canonazo', 'champions', 'bengala'],
   }, {
-    piel: '#e0ac84', pelo: { c: '#3a2214', e: 'largo' }, barba: '#3a2214',
+    piel: '#e0ac84', pelo: { c: '#3a2214', e: 'largo' }, barba: '#3a2214', brazalete: true, cejas: true,
   }),
   lenglet: jugador('Lenglet', 'defensa', {
     estilo: 'Central zurdo que despeja y saca el balón jugado desde atrás.', armaInicial: 'despeje', mods: { vida: 1.0, disparo: 1.15 },
@@ -285,7 +285,7 @@ export const PERSONAJES = {
     estilo: 'El capitán: de todo un poco y mejor cuanto más juega.', armaInicial: 'balon', mods: { vida: 1.03 },
     habilidades: ['balon', 'efecto', 'corner', 'pared', 'vaselina', 'silbato', 'canticos', 'bufanda', 'banderines', 'tarjeta', 'var', 'regate', 'contragolpe', 'volea', 'champions', 'canonazo'],
   }, {
-    piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'corto' }, botas: '#f4f4f4',
+    piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'raya' }, barba: 'rgba(107,68,35,0.35)', brazalete: true, botas: '#f4f4f4',
   }),
   llorente: jugador('Marcos Llorente', 'medio', {
     estilo: 'Un pulmón de acero: arranques, entradas y disparos de media distancia.', armaInicial: 'entrada', mods: { vel: 1.07, vida: 1.05 },
@@ -310,13 +310,13 @@ export const PERSONAJES = {
     estilo: 'El mejor del equipo: un repertorio enorme de tiros, regates y trucos.', armaInicial: 'balon', mods: { disparo: 1.1 },
     habilidades: ['balon', 'efecto', 'corner', 'vaselina', 'chilena', 'volea', 'penalti', 'canonazo', 'pared', 'regate', 'contragolpe', 'cano', 'bufanda', 'tarjeta', 'silbato', 'var'],
   }, {
-    piel: '#f7d2b0', pelo: { c: '#d9b24c', e: 'tupe' }, botas: '#ff8a00',
+    piel: '#f7d2b0', pelo: { c: '#c9a24a', e: 'mono' }, barba: 'rgba(160,120,50,0.45)', botas: '#ff8a00',
   }),
   torres: jugador('Fernando Torres', 'delantero', {
     estilo: 'El Niño: velocidad, chilenas y cabezazos al segundo palo.', armaInicial: 'chilena', mods: { vel: 1.05, disparo: 1.1 },
     habilidades: ['balon', 'canonazo', 'volea', 'chilena', 'penalti', 'cabezazo', 'contragolpe', 'regate', 'efecto', 'corner', 'bufanda', 'vaselina', 'pared', 'champions', 'cano'],
   }, {
-    piel: '#f2c6a0', pelo: { c: '#6b4a2a', e: 'largo' }, botas: '#f4f4f4',
+    piel: '#f2c6a0', pelo: { c: '#d39a4a', e: 'flequillo' }, pecas: true, brazalete: true, botas: '#f4f4f4',
   }),
   lookman: jugador('Lookman', 'delantero', {
     estilo: 'Extremo eléctrico: regates y arrancadas por la banda.', armaInicial: 'balon', mods: { vel: 1.09, vida: 0.92 },
@@ -340,19 +340,19 @@ export const PERSONAJES = {
     estilo: 'Un delantero de los de antes: golpea, empuja y marca igual.', armaInicial: 'cabezazo', mods: { vida: 1.18, cuerpo: 1.45, vel: 0.97 },
     habilidades: ['bufanda', 'cabezazo', 'entrada', 'tarjeta', 'balon', 'canonazo', 'chilena', 'volea', 'penalti', 'banderines', 'silbato', 'barrera', 'bengala'],
   }, {
-    piel: '#c68642', pelo: { c: '#16110d', e: 'rapado' }, barba: '#16110d', botas: '#ffffff',
+    piel: '#c68642', pelo: { c: '#16110d', e: 'rapado' }, barba: '#16110d', cejas: true, botas: '#ffffff',
   }),
   forlan: jugador('Forlán', 'delantero', {
     estilo: 'Zurdazo y volea: pocos tiros, pero a la escuadra.', armaInicial: 'volea', mods: { disparo: 1.18 },
     habilidades: ['canonazo', 'penalti', 'volea', 'chilena', 'vaselina', 'efecto', 'balon', 'corner', 'pared', 'contragolpe', 'regate', 'canticos', 'cano'],
   }, {
-    piel: '#f2c6a0', pelo: { c: '#d9b24c', e: 'largo' }, botas: '#f4f4f4',
+    piel: '#f2c6a0', pelo: { c: '#e2c25a', e: 'melena' }, cinta: '#ffffff', botas: '#f4f4f4',
   }),
   falcao: jugador('Falcao', 'delantero', {
     estilo: 'El Tigre: cabezazos y penaltis letales dentro del área.', armaInicial: 'cabezazo', mods: { disparo: 1.12, cuerpo: 1.3 },
     habilidades: ['cabezazo', 'penalti', 'balon', 'canonazo', 'chilena', 'volea', 'vaselina', 'corner', 'entrada', 'contragolpe', 'bengala'],
   }, {
-    piel: '#e0ac84', pelo: { c: '#3a2214', e: 'largo' }, barba: '#3a2214', botas: '#111111',
+    piel: '#e0ac84', pelo: { c: '#3a2214', e: 'melena' }, cinta: '#c8102e', barba: '#3a2214', botas: '#111111',
   }),
 
   // ---- Fichajes (se consiguen con las fichas de contrato; ver club.js) ----
@@ -430,19 +430,19 @@ export const PERSONAJES = {
     estilo: 'El capitán que lo da todo: pelea cada balón y aprieta a los suyos.', armaInicial: 'bufanda', mods: { vida: 1.05, cuerpo: 1.15 },
     habilidades: ['bufanda', 'banderines', 'canticos', 'entrada', 'silbato', 'tarjeta', 'pared', 'balon', 'bengala', 'barrera', 'despeje', 'contragolpe', 'corner', 'volea'],
   }, {
-    piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'corto' }, botas: '#111111',
+    piel: '#f2c6a0', pelo: { c: '#6b4423', e: 'raya' }, barba: 'rgba(107,68,35,0.4)', brazalete: true, botas: '#111111',
   }),
   futre: jugador('Futre', 'medio', {
     estilo: 'El extremo de las pelucas y los caños: el Niño Bonito de los 90.', armaInicial: 'cano', mods: { vel: 1.08, disparo: 1.1, vida: 0.95 },
     habilidades: ['balon', 'efecto', 'vaselina', 'regate', 'cano', 'pared', 'corner', 'volea', 'canonazo', 'chilena', 'contragolpe', 'canticos', 'champions'],
   }, {
-    piel: '#f2c6a0', pelo: { c: '#d9b24c', e: 'largo' }, botas: '#ff3bd4',
+    piel: '#f2c6a0', pelo: { c: '#2b1b12', e: 'melena' }, botas: '#ff3bd4',
   }),
   simeone: jugador('Diego Simeone', 'medio', {
     estilo: 'El Cholo jugador: garra, tarjetas y partido a partido desde el centro del campo.', armaInicial: 'tarjeta', mods: { cuerpo: 1.2, vida: 1.05 },
     habilidades: ['bufanda', 'banderines', 'canticos', 'silbato', 'tarjeta', 'var', 'entrada', 'cabezazo', 'barrera', 'contragolpe', 'balon', 'champions', 'bengala'],
   }, {
-    piel: '#e0ac84', pelo: { c: '#16110d', e: 'gomina' }, barba: 'rgba(22,17,13,0.4)', botas: '#111111',
+    piel: '#e0ac84', pelo: { c: '#16110d', e: 'largo' }, cejas: true, barba: 'rgba(22,17,13,0.4)', botas: '#111111',
   }),
   adelardo: jugador('Adelardo', 'medio', {
     estilo: 'Leyenda del Atleti de los 60 y 70: sacrificio, toque y una fe inmensa.', armaInicial: 'balon', mods: { vida: 1.04 },
@@ -461,7 +461,7 @@ export const PERSONAJES = {
     estilo: 'Bajito, explosivo y letal: del Calderón al gol que paró el mundo.', armaInicial: 'volea', mods: { disparo: 1.15, vel: 1.05, vida: 0.95 },
     habilidades: ['balon', 'efecto', 'volea', 'chilena', 'vaselina', 'penalti', 'regate', 'cano', 'pared', 'contragolpe', 'corner'],
   }, {
-    piel: '#e0ac84', pelo: { c: '#16110d', e: 'rizado' }, barba: 'rgba(22,17,13,0.4)', botas: '#4aa8ff',
+    piel: '#e0ac84', pelo: { c: '#16110d', e: 'rizado' }, pendiente: '#ffffff', barba: 'rgba(22,17,13,0.4)', botas: '#4aa8ff',
   }),
 };
 
@@ -492,7 +492,7 @@ const FICHAS = {
   pantic: ['Serbia', '1995-1998', 'El Mono: pie derecho prodigioso, ídolo del doblete de 1996; goleaba y volcaba el campo a base de calidad.'],
   tiago: ['Portugal', '2010-2014', 'Mediocentro seguro y duro, de mucha experiencia, que aportó equilibrio a los campeones.'],
   gabi: ['España', '2004-2007 / 2011-2018', 'El Capi de toda la vida: levantó la Liga 2013-14, la Europa League y la Supercopa con el brazalete. El Cholo dentro del campo.'],
-  futre: ['Portugal', '1989-1993', 'Extremo mágico y revolucionario: sus caños, sus melenas y sus goles hicieron soñar a los atléticos.'],
+  futre: ['Portugal', '1987-1993 / 1997-1998', 'Extremo mágico y revolucionario: sus caños, sus melenas y sus goles hicieron soñar a los atléticos.'],
   simeone: ['Argentina', '1994-1997 / 2003-2005', 'Como jugador fue ya el Cholo: pura garra, pero también goles y buen toque; pilar del doblete.'],
   adelardo: ['España', '1959-1976', 'Mito de los 60 y 70: 12 títulos con el Atleti. Un centrocampista de sacrificio y mucha clase.'],
   griezmann: ['Francia', 'Desde 2014', 'El mejor del equipo: goleador, asistidor y defensor. Máximo anotador de la historia rojiblanca.'],
@@ -547,7 +547,7 @@ export const ENTRENADORES = {
       radio: 650, dano: 70, danoPorNivel: 2, empuje: 420, animo: 6, bonoDano: 1.3,
     },
     aspecto: {
-      piel: '#e8bb94', pelo: { c: '#1c1c1c', e: 'gomina' },
+      piel: '#e8bb94', pelo: { c: '#1c1c1c', e: 'gomina' }, cejas: true,
       camiseta: { c: '#15171c', c2: '#ffffff', p: 'traje' }, pantalon: '#15171c', medias: '#15171c', botas: '#15171c', corbata: '#15171c',
     },
   },
@@ -627,7 +627,7 @@ export const JEFES = {
     nombre: 'Pep Guardiola', equipo: 'FC Barcelona', vida: 500, velocidad: 46, radio: 24, dano: 12, xp: 40, freno: 0.15,
     habilidad: 'Rondo, pases en círculo, tiki-taka y espiral de balones', cada: 7,
     aspecto: {
-      piel: '#f0c8a6', pelo: { c: '#3a2a20', e: 'calvo' }, gafas: true,
+      piel: '#f0c8a6', pelo: { c: '#3a2a20', e: 'calvo' }, barba: 'rgba(120,120,120,0.45)',
       camiseta: { c: '#1d2a3c', c2: '#a50044', p: 'traje' }, pantalon: '#1d2a3c', medias: '#1d2a3c', botas: '#111111', corbata: '#a50044',
     },
   },
@@ -636,7 +636,7 @@ export const JEFES = {
     nombre: 'José Mourinho', equipo: 'Real Madrid', vida: 800, velocidad: 40, radio: 28, dano: 15, xp: 50, freno: 0.1,
     habilidad: 'Autobús: ondas de choque, muro de defensas y embestida', cada: 6, radioPulso: 210,
     aspecto: {
-      piel: '#e0b08a', pelo: { c: '#9a9a9a', e: 'corto' }, barba: 'rgba(90,90,90,0.55)',
+      piel: '#e0b08a', pelo: { c: '#9a9a9a', e: 'corto' }, barba: 'rgba(90,90,90,0.55)', cejas: true,
       camiseta: { c: '#111111', c2: '#ffffff', p: 'traje' }, pantalon: '#111111', medias: '#111111', botas: '#111111', corbata: '#7b3fa0',
     },
   },
@@ -645,7 +645,7 @@ export const JEFES = {
     nombre: 'Cristiano Ronaldo', equipo: 'Real Madrid', vida: 600, velocidad: 58, radio: 24, dano: 14, xp: 45, freno: 0.15,
     habilidad: 'Cañonazos, ráfagas y el salto «Siuuu»', cada: 2.6,
     aspecto: {
-      piel: '#e2b48c', pelo: { c: '#16110d', e: 'tupe' },
+      piel: '#e2b48c', pelo: { c: '#16110d', e: 'tupe' }, pendiente: '#ffffff', cejas: true,
       camiseta: { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, pantalon: '#fafafa', medias: '#fafafa', botas: '#f2c94c',
     },
   },
@@ -654,7 +654,7 @@ export const JEFES = {
     nombre: 'Leo Messi', equipo: 'FC Barcelona', vida: 400, velocidad: 78, radio: 20, dano: 13, xp: 45, freno: 0.2,
     habilidad: 'Regates: embestidas encadenadas, rosca y extremos', cada: 3.2,
     aspecto: {
-      piel: '#ecc09c', pelo: { c: '#5a3a22', e: 'corto' }, barba: '#5a3a22',
+      piel: '#ecc09c', pelo: { c: '#5a3a22', e: 'largo' }, barba: '#5a3a22', tatuaje: '#2a2a40',
       camiseta: { c: '#a50044', c2: '#004d98', p: 'franjas' }, pantalon: '#004d98', medias: '#a50044', botas: '#111111',
     },
   },
@@ -663,7 +663,7 @@ export const JEFES = {
     nombre: 'Vinicius Jr.', equipo: 'Real Madrid', vida: 430, velocidad: 82, radio: 20, dano: 13, xp: 46, freno: 0.2,
     habilidad: 'Embestidas en zigzag, rosca y ráfagas', cada: 3.0,
     aspecto: {
-      piel: '#6b4423', pelo: { c: '#111111', e: 'cresta' },
+      piel: '#6b4423', pelo: { c: '#111111', e: 'rizado' }, pendiente: '#ffd84a',
       camiseta: { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, pantalon: '#fafafa', medias: '#fafafa', botas: '#7cff4d',
     },
   },
@@ -681,7 +681,7 @@ export const JEFES = {
     nombre: 'Neymar Jr.', equipo: 'Brasil', vida: 540, velocidad: 64, radio: 22, dano: 14, xp: 52, freno: 0.15,
     habilidad: 'Lluvia de bicicletas, saltos y espirales', cada: 3.0,
     aspecto: {
-      piel: '#c68642', pelo: { c: '#d9b24c', e: 'cresta' },
+      piel: '#c68642', pelo: { c: '#f0d870', e: 'cresta' }, tatuaje: '#3a2a20', pendiente: '#ffffff',
       camiseta: { c: '#f2c200', c2: '#1a7a3a', p: 'cuello' }, pantalon: '#1b3f9c', medias: '#ffffff', botas: '#ff3bd4',
     },
   },
@@ -690,7 +690,7 @@ export const JEFES = {
     nombre: 'Gareth Bale', equipo: 'Real Madrid', vida: 660, velocidad: 70, radio: 24, dano: 15, xp: 55, freno: 0.12,
     habilidad: 'Cañonazos enormes y arrancadas de velocista', cada: 2.8,
     aspecto: {
-      piel: '#f0c8a6', pelo: { c: '#6b4423', e: 'tupe' },
+      piel: '#f0c8a6', pelo: { c: '#6b4423', e: 'mono' }, barba: '#6b4423',
       camiseta: { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, pantalon: '#fafafa', medias: '#fafafa', botas: '#1d1d1d',
     },
   },
@@ -699,7 +699,7 @@ export const JEFES = {
     nombre: 'Karim Benzema', equipo: 'Real Madrid', vida: 720, velocidad: 52, radio: 24, dano: 15, xp: 56, freno: 0.12,
     habilidad: 'Disparos de precisión, rondos y toques de primera', cada: 2.9,
     aspecto: {
-      piel: '#d9a77a', pelo: { c: '#111111', e: 'corto' }, barba: '#111111',
+      piel: '#d9a77a', pelo: { c: '#111111', e: 'rapado' }, barba: '#111111', cejas: true,
       camiseta: { c: '#fafafa', c2: '#7b3fa0', p: 'cuello' }, pantalon: '#fafafa', medias: '#fafafa', botas: '#d8d8d8',
     },
   },
@@ -708,7 +708,7 @@ export const JEFES = {
     nombre: 'Luis Suárez', equipo: 'FC Barcelona', vida: 780, velocidad: 66, radio: 24, dano: 16, xp: 58, freno: 0.1,
     habilidad: 'Mordiscos: embestidas con pulso, murallas y autobús', cada: 3.0, radioPulso: 190,
     aspecto: {
-      piel: '#e0ac84', pelo: { c: '#3a2214', e: 'corto' }, barba: '#3a2214',
+      piel: '#e0ac84', pelo: { c: '#3a2214', e: 'raya' }, barba: 'rgba(58,34,20,0.45)', dientes: true,
       camiseta: { c: '#a50044', c2: '#004d98', p: 'franjas' }, pantalon: '#004d98', medias: '#a50044', botas: '#111111',
     },
   },

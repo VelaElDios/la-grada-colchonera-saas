@@ -24,6 +24,7 @@ export function lanzarUlti(mundo) {
   const j = mundo.jugador;
   if (mundo.estado !== 'jugando' || !ultiLista(mundo)) return false;
   const def = ENTRENADORES[j.entrenador].ulti;
+  mundo.fuente = 'ulti';
 
   if (j.entrenador === 'cholo') {
     const dano = def.dano + def.danoPorNivel * j.nivel;
@@ -47,5 +48,6 @@ export function lanzarUlti(mundo) {
   j.ulti.usos += 1;
   j.ulti.max = Math.min(ULTI.tope, ULTI.base + ULTI.incremento * j.ulti.usos);
   mundo.eventos.push({ tipo: 'ulti', texto: def.nombre });
+  mundo.fuente = undefined;
   return true;
 }

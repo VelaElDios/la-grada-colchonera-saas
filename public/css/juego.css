@@ -262,7 +262,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .en-partida .avisos { top: 72px; }
 
 /* ---------- Vestuario: plantilla filtrable + ficha del jugador ---------- */
-.pantalla__caja--vestuario { width: min(100%, 980px); height: min(calc(100vh - 100px), 700px); grid-template-rows: auto auto minmax(0, 1fr) auto; }
+.pantalla__caja--vestuario { width: min(100%, 980px); height: min(calc(100vh - 100px), 800px); grid-template-rows: auto auto minmax(0, 1fr) auto auto; }
 .vest__cabecera { display: flex; justify-content: space-between; align-items: end; gap: var(--s-4); flex-wrap: wrap; }
 .vest__aviso { max-width: 360px; font-size: var(--t-xs); color: var(--gris-300); }
 .vest__filtros { display: flex; gap: var(--s-2); flex-wrap: wrap; }
@@ -484,3 +484,58 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 .firma__lienzo { width: min(94vw, 900px, calc((100vh - 120px) * 1.6)); height: auto; aspect-ratio: 256 / 160; image-rendering: pixelated; border-radius: 6px; box-shadow: 0 20px 60px rgb(0 0 0 / 0.6); }
 .firma__pista { margin: 0; font-size: var(--t-xs); color: var(--gris-300); letter-spacing: 0.08em; text-transform: uppercase; }
 .firma--fuera { opacity: 0; transition: opacity 0.25s ease; }
+
+/* ---------- Fin de partida: estadísticas ---------- */
+.pantalla__caja--fin { width: min(100%, 900px); }
+.fin { display: grid; gap: var(--s-3); }
+.fin__cabeza { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-3) var(--s-4); }
+.fin__tiempo { display: grid; }
+.fin__tiempo small { font-size: var(--t-xs); text-transform: uppercase; letter-spacing: 0.1em; color: var(--gris-300); }
+.fin__tiempo strong { font-size: clamp(2rem, 6vw, 3rem); line-height: 1; font-variant-numeric: tabular-nums; }
+.fin__ambiente { padding: 4px 12px; border-radius: var(--r-pill); border: 1px solid var(--color-ambiente); color: var(--color-ambiente); font-weight: 800; font-size: var(--t-sm); text-transform: uppercase; letter-spacing: 0.06em; }
+.fin__quien { margin: 0; color: var(--gris-300); font-size: var(--t-sm); }
+.resultado--fin { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--s-2); }
+.resultado--fin > div { padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); background: rgb(255 255 255 / 0.06); }
+.resultado--fin dt { font-size: 11px; color: var(--gris-300); text-transform: uppercase; letter-spacing: 0.06em; }
+.resultado--fin dd { margin: 0; font-size: var(--t-lg); font-weight: 800; font-variant-numeric: tabular-nums; }
+.danos { margin: 0; padding: 0; list-style: none; display: grid; gap: 6px; }
+.dano { display: grid; grid-template-columns: 22px minmax(120px, 210px) 1fr 70px 40px; align-items: center; gap: var(--s-2); font-size: var(--t-sm); }
+.dano__icono { color: #9fd8ff; display: grid; place-items: center; }
+.dano--ultra .dano__icono { color: #ffd24a; }
+.dano__nombre small { color: var(--gris-300); }
+.dano__barra { height: 10px; border-radius: 5px; background: rgb(255 255 255 / 0.08); overflow: hidden; }
+.dano__barra span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #ff4d63, #ffb36b); }
+.dano--ultra .dano__barra span { background: linear-gradient(90deg, #ffd24a, #fff3b0); }
+.dano b { text-align: right; font-variant-numeric: tabular-nums; }
+.dano__pct { color: var(--gris-300); text-align: right; }
+.fin__jefes { margin: 0; padding: 0; list-style: none; display: flex; flex-wrap: wrap; gap: 6px; }
+.fin__jefes li { display: inline-flex; align-items: center; gap: 6px; padding: 4px 10px; border-radius: var(--r-pill); background: rgb(255 209 102 / 0.12); border: 1px solid rgb(255 209 102 / 0.5); font-size: var(--t-sm); }
+.fin__jefes small { color: var(--gris-300); }
+@media (max-width: 640px) { .dano { grid-template-columns: 22px 1fr 60px; } .dano__barra, .dano__pct { display: none; } }
+
+/* ---------- Logros ---------- */
+.logros { margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--s-2); }
+.logro { display: grid; grid-template-columns: auto 1fr; gap: var(--s-3); padding: var(--s-3); border-radius: var(--r-md); background: rgb(255 255 255 / 0.04); border: 1px solid var(--borde); color: var(--gris-300); }
+.logro--hecho { background: linear-gradient(135deg, rgb(255 209 102 / 0.14), rgb(200 16 46 / 0.08)); border-color: rgb(255 209 102 / 0.6); color: #fff; }
+.logro--nuevo { animation: latido 1.4s ease-in-out 3; box-shadow: 0 0 16px rgb(255 209 102 / 0.4); }
+.logro__icono { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50%; background: rgb(0 0 0 / 0.3); color: var(--gris-300); }
+.logro--hecho .logro__icono { color: var(--ambar); background: radial-gradient(circle at 35% 30%, rgb(255 224 138 / 0.35), rgb(0 0 0 / 0.3)); }
+.logro__cuerpo { display: grid; gap: 3px; font-size: var(--t-sm); }
+.logro__cuerpo strong { color: #fff; }
+.logro__como { font-size: 12px; color: var(--gris-300); }
+.logro__dato { font-size: 12px; color: #ffe9b0; }
+.logro__dato--oculto { color: var(--gris-300); font-style: italic; opacity: 0.8; }
+.logro__premio { font-size: 11px; font-weight: 800; color: #8ee6a0; text-transform: uppercase; letter-spacing: 0.06em; }
+
+/* ---------- Equipaciones (Vestuario) ---------- */
+.equipaciones { display: grid; gap: var(--s-2); }
+.equipaciones__lista { margin: 0; padding: 0 0 6px; list-style: none; display: grid; grid-auto-flow: column; grid-auto-columns: 132px; gap: var(--s-2); overflow-x: auto; }
+.equipacion { width: 100%; height: 100%; display: grid; grid-template-columns: 32px 1fr; grid-template-rows: auto auto; column-gap: 6px; align-items: center; align-content: center; padding: 4px 6px; border-radius: var(--r-md); border: 2px solid var(--borde); background: rgb(255 255 255 / 0.05); color: #fff; font-size: 11px; font-weight: 700; line-height: 1.15; text-align: left; cursor: pointer; }
+.equipacion img { grid-row: span 2; width: 32px; height: 40px; image-rendering: pixelated; }
+.equipacion[aria-pressed="true"] { border-color: var(--rojo-claro, #ff4d63); background: rgb(255 77 99 / 0.12); }
+.equipacion > span:last-child { grid-row: span 2; }
+.equipacion--bloqueada { cursor: not-allowed; }
+.equipacion--bloqueada img { opacity: 0.45; }
+.equipacion--bloqueada span { color: var(--gris-300); }
+.equipacion small { display: flex; align-items: center; gap: 3px; min-width: 0; color: var(--gris-300); font-weight: 600; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.equipacion small svg { flex: none; }

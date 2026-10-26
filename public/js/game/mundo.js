@@ -30,6 +30,7 @@ const SIN_ENTRADA = { x: 0, y: 0 };
  */
 export function crearMundo({
   semilla = Date.now(), efectosReducidos = false, personaje = 'koke', entrenador = 'cholo', pasilloMenu = false, entrenamiento = null,
+  equipacion = 'primera',
 } = {}) {
   const pj = PERSONAJES[personaje] ?? PERSONAJES.koke;
   const clavePersonaje = PERSONAJES[personaje] ? personaje : 'koke';
@@ -58,6 +59,7 @@ export function crearMundo({
     jugador: {
       personaje: clavePersonaje,
       entrenador: claveEntrenador,
+      equipacion, // solo cambia el dibujo (ver EQUIPACIONES en logros.js)
       posicion: pj.posicion,
       x: 0,
       y: 0,
@@ -137,6 +139,10 @@ export function crearMundo({
     opciones: [],
     eventos: [],
     cuadricula: crearCuadricula(48),
+    // Estadísticas para la pantalla de fin y los logros
+    stats: {
+      dano: {}, danoTotal: 0, criticos: 0, golpeMax: 0, recibido: 0, golpes: 0, curado: 0, primerGolpe: null, jefes: [], ambienteMax: 0,
+    },
   };
   recalcular(mundo.jugador);
   mundo.jugador.vida = mundo.jugador.vidaMax;
@@ -235,7 +241,9 @@ function golpesDeDash(mundo, d) {
     if (e.muerto || d.golpeados.has(e.id)) return;
     if ((e.x - j.x) ** 2 + (e.y - j.y) ** 2 > (e.r + alcance) ** 2) return;
     d.golpeados.add(e.id);
+    mundo.fuente = d.fuente;
     danar(mundo, e, d.dano, normalizar(e.x - j.x + d.dx * 20, e.y - j.y + d.dy * 20), d.empuje, d.tipoDano);
+    mundo.fuente = undefined;
     if (d.aturde) aturdir(mundo, e, d.aturde);
   });
   if (!mundo.efectosReducidos && mundo.ondas.length < 40 && Math.round(mundo.tiempo * 60) % 2 === 0) {
@@ -376,7 +384,9 @@ function moverProyectiles(mundo, dt) {
         if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 > (e.r + p.r) ** 2) return;
         p.golpeados.add(e.id);
         p.perfora -= 1;
+        mundo.fuente = p.fuente;
         danar(mundo, e, p.dano, normalizar(p.vx, p.vy), p.empuje, p.tipoDano ?? 'disparo');
+        mundo.fuente = undefined;
         if (p.fuego) quemar(mundo, e, p.dano * (0.2 + 0.08 * p.fuego) * mundo.jugador.mult.dano, 3);
         if (mundo.ondas.length < 40) mundo.ondas.push({ x: p.x, y: p.y, radio: 18, vida: 0.14, total: 0.14 });
       });
@@ -564,6 +574,7 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   const ambiente = ambienteDe(mundo.tiempo / 60);
   if (ambiente !== mundo.ambiente) {
     mundo.ambiente = ambiente;
+    mundo.stats.ambienteMax = Math.max(mundo.stats.ambienteMax, ambiente);
     mundo.cambioAmbiente = { t0: mundo.tiempo };
     mundo.eventos.push({ tipo: 'ambiente', indice: ambiente, clave: AMBIENTES[ambiente].clave, nombre: AMBIENTES[ambiente].nombre });
     if (!mundo.efectosReducidos) mundo.sacudida = Math.max(mundo.sacudida, 0.35);
@@ -675,5 +686,10 @@ export function resumen(mundo) {
     tiempo: mundo.tiempo, oleada: mundo.oleada, nivel: j.nivel, bajas: j.bajas, jefes: j.jefes, personaje: j.personaje, entrenador: j.entrenador,
     sinergias: [...mundo.sinergiasLogradas],
     ultras: [...mundo.ultrasLogradas],
+    ambiente: mundo.stats.ambienteMax,
+    stats: mundo.stats,
+    armas: Object.fromEntries(Object.entries(j.armas).filter(([, a]) => a.nivel > 0).map(([k, a]) => [k, a.nivel])),
+    pasivas: Object.fromEntries(Object.entries(j.pasivas).filter(([, n]) => n > 0)),
+    vidaMax: j.vidaMax,
   };
 }

@@ -505,6 +505,19 @@ export function obstaculosCerca(t, x, y, fn, r = 64) {
   }
 }
 
+/** Distancia (px) desde (x, y) al borde de la grada más cercana en `alcance`; Infinity si no hay ninguna. */
+export function distanciaGrada(t, x, y, alcance = 700) {
+  let mejor = Infinity;
+  obstaculosCerca(t, x, y, (o) => {
+    if (o.tipo !== 'grada') return;
+    const dx = Math.max(0, Math.abs(o.x - x) - o.w / 2);
+    const dy = Math.max(0, Math.abs(o.y - y) - o.h / 2);
+    const d = Math.hypot(dx, dy);
+    if (d < mejor) mejor = d;
+  }, alcance);
+  return mejor;
+}
+
 /** Celdas, obstáculos y adornos que caen dentro del rectángulo [x0,x1]×[y0,y1] (para dibujarlas). */
 export function visibles(t, x0, y0, x1, y1, margen = 260) {
   const celdas = [];
