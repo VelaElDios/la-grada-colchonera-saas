@@ -2,7 +2,8 @@
 const CLAVE = 'grada.ajustes';
 
 export const AJUSTES_BASE = {
-  volumen: 70, // 0..100
+  volumen: 70, // efectos 0..100
+  musica: 50, // música y grada 0..100
   efectos: true, // partículas y sacudidas de pantalla
   numeros: true, // números de daño sobre los rivales
   zoom: 'normal', // 'cerca' | 'normal' | 'lejos'
@@ -16,6 +17,7 @@ export function leerAjustes() {
     const g = JSON.parse(localStorage.getItem(CLAVE));
     return {
       volumen: Number.isFinite(g?.volumen) ? Math.max(0, Math.min(100, g.volumen)) : AJUSTES_BASE.volumen,
+      musica: Number.isFinite(g?.musica) ? Math.max(0, Math.min(100, g.musica)) : AJUSTES_BASE.musica,
       efectos: typeof g?.efectos === 'boolean' ? g.efectos : AJUSTES_BASE.efectos,
       numeros: typeof g?.numeros === 'boolean' ? g.numeros : AJUSTES_BASE.numeros,
       zoom: ZOOM[g?.zoom] ? g.zoom : AJUSTES_BASE.zoom,

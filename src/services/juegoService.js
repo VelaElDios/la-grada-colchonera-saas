@@ -21,7 +21,8 @@ function cargarReglas() {
     reglasPromesa = Promise.all([
       import(pathToFileURL(path.join(RUTA_JUEGO, 'club.js')).href),
       import(pathToFileURL(path.join(RUTA_JUEGO, 'config.js')).href),
-    ]).then(([club, config]) => ({ club, config }));
+      import(pathToFileURL(path.join(RUTA_JUEGO, 'logros.js')).href),
+    ]).then(([club, config, logros]) => ({ club, config, logros }));
   }
   return reglasPromesa;
 }
@@ -45,7 +46,8 @@ function createJuegoService({
 }) {
   /** Lee el perfil (lo crea con el equipo inicial la primera vez), lo transforma y lo guarda con control de versión. */
   async function conPerfil(user, transformar) {
-    const { club, config } = await cargarReglas();
+    const reglasJuego = await cargarReglas();
+    const { club } = reglasJuego;
     for (let intento = 0; intento < MAX_REINTENTOS; intento += 1) {
       let actual = await juegoRepository.getPerfil(user.id);
       if (!actual) {
@@ -53,7 +55,7 @@ function createJuegoService({
         actual = await juegoRepository.getPerfil(user.id);
       }
       const datos = structuredClone(actual.datos);
-      const resultado = await transformar(datos, { club, config });
+      const resultado = await transformar(datos, reglasJuego);
       if (resultado?.sinCambios || await juegoRepository.guardarPerfil(user.id, datos, actual.version)) {
         return { datos, resultado };
       }
@@ -61,8 +63,17 @@ function createJuegoService({
     throw new ConflictError('Hay demasiadas peticiones a la vez. Inténtalo de nuevo.');
   }
 
+  /** Apunta en el perfil los logros nuevos (con su fecha). Devuelve las claves de los que no tenía. */
+  function anotarLogros(d, claves) {
+    d.logros = d.logros ?? {};
+    const nuevos = claves.filter((k) => !d.logros[k]);
+    const fecha = new Date(ahora()).toISOString();
+    nuevos.forEach((k) => { d.logros[k] = fecha; });
+    return nuevos;
+  }
+
   /** Lo que ve el cliente (sin datos internos como la partida en curso). */
-  function vista(datos, club, config) {
+  function vista(datos, club, config, logros) {
     const jugadores = {};
     Object.entries(datos.jugadores).forEach(([clave, ficha]) => {
       jugadores[clave] = {
@@ -82,10 +93,12 @@ function createJuegoService({
       fichasGanadas: club.fichasGanadas(datos),
       siguienteFichaEn: club.JEFES_POR_FICHA - (datos.jefesTotal % club.JEFES_POR_FICHA),
       totalJugadores: Object.keys(config.PERSONAJES).length,
+      logros: datos.logros ?? {},
+      equipaciones: logros.equipacionesDe(Object.keys(datos.logros ?? {})),
     };
   }
 
-  const reglas = async (datos) => { const r = await cargarReglas(); return vista(datos, r.club, r.config); };
+  const reglas = async (datos) => { const r = await cargarReglas(); return vista(datos, r.club, r.config, r.logros); };
 
   return {
     /** Club del usuario. */
@@ -108,13 +121,15 @@ function createJuegoService({
     },
 
     /** Termina la partida: valida el resultado, reparte progreso (jefes → puntos y fichas) y actualiza el ranking. */
-    async finalizarPartida(user, partidaId, { tiempo, nivel, jefes, bajas } = {}) {
+    async finalizarPartida(user, partidaId, {
+      tiempo, nivel, jefes, bajas, logros: logrosPedidos = [],
+    } = {}) {
       if (![tiempo, nivel, jefes, bajas].every(entero) || tiempo < 0 || nivel < 1 || jefes < 0 || bajas < 0) {
         throw new ValidationError('Resultado de la partida no válido');
       }
       let record = false;
       let partida;
-      const { datos, resultado } = await conPerfil(user, (d, { club }) => {
+      const { datos, resultado } = await conPerfil(user, (d, { club, config, logros }) => {
         const actual = d.partidaActual;
         if (!actual || actual.id !== partidaId) throw new NotFoundError('No hay una partida en curso con ese identificador');
         const transcurrido = (ahora() - actual.inicio) / 1000;
@@ -132,7 +147,11 @@ function createJuegoService({
         d.partidas += 1;
         delete d.partidaActual;
         partida = actual;
+        // Logros: los de la partida que se pueden creer con lo que sabe el servidor, y los del club
+        const r = { tiempo, nivel, jefes, bajas, personaje: actual.personaje, entrenador: actual.entrenador };
+        const logrosNuevos = anotarLogros(d, [...logros.logrosCreibles(logrosPedidos, r), ...logros.logrosDeClub(d, config.PERSONAJES)]);
         return {
+          logrosNuevos,
           jefes,
           puntosNuevos: club.puntosLibres(ficha) - puntosAntes,
           fichasNuevas: club.fichasDisponibles(d) - fichasAntes,
@@ -151,15 +170,15 @@ function createJuegoService({
 
     /** Gasta una ficha de contrato: un jugador nuevo al azar (nunca repetido; los de rareza común salen más). */
     async contratar(user) {
-      const { datos, resultado } = await conPerfil(user, (d, { club }) => {
+      const { datos, resultado } = await conPerfil(user, (d, { club, config, logros }) => {
         if (club.fichasDisponibles(d) < 1) throw new ConflictError('No tienes fichas de contrato (una por cada 3 jefes vencidos)');
         const clave = club.sortearContrato(d, azar);
         if (!clave) throw new ConflictError('Ya tienes a todos los jugadores');
         d.fichasUsadas += 1;
         d.jugadores[clave] = club.fichaNueva();
-        return { fichado: clave };
+        return { fichado: clave, logrosNuevos: anotarLogros(d, logros.logrosDeClub(d, config.PERSONAJES)) };
       });
-      return { fichado: resultado.fichado, perfil: await reglas(datos) };
+      return { fichado: resultado.fichado, logrosNuevos: resultado.logrosNuevos, perfil: await reglas(datos) };
     },
 
     /** Sube una estadística de un jugador con un punto de entrenamiento. */

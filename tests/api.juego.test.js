@@ -140,6 +140,26 @@ describe('API /api/juego', () => {
     assert.equal(res.status, 404);
   });
 
+  test('logros: el servidor guarda solo los creíbles, una vez, y desbloquea su equipación', async () => {
+    const { cookie } = await nuevoUsuario();
+    const perfil = (await get(cookie, '/perfil')).body;
+    assert.deepEqual(perfil.equipaciones, ['primera']);
+    assert.deepEqual(perfil.logros, {});
+    const [a] = Object.keys(perfil.jugadores);
+    const ini = await post(cookie, '/partidas', { personaje: a, entrenador: 'cholo' });
+    reloj += 320_000;
+    const res = await post(cookie, `/partidas/${ini.body.partidaId}/fin`, {
+      tiempo: 320, nivel: 20, jefes: 1, bajas: 200, logros: ['primerJefe', 'copa', 'mundial', 'inventado'],
+    });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.deepEqual(res.body.recompensas.logrosNuevos.sort(), ['copa', 'primerJefe']); // el Mundial en 5 minutos no cuela
+    assert.ok(res.body.perfil.logros.primerJefe);
+    assert.ok(res.body.perfil.equipaciones.includes('segunda'));
+    // Repetirlos no los vuelve a dar como nuevos
+    const otra = await jugar(cookie, a, { jefes: 1, tiempo: 300 });
+    assert.deepEqual(otra.body.recompensas.logrosNuevos, []);
+  });
+
   test('el ranking ordena por tiempo, guarda quién y a qué nivel, y solo cuenta la mejor partida de cada uno', async () => {
     const ana = await nuevoUsuario('ana');
     const luis = await nuevoUsuario('luis');

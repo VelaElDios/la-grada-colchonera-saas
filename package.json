@@ -1,7 +1,7 @@
 {
   "name": "la-grada-colchonera-saas",
   "version": "0.1.0",
-  "description": "La Grada Colchonera: red social para aficionados rojiblancos (proyecto PIS 2026-2027)",
+  "description": "La Grada Colchonera: juego web rojiblanco tipo survivor en pixel art (proyecto PIS 2026-2027)",
   "private": true,
   "main": "src/server.js",
   "scripts": {

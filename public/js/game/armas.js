@@ -56,7 +56,7 @@ function masCercanos(mundo, n, alcance) {
 function nuevoProyectil(mundo, props) {
   const j = mundo.jugador;
   mundo.proyectiles.push({
-    x: j.x, y: j.y, vx: 0, vy: 0, r: 6, dano: 1, perfora: 1, vida: 1.4, rot: 0, empuje: 120, golpeados: new Set(), ...props,
+    x: j.x, y: j.y, vx: 0, vy: 0, r: 6, dano: 1, perfora: 1, vida: 1.4, rot: 0, empuje: 120, golpeados: new Set(), fuente: mundo.fuente, ...props,
   });
   // Las combinaciones («Bombardeo», «Doblete») hacen que los balones atraviesen a más rivales
   const p = mundo.proyectiles[mundo.proyectiles.length - 1];
@@ -302,7 +302,7 @@ function deslizarse(mundo, nivel) {
   const { largo, ancho, dano, empuje } = ARMAS.entrada.niveles[nivel - 1];
   const [dx, dy] = direccionDeAtaque(mundo, 340);
   const v = 720;
-  j.dash = { t: largo / v, v, dx, dy, ancho, dano, empuje, tipoDano: 'cuerpo', golpeados: new Set(), color: '#c9a36b' };
+  j.dash = { t: largo / v, v, dx, dy, ancho, dano, empuje, tipoDano: 'cuerpo', golpeados: new Set(), color: '#c9a36b', fuente: 'entrada' };
   mundo.eventos.push({ tipo: 'latigazo' });
 }
 
@@ -426,7 +426,7 @@ function regatear(mundo, nivel) {
   // Hacia donde corres; si estás quieto, hacia donde mirabas
   const moviendo = Math.hypot(j.vx, j.vy) > 20;
   const [dx, dy] = moviendo ? normalizar(j.vx, j.vy) : [j.dirX, j.dirY];
-  j.dash = { t: 0.26, v: impulso * 1.1, dx, dy, ancho: 34, dano, empuje, tipoDano: 'movil', golpeados: new Set(), color: '#9fd8ff' };
+  j.dash = { t: 0.26, v: impulso * 1.1, dx, dy, ancho: 34, dano, empuje, tipoDano: 'movil', golpeados: new Set(), color: '#9fd8ff', fuente: 'regate' };
   j.invul = Math.max(j.invul, invul);
   mundo.eventos.push({ tipo: 'latigazo' });
 }
@@ -503,7 +503,7 @@ function lanzarBengalas(mundo, nivel) {
     const x = e ? e.x : j.x + Math.cos(a) * 160;
     const y = e ? e.y : j.y + Math.sin(a) * 160;
     programarJugador(mundo, 0.25 + 0.12 * k, () => {
-      if (mundo.fuegos.length < 14) mundo.fuegos.push({ x, y, radio, dano, t: dur, total: dur, tick: 0 });
+      if (mundo.fuegos.length < 14) mundo.fuegos.push({ x, y, radio, dano, t: dur, total: dur, tick: 0, fuente: 'bengala' });
       mundo.ondas.push({ x, y, radio: radio * 1.2, vida: 0.3, total: 0.3, color: '#ff7a1a' });
     });
     mundo.impactos.push({ tipo: 'marca', x, y, radio: radio * 0.8, vida: 0.25 + 0.12 * k, total: 0.25 + 0.12 * k, color: '#ff7a1a' });
@@ -519,6 +519,7 @@ export function actualizarFuegos(mundo, dt) {
     f.tick -= dt;
     if (f.tick > 0) continue;
     f.tick = 0.4;
+    mundo.fuente = f.fuente ?? 'bengala';
     mundo.cuadricula.cerca(f.x, f.y, f.radio + 20, (e) => {
       if (e.muerto || (e.x - f.x) ** 2 + (e.y - f.y) ** 2 > (f.radio + e.r) ** 2) return;
       if (f.pct) golpeUltra(mundo, e, f.dano, f.pct, null, 0, 'cuerpo');
@@ -526,10 +527,12 @@ export function actualizarFuegos(mundo, dt) {
       quemar(mundo, e, f.dano * 0.6, 1.5);
     });
   }
+  mundo.fuente = undefined;
 }
 
 /** Quemaduras (Botas en llamas y bengalas): un golpe de fuego cada medio segundo mientras dure. */
 export function actualizarQuemaduras(mundo, dt) {
+  mundo.fuente = 'fuego';
   for (let i = 0; i < mundo.enemigos.length; i += 1) {
     const e = mundo.enemigos[i];
     const q = e.quemado;
@@ -542,6 +545,7 @@ export function actualizarQuemaduras(mundo, dt) {
     }
     if (q.t <= 0) e.quemado = null;
   }
+  mundo.fuente = undefined;
 }
 
 /** Armas que se disparan cada cierto tiempo (todas menos los banderines, que giran siempre). */
@@ -579,10 +583,13 @@ export function actualizarArmas(mundo, dt) {
     if (arma.nivel <= 0) continue;
     arma.cd -= dt;
     if (arma.cd <= 0) {
+      mundo.fuente = clave; // para las estadísticas: el daño que salga de aquí es de esta arma
       disparar(mundo, arma.nivel);
       arma.cd += recarga(j, ARMAS[clave].niveles[arma.nivel - 1].cd, clave);
     }
   }
+  mundo.fuente = 'banderines';
   if (j.armas.banderines.nivel > 0) girarBanderines(mundo, j.armas.banderines.nivel, dt);
   else j.banderines.length = 0;
+  mundo.fuente = undefined;
 }

@@ -37,6 +37,7 @@ export function curar(mundo, cantidad) {
   const j = mundo.jugador;
   const antes = j.vida;
   j.vida = Math.min(j.vidaMax, j.vida + cantidad);
+  if (mundo.stats) mundo.stats.curado += j.vida - antes;
   return j.vida - antes;
 }
 
@@ -59,6 +60,7 @@ export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo =
   // Golpe crítico (Trébol y suerte): el doble de daño
   const critico = (mundo.jugador.mult.critico ?? 0) > 0 && mundo.rng.siguiente() < mundo.jugador.mult.critico;
   if (critico) cantidad *= 2;
+  anotarDano(mundo, enemigo, cantidad, critico);
   enemigo.vida -= cantidad;
   enemigo.flash = 0.1;
   crearParticulas(mundo, enemigo.x, enemigo.y, '#ffffff', 3, 110); // chispas del golpe
@@ -73,9 +75,25 @@ export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo =
   else mundo.eventos.push({ tipo: 'golpe' });
 }
 
+/**
+ * Estadísticas de la partida: cuánto daño hace cada arma (`mundo.fuente`, que fija quien ataca) sin contar
+ * el que sobra al matar.
+ */
+function anotarDano(mundo, enemigo, cantidad, critico, porDefecto = 'otros') {
+  const st = mundo.stats;
+  if (!st) return;
+  const util = Math.max(0, Math.min(cantidad, enemigo.vida));
+  const f = mundo.fuente ?? porDefecto;
+  st.dano[f] = (st.dano[f] ?? 0) + util;
+  st.danoTotal += util;
+  if (critico) st.criticos += 1;
+  if (cantidad > st.golpeMax) st.golpeMax = cantidad;
+}
+
 /** Daño que no depende de tus multiplicadores (quemaduras): ya viene calculado. */
 export function danoFijo(mundo, enemigo, cantidad, color = '#ff9a3c') {
   if (enemigo.muerto) return;
+  anotarDano(mundo, enemigo, cantidad, false, 'fuego');
   enemigo.vida -= cantidad;
   enemigo.flash = Math.max(enemigo.flash, 0.05);
   if (!mundo.sinNumeros && mundo.textos.length < 24) crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), color);
@@ -126,6 +144,7 @@ function matar(mundo, enemigo) {
     mundo.sacudida = Math.max(mundo.sacudida, 0.4);
     mundo.congelar = Math.max(mundo.congelar, 0.14);
     mundo.jugador.jefes += 1;
+    if (mundo.stats) mundo.stats.jefes.push({ clave: enemigo.jefe, nombre: enemigo.nombre, t: mundo.tiempo, vivo: mundo.tiempo - (enemigo.nacio ?? mundo.tiempo) });
     mundo.eventos.push({ tipo: 'jefe-derrotado', nombre: enemigo.nombre });
   } else if (enemigo.elite) {
     for (let i = 0; i < 2; i += 1) soltarGema(mundo, enemigo.x, enemigo.y, enemigo.xp);

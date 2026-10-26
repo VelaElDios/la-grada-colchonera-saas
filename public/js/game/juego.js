@@ -1,13 +1,15 @@
 // Montaje del juego: pantallas (menú, pausa, mejora, final), bucle principal y conexión entre
 // la simulación (mundo.js), el dibujo (render.js), el sonido y la interfaz superpuesta (hud.js).
 import {
-  MUNDO, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, PASIVAS, SINERGIAS, ULTRAS,
+  MUNDO, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, PASIVAS, SINERGIAS, ULTRAS, AMBIENTES,
 } from './config.js';
 import { crearMundo, avanzar, elegirMejora, resumen, usarUlti } from './mundo.js';
 import { retratoUrl, aspectoDe, avatarUrl } from './sprites.js';
 import { dibujar, actualizarCamara } from './render.js';
 import { crearEntrada } from './entrada.js';
 import { crearAudio } from './audio.js';
+import { intensidadMusica, cercaniaGrada } from './musica.js';
+import { distanciaGrada } from './terreno.js';
 import { crearHud } from './hud.js';
 import { icono } from './iconos.js';
 import { formatearTiempo } from './util.js';
@@ -15,6 +17,8 @@ import { leerStats, registrarPartida, registrarSinergia } from './marca.js';
 import { leerAjustes, guardarAjustes, ZOOM } from './ajustes.js';
 import { puntosLibres, esInicial, rareza } from './club.js';
 import { animarFirma } from './firma.js';
+import { htmlEstadisticas, htmlLogros } from './fin-ui.js';
+import { LOGROS, EQUIPACIONES, logrosDePartida, logroDeEquipacion } from './logros.js';
 import {
   esc, htmlRareza, htmlEntrenamiento, htmlContratar, htmlFichado, htmlRankingGrada, htmlRecompensas, porPosicion,
 } from './club-ui.js';
@@ -93,6 +97,9 @@ const PLANTILLA = `
       <button type="button" class="menu-item" data-accion="contratar">
         ${icono('estrellaLlena', 26)}<span><strong>Contratar</strong><small>Canjea fichas por fichajes</small></span><b class="menu-item__aviso" data-campo="aviso-fichas" hidden></b>
       </button>
+      <button type="button" class="menu-item" data-accion="logros">
+        ${icono('trofeo', 26)}<span><strong>Logros</strong><small>Hazañas y datos rojiblancos</small></span><b class="menu-item__aviso" data-campo="aviso-logros" hidden></b>
+      </button>
       <button type="button" class="menu-item" data-accion="combos">
         ${icono('estrella', 26)}<span><strong>Combinaciones</strong><small>Las metas: qué juntar</small></span>
       </button>
@@ -123,7 +130,21 @@ const PLANTILLA = `
         <ul class="plantilla" data-campo="personajes" aria-label="Plantilla"></ul>
         <aside class="vest__detalle" data-campo="detalle" aria-live="polite"></aside>
       </div>
+      <div class="equipaciones">
+        <h3 class="combos__subtitulo">Equipación <span class="combos__cuenta" data-campo="equip-cuenta"></span></h3>
+        <ul class="equipaciones__lista" data-campo="equipaciones" aria-label="Equipaciones"></ul>
+      </div>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="cerrarAjustes" data-enfoque>${icono('volver', 18)} Listo</button></div>
+    </div>
+  </section>
+
+  <section class="pantalla" data-pantalla="logros" role="dialog" aria-modal="true" aria-labelledby="juego-t-logros" hidden>
+    <div class="pantalla__caja pantalla__caja--ancha pantalla__caja--combos">
+      <p class="pantalla__sobretitulo">Logros</p>
+      <h2 id="juego-t-logros" class="pantalla__titulo">La vitrina rojiblanca <span class="combos__cuenta" data-campo="logros-cuenta"></span></h2>
+      <p class="pantalla__texto">Cada logro esconde un dato de la historia del Atleti, y algunos desbloquean <strong>equipaciones</strong> para el Vestuario.</p>
+      <ul class="logros" data-campo="logros"></ul>
+      <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="hub" data-enfoque>${icono('volver', 18)} Volver</button></div>
     </div>
   </section>
 
@@ -226,7 +247,8 @@ const PLANTILLA = `
       <h2 id="juego-t-aj" class="pantalla__titulo">Sonido, gráficos y controles</h2>
       <fieldset class="ajustes__grupo">
         <legend>Sonido</legend>
-        <label class="ajuste"><span>Volumen</span><input type="range" min="0" max="100" step="5" data-ajuste="volumen"><output data-campo="volumen-valor"></output></label>
+        <label class="ajuste"><span>Efectos</span><input type="range" min="0" max="100" step="5" data-ajuste="volumen"><output data-campo="volumen-valor"></output></label>
+        <label class="ajuste"><span>Música y grada</span><input type="range" min="0" max="100" step="5" data-ajuste="musica"><output data-campo="musica-valor"></output></label>
         <label class="ajuste ajuste--check"><input type="checkbox" data-ajuste="sonido"><span>Sonido activado</span></label>
       </fieldset>
       <fieldset class="ajustes__grupo">
@@ -287,11 +309,11 @@ const PLANTILLA = `
   </section>
 
   <section class="pantalla" data-pantalla="fin" role="dialog" aria-modal="true" aria-labelledby="juego-t-fin" hidden>
-    <div class="pantalla__caja">
+    <div class="pantalla__caja pantalla__caja--ancha pantalla__caja--fin">
       <p class="pantalla__sobretitulo">Final del partido</p>
       <h2 id="juego-t-fin" class="pantalla__titulo">Te han eliminado</h2>
       <p class="insignia" data-campo="record" hidden>Nueva mejor marca</p>
-      <dl class="resultado" data-campo="resultado"></dl>
+      <div class="fin" data-campo="resultado"></div>
       <div class="recompensas__caja" data-campo="recompensas" aria-live="polite"></div>
       <div class="pantalla__acciones">
         <button type="button" class="btn btn--primario" data-accion="reiniciar" data-enfoque>Jugar otra vez</button>
@@ -304,8 +326,8 @@ const PLANTILLA = `
   <p class="sr-only" data-campo="anuncio" role="status" aria-live="polite"></p>
 `;
 
-const PANTALLAS = ['hub', 'identidad', 'vestuario', 'entrenamiento', 'contratar', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda', 'pausa', 'mejora', 'fin'];
-const PANELES_DEL_HUB = new Set(['identidad', 'vestuario', 'entrenamiento', 'contratar', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda']);
+const PANTALLAS = ['hub', 'identidad', 'logros', 'vestuario', 'entrenamiento', 'contratar', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda', 'pausa', 'mejora', 'fin'];
+const PANELES_DEL_HUB = new Set(['identidad', 'logros', 'vestuario', 'entrenamiento', 'contratar', 'combos', 'direccion', 'ranking', 'ajustes', 'ayuda']);
 
 const textoPartida = (f) => `${formatearTiempo(f.tiempo)} · ${PERSONAJES[f.personaje]?.nombre ?? '—'} · oleada ${f.oleada}`;
 
@@ -343,6 +365,7 @@ export function montarJuego(contenedor, {
     const guardada = JSON.parse(localStorage.getItem(CLAVE_ELECCION));
     if (PERSONAJES[guardada?.personaje]) eleccion.personaje = guardada.personaje;
     if (ENTRENADORES[guardada?.entrenador]) eleccion.entrenador = guardada.entrenador;
+    if (EQUIPACIONES[guardada?.equipacion]) eleccion.equipacion = guardada.equipacion;
   } catch { /* sin almacenamiento: se usa la elección por defecto */ }
 
   // --- El club (se guarda en el servidor, ligado a tu cuenta) -------------------------------------
@@ -356,10 +379,12 @@ export function montarJuego(contenedor, {
 
 
   /** `paraMenu`: el mundo del menú tiene un pasillo libre de obstáculos por el que pasea el muñeco. */
+  /** Equipación elegida, si la tienes desbloqueada (si no, la primera). */
+  const equipacionValida = () => (eleccion.equipacion && (!club || club.equipaciones?.includes(eleccion.equipacion)) ? eleccion.equipacion : 'primera');
   const nuevoMundo = (paraMenu = false) => {
     const entrenamiento = club?.jugadores[eleccion.personaje]?.stats ?? null; // lo entrenado en el club se nota en el campo
     const m = crearMundo({
-      efectosReducidos: !ajustes.efectos, ...eleccion, pasilloMenu: paraMenu, entrenamiento,
+      efectosReducidos: !ajustes.efectos, ...eleccion, equipacion: equipacionValida(), pasilloMenu: paraMenu, entrenamiento,
     });
     m.sinNumeros = !ajustes.numeros;
     return m;
@@ -479,6 +504,56 @@ export function montarJuego(contenedor, {
     const apunta = (campo, n) => { const b = q(`[data-campo="${campo}"]`); b.hidden = n <= 0; b.textContent = String(n); };
     apunta('aviso-puntos', puntos);
     apunta('aviso-fichas', fichas);
+    apunta('aviso-logros', club ? Object.keys(club.logros ?? {}).filter((k) => !logrosVistos.has(k)).length : 0);
+  }
+
+  // --- Logros y equipaciones ---------------------------------------------------------------------
+
+  const CLAVE_LOGROS_VISTOS = 'grada.logrosVistos';
+  let logrosVistos = new Set();
+  try { logrosVistos = new Set(JSON.parse(localStorage.getItem(CLAVE_LOGROS_VISTOS)) ?? []); } catch { /* sin almacenamiento */ }
+  let logrosAvisados = new Set(); // los ya anunciados en esta partida
+  let proximaRevisionLogros = 0;
+
+  /** Durante la partida, avisa en cuanto consigues un logro que aún no tenías (se guarda al terminar). */
+  function vigilarLogros() {
+    if (!club || mundo.tiempo < proximaRevisionLogros) return;
+    proximaRevisionLogros = mundo.tiempo + 1;
+    const r = { ...resumen(mundo), muerto: false };
+    for (const k of logrosDePartida(r)) {
+      if (club.logros?.[k] || logrosAvisados.has(k)) continue;
+      logrosAvisados.add(k);
+      hud.aviso(`🏆 Logro: ${LOGROS[k].nombre}`, 'exito');
+      audio.reproducir('logro');
+      anunciar(`Logro conseguido: ${LOGROS[k].nombre}. ${LOGROS[k].dato}`);
+    }
+  }
+
+  function pintarLogros() {
+    const { cuenta, html } = htmlLogros(club?.logros ?? {});
+    q('[data-campo="logros-cuenta"]').textContent = cuenta;
+    q('[data-campo="logros"]').innerHTML = html;
+    Object.keys(club?.logros ?? {}).forEach((k) => logrosVistos.add(k));
+    try { localStorage.setItem(CLAVE_LOGROS_VISTOS, JSON.stringify([...logrosVistos])); } catch { /* da igual */ }
+    pintarAvisosClub();
+  }
+
+  /** Equipaciones del Vestuario: las desbloqueadas se pueden elegir; las demás dicen qué logro piden. */
+  function pintarEquipaciones() {
+    const tengo = new Set(club?.equipaciones ?? ['primera']);
+    const elegida = equipacionValida();
+    const yo = PERSONAJES[eleccion.personaje];
+    q('[data-campo="equip-cuenta"]').textContent = `${tengo.size} de ${Object.keys(EQUIPACIONES).length}`;
+    q('[data-campo="equipaciones"]').innerHTML = Object.entries(EQUIPACIONES).map(([k, e]) => {
+      const libre = tengo.has(k);
+      const aspecto = e.kit ? { ...yo.aspecto, camiseta: { ...e.kit.camiseta }, pantalon: e.kit.pantalon, medias: e.kit.medias } : yo.aspecto;
+      const logro = logroDeEquipacion(k);
+      return `<li><button type="button" class="equipacion${libre ? '' : ' equipacion--bloqueada'}" data-equipacion="${k}" aria-pressed="${elegida === k}" ${libre ? '' : 'aria-disabled="true"'}
+        title="${esc(libre ? e.descripcion : `Se desbloquea con el logro «${LOGROS[logro]?.nombre ?? ''}»: ${LOGROS[logro]?.como ?? ''}`)}">
+        <img src="${retratoUrl(`eq:${eleccion.personaje}:${k}`, aspecto, 4)}" alt="" width="32" height="40">
+        <span>${esc(e.nombre)}</span>${libre ? '' : `<small>${icono('candado', 12)} ${esc(LOGROS[logro]?.nombre ?? '')}</small>`}
+      </button></li>`;
+    }).join('');
   }
 
   const entrada = crearEntrada(contenedor, { alPausar: alternarPausa, activo: () => fase === 'jugando' });
@@ -487,6 +562,7 @@ export function montarJuego(contenedor, {
 
   function aplicarAjustes() {
     audio.volumen = ajustes.volumen / 100;
+    audio.volumenMusica = ajustes.musica / 100;
     entrada.ponerJoystick(ajustes.joystick);
     mundo.efectosReducidos = !ajustes.efectos;
     mundo.sinNumeros = !ajustes.numeros;
@@ -496,6 +572,8 @@ export function montarJuego(contenedor, {
   function pintarAjustes() {
     q('[data-ajuste="volumen"]').value = String(ajustes.volumen);
     q('[data-campo="volumen-valor"]').textContent = `${ajustes.volumen} %`;
+    q('[data-ajuste="musica"]').value = String(ajustes.musica);
+    q('[data-campo="musica-valor"]').textContent = `${ajustes.musica} %`;
     q('[data-ajuste="sonido"]').checked = !audio.silenciado;
     q('[data-ajuste="efectos"]').checked = ajustes.efectos;
     q('[data-ajuste="numeros"]').checked = ajustes.numeros;
@@ -516,7 +594,9 @@ export function montarJuego(contenedor, {
     guardarAjustes(ajustes);
     aplicarAjustes();
     q('[data-campo="volumen-valor"]').textContent = `${ajustes.volumen} %`;
+    q('[data-campo="musica-valor"]').textContent = `${ajustes.musica} %`;
     if (clave === 'volumen') { audio.activar(); audio.reproducir('gema'); }
+    if (clave === 'musica') audio.activar();
   }
 
   // --- Pantallas ------------------------------------------------------------------------------
@@ -673,6 +753,7 @@ export function montarJuego(contenedor, {
     }).join('');
     lista.scrollTop = scroll;
     pintarDetalle();
+    pintarEquipaciones();
   }
 
   function pintarEntrenamiento() {
@@ -738,6 +819,7 @@ export function montarJuego(contenedor, {
       const r = await servidor.contratar();
       fichado = r.fichado;
       aplicarClub(r.perfil);
+      (r.logrosNuevos ?? []).forEach((k) => setTimeout(() => anunciar(`Logro conseguido: ${LOGROS[k]?.nombre}`), 5200));
       audio.reproducir('sinergia');
     } catch (error) {
       anunciar(error.message || 'No se ha podido contratar');
@@ -866,8 +948,10 @@ export function montarJuego(contenedor, {
     const p = partida;
     if (!p || p.enviada || !servidor) return null;
     p.enviada = true;
-    const r = resumen(mundo);
-    const datos = { tiempo: Math.floor(r.tiempo), nivel: r.nivel, jefes: r.jefes, bajas: r.bajas };
+    const r = { ...resumen(mundo), muerto: mundo.estado === 'fin' };
+    const datos = {
+      tiempo: Math.floor(r.tiempo), nivel: r.nivel, jefes: r.jefes, bajas: r.bajas, logros: logrosDePartida(r),
+    };
     if (alCerrarPagina) {
       servidor.finalizarAlCerrar?.(p.id, datos);
       return null;
@@ -918,6 +1002,7 @@ export function montarJuego(contenedor, {
     }
     else if (panel === 'ajustes') pintarAjustes();
     else if (panel === 'identidad') pintarIdentidad();
+    else if (panel === 'logros') pintarLogros();
     mostrar(panel);
   }
 
@@ -926,6 +1011,8 @@ export function montarJuego(contenedor, {
     if (fase === 'jugando' || fase === 'pausa' || fase === 'mejora') await cerrarPartida();
     audio.activar();
     partida = null;
+    logrosAvisados = new Set();
+    proximaRevisionLogros = 0;
     if (servidor && estadoClub === 'listo') {
       ocupado = true;
       try {
@@ -948,6 +1035,7 @@ export function montarJuego(contenedor, {
     zonaHud.hidden = false;
     mostrar(null);
     hud.actualizar(mundo);
+    audio.saqueInicial();
     procesarEventos();
     lienzo.focus({ preventScroll: true });
   }
@@ -1058,26 +1146,25 @@ export function montarJuego(contenedor, {
     fase = 'fin';
     entrada.soltarTodo();
     const r = resumen(mundo);
+    audio.reproducir('fin');
     const { record } = registrarPartida(usuario, r);
     q('[data-campo="record"]').hidden = !record;
     const cajaRecompensas = q('[data-campo="recompensas"]');
+    const cajaResultado = q('[data-campo="resultado"]');
     cajaRecompensas.innerHTML = partida ? '<p class="panel__vacio">Guardando tu partida…</p>' : '';
+    cajaResultado.innerHTML = htmlEstadisticas(r);
     cerrarPartida().then((respuesta) => {
       if (fase !== 'fin') return;
       cajaRecompensas.innerHTML = respuesta ? htmlRecompensas(respuesta, PERSONAJES[r.personaje].nombre)
         : (partida ? '<p class="panel__vacio">No se ha podido guardar la partida en el servidor.</p>' : '');
       if (respuesta?.record) q('[data-campo="record"]').hidden = false;
+      const nuevos = respuesta?.recompensas?.logrosNuevos ?? [];
+      if (nuevos.length) {
+        cajaResultado.innerHTML = htmlEstadisticas(r, { logrosNuevos: nuevos });
+        audio.reproducir('logro');
+      }
       pintarAvisosClub();
     });
-    q('[data-campo="resultado"]').innerHTML = `
-      <div><dt>Tiempo aguantado</dt><dd>${formatearTiempo(r.tiempo)}</dd></div>
-      <div><dt>Oleada</dt><dd>${r.oleada}</dd></div>
-      <div><dt>Nivel</dt><dd>${r.nivel}</dd></div>
-      <div><dt>Rivales eliminados</dt><dd>${r.bajas}</dd></div>
-      <div><dt>Jefes derrotados</dt><dd>${r.jefes}</dd></div>
-      ${r.sinergias.length ? `<div><dt>Combinaciones</dt><dd>${r.sinergias.map((k) => SINERGIAS[k].nombre).join(', ')}</dd></div>` : ''}
-      <div><dt>Jugador</dt><dd>${PERSONAJES[r.personaje].nombre}</dd></div>
-      <div><dt>Entrenador</dt><dd>${ENTRENADORES[r.entrenador].nombre}</dd></div>`;
     // Pequeña pausa para que se vea el golpe final antes de tapar la pantalla
     setTimeout(() => {
       if (fase !== 'fin') return;
@@ -1091,7 +1178,7 @@ export function montarJuego(contenedor, {
 
   function procesarEventos() {
     for (const ev of mundo.eventos.splice(0)) {
-      audio.reproducir(ev.tipo);
+      audio.reproducir(ev.tipo, ev);
       if (ev.tipo === 'oleada' && ev.oleada > 1) {
         hud.aviso(`Oleada ${ev.oleada}`);
         anunciar(`Oleada ${ev.oleada}`);
@@ -1134,6 +1221,21 @@ export function montarJuego(contenedor, {
     if (j.x > 9000) mundo = nuevoMundo(true);
   }
 
+  // Música y grada: qué canción toca, con cuánta intensidad y cuánto se oye la grada (se mide 4 veces por segundo)
+  const oido = { proximo: 0, cerca: 0, jefe: false };
+  function sonarAmbiente(ahora) {
+    if (ahora >= oido.proximo && fase !== 'hub') {
+      oido.proximo = ahora + 250;
+      const j = mundo.jugador;
+      oido.cerca = cercaniaGrada(distanciaGrada(mundo.terreno, j.x, j.y, 700));
+      oido.jefe = mundo.enemigos.some((e) => e.jefe && !e.muerto);
+    }
+    const minuto = mundo.tiempo / 60 - AMBIENTES[mundo.ambiente ?? 0].desde;
+    audio.actualizar({
+      fase, ambiente: mundo.ambiente ?? 0, intensidad: intensidadMusica(minuto, oido.jefe), cercaGrada: fase === 'hub' ? 0 : oido.cerca,
+    });
+  }
+
   function bucle(ahora) {
     raf = requestAnimationFrame(bucle);
     const dt = Math.max(0, Math.min(0.1, (ahora - previo) / 1000)); // el reloj del navegador puede ir un pelo atrasado
@@ -1150,12 +1252,14 @@ export function montarJuego(contenedor, {
       if (pasos >= 6) acumulador = 0;
       procesarEventos();
       hud.actualizar(mundo);
+      vigilarLogros();
       if (mundo.estado === 'mejora') mostrarMejora();
       else if (mundo.estado === 'fin') mostrarFin();
     } else if (fase === 'hub') {
       pasearEnElMenu(dt);
     }
 
+    sonarAmbiente(ahora);
     actualizarCamara(mundo, dt);
     ctx.setTransform(vista.dpr, 0, 0, vista.dpr, 0, 0);
     // En el menú el jugador se ve más grande
@@ -1192,6 +1296,7 @@ export function montarJuego(contenedor, {
     desbloquear: desbloquearTodo,
     combos: () => irAlHub('combos'),
     identidad: () => irAlHub('identidad'),
+    logros: () => irAlHub('logros'),
     direccion: () => irAlHub('direccion'),
     ranking: () => irAlHub('ranking'),
     ajustes: () => irAlHub('ajustes'),
@@ -1218,6 +1323,15 @@ export function montarJuego(contenedor, {
       filtroCombos = filtroC.dataset.filtroCombos;
       pintarCombos();
       pintarUltras();
+      return;
+    }
+    const equip = ev.target.closest('[data-equipacion]');
+    if (equip) {
+      if (equip.getAttribute('aria-disabled') === 'true') { anunciar(equip.title); return; }
+      eleccion = { ...eleccion, equipacion: equip.dataset.equipacion };
+      try { localStorage.setItem(CLAVE_ELECCION, JSON.stringify(eleccion)); } catch { /* da igual */ }
+      mundo = nuevoMundo(true);
+      pintarEquipaciones();
       return;
     }
     const cara = ev.target.closest('[data-avatar]');
@@ -1285,6 +1399,10 @@ export function montarJuego(contenedor, {
     }
   }
 
+  // El navegador no deja sonar nada hasta el primer gesto: con el primero arranca la música del vestuario
+  const alPrimerGesto = () => { audio.activar(); };
+  contenedor.addEventListener('pointerdown', alPrimerGesto, { once: true });
+  window.addEventListener('keydown', alPrimerGesto, { once: true });
   const alCambiarVisibilidad = () => { if (document.hidden && fase === 'jugando') alternarPausa(); };
   const alCerrarPagina = () => { if (partida && !partida.enviada && fase !== 'hub') cerrarPartida({ alCerrarPagina: true }); };
   window.addEventListener('pagehide', alCerrarPagina);
@@ -1318,6 +1436,9 @@ export function montarJuego(contenedor, {
       window.removeEventListener('keydown', alPulsarTecla);
       document.removeEventListener('visibilitychange', alCambiarVisibilidad);
       document.removeEventListener('fullscreenchange', alCambiarPantalla);
+      contenedor.removeEventListener('pointerdown', alPrimerGesto);
+      window.removeEventListener('keydown', alPrimerGesto);
+      audio.cerrar();
       ponerEnPartida(false);
       if (document.fullscreenElement) document.exitFullscreen?.();
       contenedor.classList.remove('juego');

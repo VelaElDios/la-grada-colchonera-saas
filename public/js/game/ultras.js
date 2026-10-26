@@ -237,7 +237,7 @@ function actualizarRastroDeFuego(mundo, dt) {
   st.t -= dt;
   if (j.moviendo && st.t <= 0 && mundo.fuegos.length < MAX_FUEGOS) {
     st.t = d.cada;
-    mundo.fuegos.push({ x: j.x, y: j.y + j.r * 0.4, radio: d.radio, dano: d.dano, pct: d.pct, t: d.dur, total: d.dur, tick: 0.1 });
+    mundo.fuegos.push({ x: j.x, y: j.y + j.r * 0.4, radio: d.radio, dano: d.dano, pct: d.pct, t: d.dur, total: d.dur, tick: 0.1, fuente: 'ultra:botaOro' });
   }
 }
 
@@ -305,20 +305,28 @@ export function actualizarUltras(mundo, dt) {
   if (!j.ultras.length) return;
   const tiene = (k) => j.ultras.includes(k);
 
+  // `mundo.fuente`: a quién se apunta el daño en las estadísticas de la partida
+  mundo.fuente = 'ultra:puskas';
   if (tiene('puskas')) {
     u.puskasCd = (u.puskasCd ?? 1.5) - dt;
     if (u.puskasCd <= 0) { u.puskasCd = ULTRAS.puskas.cd * j.mult.cd; lanzarCometas(mundo); }
   }
   moverCometas(mundo, dt);
+  mundo.fuente = 'ultra:balonOro';
   if (tiene('balonOro')) {
     u.oroCd = (u.oroCd ?? 0) - dt;
     while (u.oroCd <= 0) { u.oroCd += ULTRAS.balonOro.cada * Math.max(0.6, j.mult.cd); nuevoMeteoro(mundo); }
   }
   caerMeteoros(mundo, dt);
+  mundo.fuente = 'ultra:champions';
   if (tiene('champions')) actualizarEstrellas(mundo, dt);
+  mundo.fuente = 'ultra:zamora';
   if (tiene('zamora')) actualizarZamora(mundo, dt);
+  mundo.fuente = 'ultra:botaOro';
   if (tiene('botaOro')) actualizarRastroDeFuego(mundo, dt);
+  mundo.fuente = 'ultra:mundial';
   if (tiene('mundial')) actualizarMagia(mundo, dt);
+  mundo.fuente = undefined;
 }
 
 /** Anuncio a lo grande al conseguir una ultra. */

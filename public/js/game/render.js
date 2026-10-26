@@ -1,6 +1,7 @@
 // Dibujo del juego en un <canvas> 2D con estética de píxeles (césped, muñecos «chibi» y rivales).
 // Solo lee el estado del mundo: no cambia nada de la simulación.
 import { obtenerSprite, dibujarSprite, aspectoDe, conSeleccion } from './sprites.js';
+import { EQUIPACIONES } from './logros.js';
 import { visibles as terrenoVisible, zonaEn } from './terreno.js';
 import {
   CAMARA, ELITES, PERSONAJES, SELECCION_DE_EQUIPO, SELECCION_DE_JEFE,
@@ -313,6 +314,19 @@ function dibujarAvisoJefe(ctx, a) {
     ctx.beginPath();
     ctx.arc(a.x, a.y, a.radio, 0, Math.PI * 2);
     ctx.stroke();
+  } else if (a.tipo === 'linea') { // láser de aviso (Benzema): se vuelve más gruesa justo antes del tiro
+    const x2 = a.x + Math.cos(a.ang) * a.largo;
+    const y2 = a.y + Math.sin(a.ang) * a.largo;
+    ctx.globalAlpha = 0.3 + 0.6 * k;
+    ctx.strokeStyle = '#ff3b3b';
+    ctx.lineWidth = 1.5 + 4 * k;
+    ctx.beginPath();
+    ctx.moveTo(a.x, a.y);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.globalAlpha = 0.25 * k;
+    ctx.lineWidth = 14;
+    ctx.stroke();
   } else if (a.tipo === 'impacto') {
     ctx.globalAlpha = 0.16 + 0.3 * k;
     ctx.fillStyle = '#ff3b3b';
@@ -561,6 +575,15 @@ function dibujarEnemigo(ctx, e, t) {
     ctx.restore();
   }
 
+  if (e.furia) { // jefe furioso: aura roja que late
+    ctx.save();
+    ctx.globalAlpha = 0.28 + 0.18 * Math.sin(t * 10);
+    ctx.fillStyle = '#ff2a2a';
+    ctx.beginPath();
+    ctx.ellipse(e.x, e.y + alto * 0.1, alto * 0.42, alto * 0.55, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
   if (e.lento > 0) {
     ctx.fillStyle = 'rgba(143,216,255,.35)';
     ctx.fillRect(e.x - alto * 0.3, e.y + alto * 0.38, alto * 0.6, alto * 0.1);
@@ -619,9 +642,13 @@ function dibujarEnemigoRecto(ctx, e, t, sprite, alto, frame, bote, altura, quiet
 
 function dibujarJugador(ctx, j, t) {
   const alto = j.r * 3.2;
-  const sprite = enMundial && paisJugador
-    ? obtenerSprite(`p:${j.personaje}:${paisJugador}`, conSeleccion(aspectoDe('personaje', j.personaje), paisJugador))
-    : obtenerSprite(`p:${j.personaje}`, aspectoDe('personaje', j.personaje));
+  const kit = EQUIPACIONES[j.equipacion]?.kit;
+  let sprite;
+  if (enMundial && paisJugador) sprite = obtenerSprite(`p:${j.personaje}:${paisJugador}`, conSeleccion(aspectoDe('personaje', j.personaje), paisJugador));
+  else if (kit) {
+    const a = aspectoDe('personaje', j.personaje);
+    sprite = obtenerSprite(`p:${j.personaje}:eq:${j.equipacion}`, { ...a, camiseta: { ...kit.camiseta }, pantalon: kit.pantalon, medias: kit.medias });
+  } else sprite = obtenerSprite(`p:${j.personaje}`, aspectoDe('personaje', j.personaje));
   const frame = j.moviendo ? Math.floor(t * 10) % 2 : 0;
   const parpadeo = j.invul > 0 && Math.floor(t * 20) % 2 === 0;
 

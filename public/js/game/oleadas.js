@@ -71,6 +71,7 @@ export function crearJefe(indice, x, y, oleada, claveElegida = null) {
     id: contadorId++,
     tipo: clave,
     jefe: clave,
+    indice, // cuántos jefes habían salido antes en la partida (desde el segundo traen escolta)
     nombre: def.nombre,
     x,
     y,
