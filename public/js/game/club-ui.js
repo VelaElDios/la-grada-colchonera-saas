@@ -1,7 +1,7 @@
 // HTML de las pantallas del CLUB: entrenamiento, contratos, ranking de la grada y recompensas de fin de partida.
 // Solo construye texto HTML a partir de datos (sin DOM ni red), así se puede probar con node:test.
 // `retrato(clave)` devuelve la URL del retrato de un jugador (lo pone juego.js).
-import { PERSONAJES, POSICIONES } from './config.js';
+import { PERSONAJES, POSICIONES, RAREZAS } from './config.js';
 import {
   ESTADISTICAS, ESTADISTICA_NOMBRES, NIVEL_ESTADISTICA_MAX, JEFES_POR_PUNTO, JEFES_POR_FICHA, PUNTOS_BAJAS_MAX, costePunto,
   rareza, probabilidadesContrato, efectoEstadisticas, estadisticasVacias,
@@ -96,41 +96,56 @@ export function htmlEntrenamiento(club, seleccionado, retrato) {
 // Contratar
 // ---------------------------------------------------------------------------------------------
 
+const porcentaje = (p) => `${(p * 100).toFixed(1).replace('.', ',')} %`;
+
 export function htmlContratar(club, retrato) {
   const progreso = club.jefesTotal % JEFES_POR_FICHA;
+  const faltan = JEFES_POR_FICHA - progreso;
   const probs = probabilidadesContrato({ jugadores: club.jugadores });
   const todos = probs.length === 0;
   const grupos = {};
+  Object.keys(RAREZAS).forEach((id) => { grupos[id] = { id, ...RAREZAS[id], p: 0, n: 0 }; });
   probs.forEach((x) => {
-    const r = rareza(x.clave);
-    grupos[r.id] = grupos[r.id] || { nombre: r.nombre, id: r.id, p: 0, n: 0 };
-    grupos[r.id].p += x.probabilidad;
-    grupos[r.id].n += 1;
+    const g = grupos[rareza(x.clave).id];
+    g.p += x.probabilidad;
+    g.n += 1;
   });
-  const orden = ['comun', 'raro', 'epico', 'leyenda'].filter((id) => grupos[id]);
-  const barras = orden.map((id) => `<li class="prob rareza--${id}"><span>${grupos[id].nombre} <small>(${grupos[id].n})</small></span>
-      <span class="prob__barra"><span style="width:${Math.round(grupos[id].p * 100)}%"></span></span><b>${(grupos[id].p * 100).toFixed(1).replace('.', ',')} %</b></li>`).join('');
-  const detalle = [...probs].sort((a, b) => b.probabilidad - a.probabilidad).map((x) => `
-      <li class="prob-jugador"><img alt="" width="28" height="35" src="${retrato(x.clave)}"><span>${esc(PERSONAJES[x.clave].nombre)}</span>
-      <span class="prob-jugador__hab">${PERSONAJES[x.clave].habilidades.length} hab.</span><b>${(x.probabilidad * 100).toFixed(1).replace('.', ',')} %</b></li>`).join('');
+  const orden = Object.keys(RAREZAS);
+  // Una barra con un tramo de color por rareza y una tarjeta por rareza con su probabilidad
+  const tramos = orden.filter((id) => grupos[id].p > 0).map((id) => `<span class="reparto__tramo rareza-color--${id}" style="flex-grow:${grupos[id].p.toFixed(4)}" title="${grupos[id].nombre}: ${porcentaje(grupos[id].p)}"></span>`).join('');
+  const tarjetas = orden.map((id) => {
+    const g = grupos[id];
+    return `<li class="rareza-tarjeta rareza-color--${id}${g.n ? '' : ' rareza-tarjeta--vacia'}">
+      <span class="rareza-tarjeta__gema" aria-hidden="true"></span>
+      <span class="rareza-tarjeta__nombre">${g.nombre}</span>
+      <strong class="rareza-tarjeta__pct">${g.n ? porcentaje(g.p) : '—'}</strong>
+      <small>${g.n ? `quedan ${g.n}` : 'los tienes todos'}</small>
+    </li>`;
+  }).join('');
+  const detalle = [...probs].sort((a, b) => b.probabilidad - a.probabilidad).map((x) => {
+    const r = rareza(x.clave);
+    return `<li class="prob-jugador"><img alt="" width="28" height="35" src="${retrato(x.clave)}"><span>${esc(PERSONAJES[x.clave].nombre)}</span>
+      <span class="rareza rareza--${r.id}">${r.nombre}</span><b>${porcentaje(x.probabilidad)}</b></li>`;
+  }).join('');
+  const pips = Array.from({ length: JEFES_POR_FICHA }, (_, i) => `<span class="contrato__pip${i < progreso ? ' contrato__pip--hecho' : ''}">${icono(i < progreso ? 'estrellaLlena' : 'estrella', 18)}</span>`).join('');
 
   return `
     <div class="contrato">
       <div class="contrato__ficha ${club.fichas > 0 ? 'contrato__ficha--lista' : ''}">
         <span class="contrato__icono">${icono('camiseta', 44)}</span>
-        <div>
+        <div class="contrato__texto">
           <p class="contrato__cuenta"><strong>${club.fichas}</strong> ${club.fichas === 1 ? 'ficha de contrato' : 'fichas de contrato'}</p>
-          <p class="contrato__sub">${todos ? '¡Ya tienes a todos los jugadores!' : `Te faltan <b>${JEFES_POR_FICHA - progreso}</b> jefes para la siguiente`}</p>
+          <p class="contrato__sub">${todos ? '¡Ya tienes a todos los jugadores!' : `${faltan === 1 ? 'Te falta <b>1</b> jefe' : `Te faltan <b>${faltan}</b> jefes`} para la siguiente`}</p>
         </div>
+        <div class="contrato__pips" role="progressbar" aria-label="Jefes hasta la siguiente ficha" aria-valuemin="0" aria-valuemax="${JEFES_POR_FICHA}" aria-valuenow="${progreso}">${pips}</div>
       </div>
-      <div class="contrato__progreso" role="progressbar" aria-label="Jefes hasta la siguiente ficha" aria-valuemin="0" aria-valuemax="${JEFES_POR_FICHA}" aria-valuenow="${progreso}">
-        ${Array.from({ length: JEFES_POR_FICHA }, (_, i) => `<span class="${i < progreso ? 'lleno' : ''}"></span>`).join('')}
-      </div>
-      <button type="button" class="btn btn--primario contrato__canjear" data-accion="canjear" ${club.fichas > 0 && !todos ? '' : 'disabled'}>Canjear ficha: ¡un fichaje al azar!</button>
+      <button type="button" class="btn btn--primario contrato__canjear" data-accion="canjear" ${club.fichas > 0 && !todos ? '' : 'disabled'}>${icono('camiseta', 20)} Firmar un contrato: ¡fichaje al azar!</button>
       <div class="contrato__resultado" data-campo="fichado" aria-live="polite"></div>
       ${todos ? '' : `
-      <h4 class="panel__subtitulo">Probabilidades (cuantas más habilidades, menos probable)</h4>
-      <ul class="probs">${barras}</ul>
+      <h4 class="panel__subtitulo">Probabilidades del próximo fichaje</h4>
+      <p class="contrato__explica">La rareza depende de lo que cada jugador fue <b>en el Atleti</b>: las leyendas salen muy poco.</p>
+      <div class="reparto" aria-hidden="true">${tramos}</div>
+      <ul class="rareza-tarjetas">${tarjetas}</ul>
       <details class="contrato__detalle"><summary>Ver jugador a jugador (${probs.length} por fichar)</summary><ul class="prob-jugadores">${detalle}</ul></details>`}
       <p class="entrena__nota">Tienes <strong>${Object.keys(club.jugadores).length}</strong> de <strong>${club.totalJugadores}</strong> jugadores.</p>
     </div>`;

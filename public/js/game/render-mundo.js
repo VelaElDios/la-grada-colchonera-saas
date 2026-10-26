@@ -812,10 +812,11 @@ const SIN_SPRITE = new Set(['talud']);
 /** ¿Cambia el dibujo con el ambiente? (las rocas, por ejemplo, no). */
 const POR_AMBIENTE = new Set(['grada', 'cartel', 'banquillo', 'foco', 'arbol', 'tienda', 'kiosco', 'monumento', 'pantalla', 'farola']);
 
-function spriteObstaculo(o, amb, mundo, frame) {
-  const clave = `${o.id}:${POR_AMBIENTE.has(o.tipo) ? amb.clave : ''}:${frame}`;
+function spriteObstaculo(ob, amb, mundo, frame) {
+  const clave = `${ob.id}:${POR_AMBIENTE.has(ob.tipo) ? amb.clave : ''}:${frame}`;
   let c = sprites.get(clave);
   if (c) return c;
+  const o = ob.hBase !== undefined ? { ...ob, h: ob.hBase } : ob; // los dibujos trabajan con el fondo de la base
   const pw = Math.max(4, Math.round(o.w / PX));
   let ph = Math.max(4, Math.round((o.h + o.alto) / PX));
   let ancho = pw;
@@ -863,7 +864,12 @@ export function dibujarObstaculo(ctx, o, amb, mundo, t) {
     const w = c.width * PX;
     const h = c.height * PX;
     sombra(ctx, o.x + 8, o.y + 4, o.copa * 0.9, o.copa * 0.32, 0.3);
+    // Si estás detrás de la copa, se vuelve transparente para que no te pierdas de vista
+    const j = mundo.jugador;
+    const detras = j && j.y < o.y && j.y > o.y - h - 20 && Math.abs(j.x - o.x) < w / 2 + 8;
+    if (detras) ctx.globalAlpha = 0.45;
     ctx.drawImage(c, o.x - w / 2, o.y + o.h / 2 - h, w, h);
+    ctx.globalAlpha = 1;
     return;
   }
   if (o.tipo === 'farola') {
@@ -877,7 +883,9 @@ export function dibujarObstaculo(ctx, o, amb, mundo, t) {
   }
   if (o.tipo === 'foco') sombra(ctx, o.x + 26, o.y + o.h / 2 - 4, 44, 8);
   else sombra(ctx, o.x, o.y + o.h / 2 - 2, o.w * 0.52, 8);
-  ctx.drawImage(c, o.x - o.w / 2, o.y - o.h / 2 - o.alto, o.w, o.h + o.alto);
+  // Los macizos ya incluyen su altura en `h` (lo que se ve es lo que choca); el resto se dibuja hacia arriba
+  if (o.hBase !== undefined) ctx.drawImage(c, o.x - o.w / 2, o.y - o.h / 2, o.w, o.h);
+  else ctx.drawImage(c, o.x - o.w / 2, o.y - o.h / 2 - o.alto, o.w, o.h + o.alto);
 }
 
 /** Obstáculos que se dibujan pegados al suelo (antes que nadie): no tapan a nadie. */

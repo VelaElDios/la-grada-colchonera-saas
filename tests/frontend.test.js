@@ -139,3 +139,14 @@ test('mote y avatar: el juego tiene «Tu ficha», el cliente lo guarda y la cabe
   assert.match(cabecera, /nombreVisible\(estado\.usuario\)/);
   assert.match(avatar, /apodo \|\| usuario\?\.email/);
 });
+
+test('combinaciones a la vista con filtros y firma del contrato animada al fichar', () => {
+  const juego = fs.readFileSync(path.join(PUBLIC, 'js', 'game', 'juego.js'), 'utf8');
+  const firma = fs.readFileSync(path.join(PUBLIC, 'js', 'game', 'firma.js'), 'utf8');
+  for (const f of ['todas', 'posibles', 'hechas']) assert.match(juego, new RegExp(`data-filtro-combos="${f}"`));
+  assert.doesNotMatch(juego, /<strong>\$\{conocida \? c\.nombre : '\?\?\?'\}/, 'ya no se esconden los nombres');
+  assert.match(juego, /await animarFirma\(contenedor/);
+  assert.match(firma, /export function animarFirma/);
+  assert.match(firma, /duracion = 5000/);
+  assert.match(firma, /CLUB ATLETICO DE MADRID/);
+});
