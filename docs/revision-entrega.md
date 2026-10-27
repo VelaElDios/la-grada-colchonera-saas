@@ -54,12 +54,12 @@ Comprobación, frase a frase, de la especificación del proyecto (*Procesos de I
 | Requisito | | Cómo se cumple | Evidencia |
 |---|---|---|---|
 | Dos roles como mínimo: usuario y administrador | ✅ | `ROLES = { user, admin }` | [`src/models/user.js`](../src/models/user.js) |
-| Listar usuarios (solo admin), con email, rol y estado | ✅ | `GET /api/users` con `requireRole('admin')`. El panel *Administración* muestra email, rol, estado y fecha de alta | [`src/api/users.js`](../src/api/users.js), captura 06 |
+| Listar usuarios (solo admin), con email, rol y estado | ✅ | `GET /api/users` con `requireRole('admin')`. El panel *Administración* muestra email, rol, estado y fecha de alta | [`src/api/users.js`](../src/api/users.js), captura 07 |
 | Comprobar si un usuario está activo (solo admin) | ✅ | `GET /api/users/:id/active` con `requireRole('admin')`. Un usuario normal recibe `403`, también si pregunta por su propia cuenta | [`tests/api.users.test.js`](../tests/api.users.test.js) |
 | «Activo» = cuenta confirmada (u OAuth) y no eliminada; no es «conectado» | ✅ | `isUserActive` devuelve `status === 'active'`; las cuentas pendientes y eliminadas no están activas | [`src/services/userService.js`](../src/services/userService.js) |
 | El admin elimina a cualquiera; un usuario solo su propia cuenta | ✅ | La API comprueba el permiso (`requireSelfOrRole`) y la lógica vuelve a comprobarlo (`deleteUser`). Además, nunca se elimina al último administrador | [`tests/userService.test.js`](../tests/userService.test.js) |
 | Un usuario eliminado no puede volver a iniciar sesión | ✅ | Baja lógica (`status = 'deleted'`): el login se rechaza y una sesión abierta deja de valer en la siguiente petición | [`src/api/currentUser.js`](../src/api/currentUser.js), [`tests/api.users.test.js`](../tests/api.users.test.js) |
-| Las restricciones se aplican en el servidor | ✅ | `requireAuth` (`401`), `requireRole` y `requireSelfOrRole` (`403`). La interfaz solo oculta los enlaces | [`src/api/currentUser.js`](../src/api/currentUser.js), captura 05 |
+| Las restricciones se aplican en el servidor | ✅ | `requireAuth` (`401`), `requireRole` y `requireSelfOrRole` (`403`). La interfaz solo oculta los enlaces | [`src/api/currentUser.js`](../src/api/currentUser.js), captura 06 |
 | Cómo se crea el primer administrador (justificado) | ✅ | Con las variables `ADMIN_EMAIL` y `ADMIN_PASSWORD` al arrancar (`ensureAdmin`): no hay contraseñas en el código y no hace falta tocar la base de datos a mano | [README › Roles](../README.md#roles), [`src/bootstrap.js`](../src/bootstrap.js) |
 
 ## 5. Requisitos no funcionales y seguridad

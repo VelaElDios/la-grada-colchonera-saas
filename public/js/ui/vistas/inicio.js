@@ -37,7 +37,7 @@ function estadoServidor() {
 const PASOS = [
   ['1', 'Muévete', 'WASD, flechas o el dedo en el móvil. Tus armas disparan solas.'],
   ['2', 'Sube de nivel', 'Cada rival caído suelta experiencia. Elige una mejora entre tres.'],
-  ['3', 'Aguanta', 'Las oleadas crecen cada 30 segundos y cada cinco llega un jefe.'],
+  ['3', 'Aguanta', 'Las oleadas crecen cada 30 segundos y cada cuatro llega un jefe.'],
 ];
 
 export function montar(raiz) {
