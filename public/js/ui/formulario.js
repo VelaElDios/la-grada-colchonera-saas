@@ -34,6 +34,7 @@ function campo({ id, etiqueta, tipo, autocompletar, ayuda, validar, extra }) {
   });
   if (tipo === 'email') { input.inputMode = 'email'; input.autocapitalize = 'none'; }
   let tocado = false;
+  let editado = false; // se ha escrito algo desde la última vez que se vació
 
   const comprobar = () => {
     const mensaje = validar(input.value);
@@ -42,8 +43,18 @@ function campo({ id, etiqueta, tipo, autocompletar, ayuda, validar, extra }) {
     if (mensaje) input.setAttribute('aria-invalid', 'true'); else input.removeAttribute('aria-invalid');
     return mensaje;
   };
-  input.addEventListener('blur', () => { tocado = true; comprobar(); });
-  input.addEventListener('input', () => { if (tocado) comprobar(); });
+  // Al salir de un campo solo se avisa si se ha escrito en él: un campo vacío que nadie ha tocado no da error
+  // (si no, el aviso aparece al pulsar otro botón, mueve la página y ese clic se pierde)
+  input.addEventListener('blur', () => { if (editado || input.value) { tocado = true; comprobar(); } });
+  input.addEventListener('input', () => { editado = true; if (tocado) comprobar(); });
+  /** Vacía el campo sin mostrar error (tras un fallo del servidor se borra la contraseña). */
+  const vaciar = () => {
+    input.value = '';
+    tocado = false;
+    editado = false;
+    error.hidden = true;
+    input.removeAttribute('aria-invalid');
+  };
 
   const caja = h('div', { class: 'campo__caja' }, input, extra);
   const nodo = h(
@@ -54,7 +65,7 @@ function campo({ id, etiqueta, tipo, autocompletar, ayuda, validar, extra }) {
     ayuda && h('p', { class: 'campo__ayuda', id: `${id}-ayuda` }, ayuda),
     error,
   );
-  return { nodo, input, comprobar, marcarTocado: () => { tocado = true; } };
+  return { nodo, input, comprobar, vaciar, marcarTocado: () => { tocado = true; } };
 }
 
 /**
@@ -121,7 +132,7 @@ export function crearFormularioAuth({ modo, alEnviar }) {
     } catch (error) {
       alerta.textContent = mensajeDeError(error, modo);
       alerta.hidden = false;
-      password.input.value = '';
+      password.vaciar();
       ocupado(false);
       (error.status === 409 ? email : password).input.focus();
     }

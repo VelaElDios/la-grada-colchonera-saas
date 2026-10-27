@@ -28,7 +28,7 @@ memoria/
   figuras/              Figuras propias (diagramas, capturas de DoneTonic...)
 ```
 
-Las capturas de la aplicación **no se copian**: `\graphicspath` también busca en `../docs/capturas/app/`, así que basta con `\includegraphics{06-panel-admin}`.
+Las capturas de la aplicación **no se copian**: `\graphicspath` también busca en `../docs/capturas/app/`, `../docs/capturas/hito4/` y `../docs/capturas/produccion/`, así que basta con `\includegraphics{07-panel-admin}`. La lista de capturas, con lo que muestra cada una, está en el README principal y en `docs/documentacion-tecnica.md`.
 
 Los datos del trabajo (título, autor, URL del repositorio y de la aplicación) están en `main.tex`, en los `\newcommand` del principio.
 
