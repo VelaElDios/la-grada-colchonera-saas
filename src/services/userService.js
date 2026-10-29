@@ -116,7 +116,8 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
    * Inicio de sesión con un proveedor externo (OAuth), con el email que nos da el proveedor.
    * - Si no hay cuenta con ese email, se crea ya activa (el proveedor ha verificado el correo).
    * - Si hay una cuenta local pendiente, queda confirmada por el mismo motivo.
-   * - Una cuenta eliminada no puede volver a entrar, tampoco con OAuth.
+   * - Una cuenta eliminada ya no cuenta: con ese email se crea una cuenta nueva (vacía).
+   *   (findByEmail solo devuelve cuentas no eliminadas.)
    * @returns {Promise<{ user: object, created: boolean }>}
    */
   async function loginWithOAuth({ provider, email, emailVerified } = {}) {
@@ -201,9 +202,11 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
       throw new ForbiddenError('No se puede eliminar al último administrador');
     }
 
+    // Baja lógica: la fila se conserva, pero el email y el mote quedan libres para otra cuenta
     const deleted = await userRepository.update(targetId, {
       status: STATUS.DELETED,
       deletedAt: new Date().toISOString(),
+      apodoClave: null,
     });
     return toPublicUser(deleted);
   }

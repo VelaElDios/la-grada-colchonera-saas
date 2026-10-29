@@ -22,7 +22,7 @@ export function montar(raiz, { navegar }) {
   botonBaja.addEventListener('click', async () => {
     const ok = await confirmar({
       titulo: '¿Eliminar tu cuenta?',
-      texto: 'Tu cuenta quedará eliminada y no podrás volver a entrar con ella. Esta acción no se puede deshacer.',
+      texto: 'Tu cuenta y tu progreso en el juego se eliminarán y saldrás del ranking. Esta acción no se puede deshacer: si vuelves, empezarás con una cuenta nueva (puedes usar el mismo email o Google).',
       confirmar: 'Sí, eliminar',
       peligro: true,
     });
@@ -67,7 +67,7 @@ export function montar(raiz, { navegar }) {
         'section',
         { class: 'tarjeta zona-peligro', attrs: { 'aria-labelledby': 'baja-t' } },
         h('h2', { class: 'tarjeta__titulo', id: 'baja-t' }, 'Darme de baja'),
-        h('p', {}, 'Tu cuenta quedará eliminada y no podrás volver a entrar con ella.'),
+        h('p', {}, 'Tu cuenta y tu progreso se eliminarán. Si vuelves, empezarás de cero con una cuenta nueva.'),
         botonBaja,
       ),
     ),

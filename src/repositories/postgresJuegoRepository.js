@@ -70,6 +70,10 @@ function createPostgresJuegoRepository(pool) {
       await pool.query('UPDATE juego_records SET alias = $2, avatar = $3 WHERE user_id = $1', [userId, alias, avatar ?? null]);
     },
 
+    async borrarRecord(userId) {
+      await pool.query('DELETE FROM juego_records WHERE user_id = $1', [userId]);
+    },
+
     async mejoresRecords(limite) {
       const { rows } = await pool.query(
         'SELECT * FROM juego_records ORDER BY tiempo DESC, nivel DESC, created_at ASC LIMIT $1',

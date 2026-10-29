@@ -9,7 +9,7 @@ const express = require('express');
 const { ROLES } = require('../models/user');
 const { requireRole, requireSelfOrRole } = require('./currentUser');
 
-function createUsersRouter({ userService }) {
+function createUsersRouter({ userService, juegoService = null }) {
   const router = express.Router();
   const soloAdmin = requireRole(ROLES.ADMIN);
   const propioOAdmin = requireSelfOrRole(ROLES.ADMIN);
@@ -35,6 +35,7 @@ function createUsersRouter({ userService }) {
   // Eliminar un usuario (la lógica vuelve a comprobar los permisos y protege al último admin)
   router.delete('/:id', propioOAdmin, async (req, res) => {
     await userService.deleteUser(req.user, req.params.id);
+    await juegoService?.olvidarCuenta(req.params.id); // sale del ranking
     req.log.info('user.deleted', 'Cuenta eliminada', {
       actorId: req.user.id,
       targetId: req.params.id,

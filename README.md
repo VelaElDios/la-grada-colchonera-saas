@@ -126,7 +126,7 @@ La primera entrega se limitó a los Hitos 1–3. El Hito 4 (P15 OAuth, P16 confi
 | PBI | Qué hace | Dónde |
 |---|---|---|
 | **P16 · Confirmación por correo** (T23, T24) | Al registrarse con email y contraseña la cuenta queda `pending` y se envía un correo con un enlace firmado (HMAC-SHA256, caduca a las 24 h). `GET /api/auth/confirm` la activa. Si el correo falla la cuenta se crea igualmente y se puede pedir otro (`POST /api/auth/resend-confirmation`, que responde igual exista o no la cuenta). El login de una cuenta pendiente devuelve `403 ACCOUNT_PENDING` y la interfaz ofrece reenviar el correo. | `src/integrations/mailer.js`, `src/services/tokenSigner.js`, `src/services/accountConfirmationService.js` |
-| **P15 · Inicio de sesión con Google** (T22) | OAuth 2.0 «authorization code»: `/api/auth/google` manda al usuario a Google con un `state` aleatorio guardado en su sesión; `/api/auth/google/callback` comprueba el `state` (anti-CSRF, de un solo uso), cambia el código por el email **en el servidor** (el `client_secret` nunca llega al navegador) y abre sesión. Si no existía la cuenta se crea ya activa (`authProvider: google`); una cuenta local pendiente queda confirmada; una eliminada no entra. Sin las variables de Google, el botón no aparece. | `src/integrations/googleOAuth.js`, `userService.loginWithOAuth`, `public/js/ui/google.js` |
+| **P15 · Inicio de sesión con Google** (T22) | OAuth 2.0 «authorization code»: `/api/auth/google` manda al usuario a Google con un `state` aleatorio guardado en su sesión; `/api/auth/google/callback` comprueba el `state` (anti-CSRF, de un solo uso), cambia el código por el email **en el servidor** (el `client_secret` nunca llega al navegador) y abre sesión. Si no existía la cuenta se crea ya activa (`authProvider: google`); una cuenta local pendiente queda confirmada; si la cuenta se había eliminado, se crea una nueva (el email queda libre tras la baja). Sin las variables de Google, el botón no aparece. | `src/integrations/googleOAuth.js`, `userService.loginWithOAuth`, `public/js/ui/google.js` |
 | **P17 · Manejo de errores** | Toda la interfaz traduce los errores a avisos legibles y los registra en la consola; hay estados de carga, vacío y error con reintento, timeout de 15 s en las peticiones, captura global de promesas rechazadas, y las redirecciones de OAuth y de confirmación vuelven a la web con un aviso en lugar de mostrar JSON. | `public/js/ui/componentes.js`, `public/js/ui.js`, `src/api/errorHandler.js` |
 | **Secretos y despliegue** (T25) | El workflow de despliegue entrega a Cloud Run los secretos `smtp-url`, `mail-from`, `google-client-id` y `google-client-secret`. Un script de Cloud Shell los crea en Secret Manager y da acceso a la cuenta de servicio. | `.github/workflows/deploy-cloud-run.yml`, `scripts/gcp/configurar-hito4.sh`, [`docs/hito4-configuracion.md`](docs/hito4-configuracion.md) |
 | **Política de privacidad** (T26) | Página pública que explica qué datos se guardan, para qué y cómo borrarlos. Google la exige para publicar la aplicación de inicio de sesión. | [`public/privacidad.html`](public/privacidad.html) |
@@ -170,7 +170,7 @@ erDiagram
     users ||--o| juego_records : "tiene su mejor partida"
     users {
         UUID id PK
-        TEXT email UK
+        TEXT email "único entre las no eliminadas"
         TEXT password_hash "null si entra con Google"
         TEXT role "user | admin"
         TEXT status "pending | active | deleted"
@@ -206,7 +206,7 @@ erDiagram
     }
 ```
 
-Las tablas se crean con **migraciones SQL versionadas** (`src/db/migrations/001` a `004`) que se aplican solas al arrancar y quedan apuntadas para no repetirse. Las bajas son **lógicas** (`status = 'deleted'` y `deleted_at`): la cuenta deja de poder entrar, pero no se pierde el historial. La tabla `session` la gestiona `connect-pg-simple`.
+Las tablas se crean con **migraciones SQL versionadas** (`src/db/migrations/001` a `005`) que se aplican solas al arrancar y quedan apuntadas para no repetirse. Las bajas son **lógicas** (`status = 'deleted'` y `deleted_at`): la fila se conserva para el historial, pero la cuenta deja de poder entrar, sale del ranking y su email y su mote quedan libres, así que el usuario puede volver más adelante con una cuenta nueva (también con Google). La tabla `session` la gestiona `connect-pg-simple`.
 
 ### Flujos principales
 
@@ -331,7 +331,7 @@ public/
   js/ui/vistas/        Una vista por módulo: inicio, entrar, registro, perfil, admin, jugar y 404
   js/api.js            Cliente de comunicación con la API (único sitio con fetch, timeout de 15 s)
   js/game/             El juego: simulación pura, dibujo en canvas, HUD, sonido, logros y club
-tests/                 271 pruebas automatizadas (unitarias, de API, de base de datos y del juego)
+tests/                 276 pruebas automatizadas (unitarias, de API, de base de datos y del juego)
 docs/                  Capturas, gestión, configuración del Hito 4, revisión de la entrega y documentación técnica
 memoria/               Memoria del proyecto en LuaLaTeX
 scripts/               Preparación de Google Cloud y modo pruebas del juego
@@ -374,7 +374,7 @@ Todas las rutas están bajo `/api`, reciben y devuelven JSON y usan la cookie de
 |---|---|---|---|
 | GET | `/api/health` | Público | Comprueba que el servidor está en marcha |
 | POST | `/api/auth/register` | Público | Registro con email y contraseña (mínimo 8 caracteres): `201`, cuenta pendiente y correo de confirmación |
-| POST | `/api/auth/login` | Público | Inicia sesión y deja la cookie `grada.sid` (`401` credenciales, `403 ACCOUNT_PENDING` o cuenta eliminada) |
+| POST | `/api/auth/login` | Público | Inicia sesión y deja la cookie `grada.sid` (`401` credenciales o cuenta eliminada, `403 ACCOUNT_PENDING`) |
 | POST | `/api/auth/logout` | Público | Cierra la sesión actual |
 | GET | `/api/auth/me` | Sesión | Devuelve el usuario con sesión iniciada |
 | GET | `/api/auth/confirm?token=…` | Público | Confirma la cuenta (enlace del correo) y redirige a la web con un aviso |
@@ -385,7 +385,7 @@ Todas las rutas están bajo `/api`, reciben y devuelven JSON y usan la cookie de
 | GET | `/api/users` | Admin | Listado de usuarios (email, rol, estado, proveedor y alta; nunca el hash) |
 | GET | `/api/users/:id/active` | Admin | Indica si un usuario está activo: confirmado y no eliminado (no si está conectado) |
 | PATCH | `/api/users/:id/role` | Admin | Cambia el rol (`{ "role": "admin" \| "user" }`) |
-| DELETE | `/api/users/:id` | Propio o admin | Elimina una cuenta (baja lógica). Nunca se elimina al último administrador |
+| DELETE | `/api/users/:id` | Propio o admin | Elimina una cuenta (baja lógica): sale del ranking y su email y su mote quedan libres para una cuenta nueva. Nunca se elimina al último administrador |
 | GET | `/api/juego/perfil` | Sesión | Tu club: plantilla, entrenamiento, fichas, puntos, logros y equipaciones |
 | POST | `/api/juego/partidas` | Sesión | Empieza una partida (`{ personaje, entrenador }`): `201 { partidaId }` |
 | POST | `/api/juego/partidas/:id/fin` | Sesión | Termina la partida (`{ tiempo, nivel, jefes, bajas, logros }`): valida el resultado y devuelve recompensas, récord y logros nuevos |
@@ -402,7 +402,7 @@ Los errores se devuelven siempre como `{ "error": { "code": "...", "message": ".
 |---|---|
 | `400 VALIDATION_ERROR` | Datos no válidos o JSON mal formado |
 | `401 UNAUTHENTICATED` | Sin sesión o credenciales incorrectas (mismo mensaje si el email no existe) |
-| `403 FORBIDDEN` / `ACCOUNT_PENDING` | Sin permiso o cuenta eliminada / cuenta sin confirmar |
+| `403 FORBIDDEN` / `ACCOUNT_PENDING` | Sin permiso / cuenta sin confirmar |
 | `404 NOT_FOUND` | El recurso o la ruta no existen |
 | `409 CONFLICT` | Email o mote repetidos, sin fichas, cambio simultáneo |
 | `503 SERVICE_UNAVAILABLE` | El correo no se puede enviar ahora mismo (al reenviar la confirmación) |
@@ -485,24 +485,24 @@ No hace falta tener PostgreSQL: en local, las pruebas de base de datos usan `pg-
 TEST_DATABASE_URL=postgresql://usuario:clave@localhost:5432/grada_test npm test
 ```
 
-Son **271 pruebas** en 25 ficheros (más el recorrido con PostgreSQL real, que solo se ejecuta en el CI). Muchas comprueban casos de error, no solo el camino feliz.
+Son **276 pruebas** en 25 ficheros (más el recorrido con PostgreSQL real, que solo se ejecuta en el CI). Muchas comprueban casos de error, no solo el camino feliz.
 
 | Fichero | Pruebas | Qué comprueba |
 |---|---:|---|
-| `userService.test.js` | 26 | Lógica de usuarios: registro, email repetido, cuenta pendiente que intenta entrar, OAuth, roles, bajas, último administrador y primer administrador |
+| `userService.test.js` | 27 | Lógica de usuarios: registro, email repetido, cuenta pendiente que intenta entrar, OAuth, roles, bajas (y volver con el mismo email), último administrador y primer administrador |
 | `api.auth.test.js` | 16 | Registro, login con el mismo mensaje para email o contraseña malos, cookie `HttpOnly`, `me`, sesión que se mantiene y que se invalida al salir o al borrar la cuenta, confirmación por correo y correo caído |
-| `userRepository.test.js` | 14 | El mismo contrato para el repositorio en memoria y el de PostgreSQL |
+| `userRepository.test.js` | 16 | El mismo contrato para el repositorio en memoria y el de PostgreSQL (también que una cuenta eliminada no ocupa su email) |
 | `frontend.test.js` | 14 | Que solo `api.js` use `fetch`, que la interfaz no inserte texto de usuario como HTML y que todos los módulos se puedan importar |
 | `domainPolicy.test.js` | 13 | Prueba técnica: dominios permitidos, subdominios, sufijos parecidos y errores |
 | `api.users.test.js` | 11 | `401`, `403`, listado, usuario activo, cambio de rol y baja (propia y de otros) |
-| `googleOAuth.test.js` | 10 | `state` falso, ausente y reutilizado, cuenta nueva, pendiente que se confirma, eliminada y email sin verificar (con un Google falso) |
+| `googleOAuth.test.js` | 11 | `state` falso, ausente y reutilizado, cuenta nueva, pendiente que se confirma, email sin verificar y volver a entrar con Google tras darse de baja (con un Google falso) |
 | `config.test.js` | 8 | Configuración y secretos obligatorios, `.env` fuera del repositorio |
 | `accountConfirmation.test.js` | 6 | Correo con su enlace, confirmación, enlace manipulado o caducado, reenvío sin revelar si la cuenta existe |
 | `logger.test.js` | 6 | Formato JSON, niveles y que nunca aparecen contraseñas ni secretos |
 | `tokenSigner.test.js` · `mailer.test.js` · `migrate.test.js` | 3 + 3 + 3 | Tokens firmados, correo por SMTP o por el registro, migraciones que no se repiten |
 | `bootstrap.test.js` · `health.test.js` | 2 + 1 | Arranque con memoria o PostgreSQL y comprobación de salud |
 | `api.database.test.js` | (CI) | Recorrido completo con PostgreSQL real: registro, inicio de sesión y sesión guardada en la base de datos |
-| **Juego:** `juego-club` · `juego-movilidad` · `api.juego` · `juego-personajes` · `juego-habilidades` · `juego-ultras` · `juego-logros` · `game` · `juegoRepository` | 27 · 22 · 14 · 14 · 14 · 13 · 13 · 10 · 8 | Simulación (paso fijo, semilla), mundo y colisiones, personajes, habilidades, ultras, jefes, logros, club, ranking y validación anti-trampas en el servidor |
+| **Juego:** `juego-club` · `juego-movilidad` · `api.juego` · `juego-personajes` · `juego-habilidades` · `juego-ultras` · `juego-logros` · `game` · `juegoRepository` | 27 · 22 · 15 · 14 · 14 · 13 · 13 · 10 · 8 | Simulación (paso fijo, semilla), mundo y colisiones, personajes, habilidades, ultras, jefes, logros, club, ranking y validación anti-trampas en el servidor |
 
 El CI ejecuta todas las pruebas contra un **PostgreSQL 17 real** y, en otro trabajo, construye la imagen Docker y comprueba que el contenedor responde en `/api/health`.
 

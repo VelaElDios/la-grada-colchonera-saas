@@ -3,7 +3,7 @@
 // Contrato del repositorio (todos los métodos son asíncronos):
 //   create(data)        -> usuario creado (con id y createdAt)
 //   findById(id)        -> usuario | null
-//   findByEmail(email)  -> usuario | null
+//   findByEmail(email)  -> usuario no eliminado con ese email | null (una cuenta eliminada ya no ocupa su email)
 //   findByApodo(clave)  -> usuario | null (por el mote normalizado)
 //   findAll()           -> lista de usuarios
 //   update(id, changes) -> usuario actualizado | null
@@ -32,7 +32,7 @@ function createMemoryUserRepository() {
 
     async findByEmail(email) {
       for (const user of users.values()) {
-        if (user.email === email) return copy(user);
+        if (user.email === email && user.status !== 'deleted') return copy(user);
       }
       return null;
     },
