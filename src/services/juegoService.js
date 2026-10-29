@@ -256,6 +256,11 @@ function createJuegoService({
       return publico;
     },
 
+    /** Al eliminar una cuenta, su mejor partida sale del ranking (el resto de su progreso se queda con la cuenta eliminada). */
+    async olvidarCuenta(userId) {
+      await juegoRepository.borrarRecord(userId);
+    },
+
     /** Clasificación: las mejores partidas (una por usuario), con quién y a qué nivel. */
     async ranking(user, limite = 20) {
       const lista = await juegoRepository.mejoresRecords(Math.min(Math.max(limite, 1), 100));

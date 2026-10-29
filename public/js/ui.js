@@ -108,7 +108,7 @@ const AVISOS = {
   'google-ok': { texto: 'Has entrado con Google. ¡A jugar!', tipo: 'exito' },
   'google-cuenta-creada': { texto: 'Cuenta creada con tu cuenta de Google. ¡Bienvenido a la grada!', tipo: 'exito' },
   'google-cancelado': { texto: 'Has cancelado el acceso con Google.', tipo: 'info' },
-  'google-rechazado': { texto: 'No hemos podido entrar con esa cuenta de Google (está eliminada o sin email verificado).', tipo: 'error' },
+  'google-rechazado': { texto: 'No hemos podido entrar con esa cuenta de Google (no tiene el email verificado).', tipo: 'error' },
   'google-error': { texto: 'Algo ha fallado al entrar con Google. Inténtalo de nuevo.', tipo: 'error' },
   'google-no-disponible': { texto: 'El acceso con Google no está disponible ahora mismo.', tipo: 'error' },
   'error-servidor': { texto: 'Ha habido un problema en el servidor. Inténtalo de nuevo en unos minutos.', tipo: 'error' },

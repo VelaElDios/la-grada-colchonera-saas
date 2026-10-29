@@ -104,17 +104,38 @@ test('si el usuario cancela en Google o el código es malo, vuelve a la interfaz
   assert.match(malo.location, /aviso=google-error/);
 });
 
-test('Google sin email verificado o una cuenta eliminada no pueden entrar', async () => {
+test('Google sin email verificado no puede entrar', async () => {
   const sinVerificar = await arrancar({ subject: '1', email: 'fan@gmail.com', emailVerified: false });
-  let s = await iniciar(sinVerificar);
-  let r = await sinVerificar.request('GET', `/auth/google/callback?code=ok&state=${s.state}`, { cookie: s.cookie });
+  const s = await iniciar(sinVerificar);
+  const r = await sinVerificar.request('GET', `/auth/google/callback?code=ok&state=${s.state}`, { cookie: s.cookie });
   assert.match(r.location, /aviso=google-rechazado/);
+});
 
-  const eliminada = await arrancar();
-  await eliminada.seedUser({ email: 'fan@gmail.com', status: 'deleted' });
-  s = await iniciar(eliminada);
-  r = await eliminada.request('GET', `/auth/google/callback?code=ok&state=${s.state}`, { cookie: s.cookie });
-  assert.match(r.location, /aviso=google-rechazado/);
+test('quien elimina su cuenta de Google puede volver a entrar con Google: se crea una cuenta nueva', async () => {
+  const t = await arrancar();
+  // Entra con Google por primera vez y se da de baja desde Mi cuenta
+  let s = await iniciar(t);
+  let r = await t.request('GET', `/auth/google/callback?code=ok&state=${s.state}`, { cookie: s.cookie });
+  assert.match(r.location, /aviso=google-cuenta-creada/);
+  let sesion = r.cookie; // la sesión se regenera al entrar
+  const primera = (await t.request('GET', '/auth/me', { cookie: sesion })).body;
+  assert.equal((await t.request('DELETE', `/users/${primera.id}`, { cookie: sesion })).status, 204);
+  assert.equal((await t.request('GET', '/auth/me', { cookie: sesion })).status, 401);
+
+  // Vuelve con la misma cuenta de Google: entra con una cuenta nueva y activa
+  s = await iniciar(t);
+  r = await t.request('GET', `/auth/google/callback?code=ok&state=${s.state}`, { cookie: s.cookie });
+  assert.match(r.location, /aviso=google-cuenta-creada/);
+  sesion = r.cookie;
+  const segunda = (await t.request('GET', '/auth/me', { cookie: sesion })).body;
+  assert.equal(segunda.email, 'fan@gmail.com');
+  assert.equal(segunda.status, 'active');
+  assert.notEqual(segunda.id, primera.id);
+  // Y las siguientes veces entra con esa misma cuenta nueva
+  s = await iniciar(t);
+  r = await t.request('GET', `/auth/google/callback?code=ok&state=${s.state}`, { cookie: s.cookie });
+  assert.match(r.location, /aviso=google-ok/);
+  assert.equal((await t.request('GET', '/auth/me', { cookie: r.cookie })).body.id, segunda.id);
 });
 
 test('el cliente real pide el token con el secreto y lee el perfil (con fetch falso)', async () => {

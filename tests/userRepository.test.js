@@ -78,6 +78,17 @@ for (const { name, setup } of IMPLEMENTATIONS) {
       assert.equal(await repo.update('00000000-0000-4000-8000-000000000000', { status: 'active' }), null);
     });
 
+    test('una cuenta eliminada no ocupa su email: findByEmail la ignora y se puede crear otra', async () => {
+      const vieja = await repo.create(nuevoUsuario('fan@grada.es'));
+      await repo.update(vieja.id, { status: 'deleted', deletedAt: new Date().toISOString(), apodoClave: null });
+      assert.equal(await repo.findByEmail('fan@grada.es'), null);
+
+      const nueva = await repo.create(nuevoUsuario('fan@grada.es'));
+      assert.equal((await repo.findByEmail('fan@grada.es')).id, nueva.id);
+      assert.equal((await repo.findById(vieja.id)).status, 'deleted');
+      assert.equal((await repo.findAll()).length, 2);
+    });
+
     test('update puede cambiar el rol', async () => {
       const user = await repo.create(nuevoUsuario('simeone@grada.es'));
       assert.equal((await repo.update(user.id, { role: 'admin' })).role, 'admin');

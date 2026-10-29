@@ -94,7 +94,7 @@ El trabajo de PIS se plantea como si fuera un TFG: un producto software real, de
 | RF-05 | Persistencia en una base de datos real | 3 | P11 | PostgreSQL (Neon), `postgresUserRepository`, migraciones | `userRepository`, `migrate`, `api.database` |
 | RF-06 | Roles usuario y administrador, con un primer administrador | 3 | P13 | `requireRole`, `requireSelfOrRole`, `userService.ensureAdmin` | `userService`, `api.users`, `bootstrap` |
 | RF-07 | Listar usuarios, ver si un usuario está activo y cambiar roles (solo administrador) | 3 | P13 | `GET /api/users`, `GET /api/users/:id/active`, `PATCH /api/users/:id/role`, vista `admin.js` | `api.users` |
-| RF-08 | Darse de baja (y que el administrador pueda eliminar cuentas); nunca eliminar al último administrador | 3 | P13 | `DELETE /api/users/:id` (baja lógica), vistas `perfil.js` y `admin.js` | `userService`, `api.users` |
+| RF-08 | Darse de baja (y que el administrador pueda eliminar cuentas); nunca eliminar al último administrador; tras la baja se puede volver con el mismo email | 3 | P13 | `DELETE /api/users/:id` (baja lógica), vistas `perfil.js` y `admin.js` | `userService`, `api.users` |
 | RF-09 | Registro de la actividad relevante | 3 | P14 | `src/logger.js`, `requestLogger` | `logger` |
 | RF-10 | Confirmación de la cuenta por correo, con reenvío | 4 | P16 | `accountConfirmationService`, `tokenSigner`, `mailer`, `GET /api/auth/confirm`, `POST /api/auth/resend-confirmation` | `accountConfirmation`, `tokenSigner`, `mailer`, `api.auth` |
 | RF-11 | Inicio de sesión con un proveedor externo (Google, OAuth 2.0) | 4 | P15 | `googleOAuth.js`, `GET /api/auth/google`, `GET /api/auth/google/callback`, `userService.loginWithOAuth` | `googleOAuth`, `userService` |
@@ -124,7 +124,7 @@ El trabajo de PIS se plantea como si fuera un TFG: un producto software real, de
 | RNF-01 | **Seguridad** de credenciales y sesiones | Hash bcrypt, cookie `httpOnly` + `secure` + `sameSite`, regeneración de la sesión, permisos en el servidor, consultas parametrizadas (sección 8) |
 | RNF-02 | **Secretos fuera del código** | Variables de entorno; Secret Manager en producción; la app no arranca si falta un secreto obligatorio |
 | RNF-03 | **Separación en capas** | API → lógica → datos/integraciones, con inyección de dependencias (sección 5) |
-| RNF-04 | **Pruebas automáticas** y CI obligatorio | 271 pruebas con `node:test`; las ramas protegidas exigen el CI en verde |
+| RNF-04 | **Pruebas automáticas** y CI obligatorio | 276 pruebas con `node:test`; las ramas protegidas exigen el CI en verde |
 | RNF-05 | **Despliegue continuo** en una URL pública | Cloud Run (principal) y Render (alternativo), sin intervención manual |
 | RNF-06 | **Disponibilidad y coste** | Escala a cero (capas gratuitas y créditos de educación); si una versión no arranca, sigue sirviendo la anterior |
 | RNF-07 | **Accesibilidad** | HTML semántico, foco gestionado al navegar, `aria-live` en los avisos, errores de formulario enlazados con `aria-describedby`, manejo con teclado, `prefers-reduced-motion` |
@@ -272,7 +272,7 @@ flowchart LR
 | **Repositorio con dos implementaciones** (memoria y PostgreSQL) | Solo PostgreSQL; un ORM | Se puede arrancar y probar sin base de datos, y las **mismas pruebas** se pasan a las dos, lo que demuestra que la lógica no depende del almacenamiento (patrón Repository) |
 | **Inyección de dependencias por parámetro** | Módulos globales, singletons | Cada servicio recibe sus dependencias (`userRepository`, `passwordHasher`, `mailer`, `tokenSigner`, reloj, azar), así que las pruebas usan versiones falsas sin trucos |
 | **Sesiones en el servidor** (`express-session` + PostgreSQL) | JWT en el navegador | Cerrar sesión o eliminar una cuenta la invalida al momento; la cookie es `httpOnly` y no contiene datos; las sesiones sobreviven a los reinicios y despliegues |
-| **Bajas lógicas** (`status = deleted`) | Borrar la fila | Se conserva el historial y la auditoría; la cuenta deja de poder entrar y su sesión deja de valer |
+| **Bajas lógicas** (`status = deleted`) con el email libre | Borrar la fila; bloquear el email para siempre | Se conserva el historial y la auditoría; la cuenta deja de poder entrar y su sesión deja de valer, pero su email y su mote quedan libres para que la persona pueda volver con una cuenta nueva (índice único parcial) |
 | **Token de confirmación firmado (HMAC) sin guardar en la base de datos** | Token aleatorio en una tabla | No hace falta tabla ni limpieza; caduca solo; no se puede fabricar ni modificar sin el secreto |
 | **OAuth 2.0 escrito con `fetch`** | Passport.js u otra librería | El flujo es corto y se entiende entero (`state`, intercambio del código, email verificado); menos dependencias y fácil de probar con un cliente falso |
 | **Primer administrador por variables de entorno** | Script SQL, insertar a mano | No deja contraseñas en el código ni en scripts; es idempotente (si ya existe, no se toca) |
@@ -310,7 +310,7 @@ flowchart LR
 | `repositories/*` | `memoryUserRepository`, `postgresUserRepository`, `memoryJuegoRepository`, `postgresJuegoRepository` |
 | `integrations/mailer.js` | Correo por SMTP (`nodemailer`) o, sin `SMTP_URL`, escrito en el registro |
 | `integrations/googleOAuth.js` | URL de autorización de Google e intercambio del código por el perfil |
-| `db/migrate.js`, `db/migrations/*.sql` | Migraciones versionadas (001 usuarios, 002 sesiones, 003 juego, 004 identidad) |
+| `db/migrate.js`, `db/migrations/*.sql` | Migraciones versionadas (001 usuarios, 002 sesiones, 003 juego, 004 identidad, 005 email libre tras la baja) |
 
 ### 6.2 Modelo de datos
 
@@ -320,7 +320,7 @@ erDiagram
     users ||--o| juego_records : "tiene su mejor partida"
     users {
         UUID id PK
-        TEXT email UK
+        TEXT email "único entre las no eliminadas"
         TEXT password_hash "null con Google"
         TEXT role "user | admin"
         TEXT status "pending | active | deleted"
@@ -356,7 +356,7 @@ erDiagram
     }
 ```
 
-- **`users`**: una fila por cuenta. `email` único y normalizado (minúsculas, sin espacios). `password_hash` es nulo en las cuentas de Google. `apodo_clave` es el mote normalizado (sin mayúsculas ni tildes) con índice único.
+- **`users`**: una fila por cuenta. `email` normalizado (minúsculas, sin espacios) y único **entre las cuentas no eliminadas** (índice parcial de la migración 005), así que tras una baja se puede volver con el mismo email. `password_hash` es nulo en las cuentas de Google. `apodo_clave` es el mote normalizado (sin mayúsculas ni tildes) con índice único.
 - **`session`**: la gestiona `connect-pg-simple`. Guarda el `userId` y, durante el acceso con Google, el `state`.
 - **`juego_perfiles.datos`** (JSONB): plantilla (`jugadores` con jefes, bajas, partidas y estadísticas de entrenamiento), contadores (`jefesTotal`, `partidas`, `contratos`), logros con su fecha y la partida en curso (`partidaActual`). `version` sube en cada escritura (concurrencia optimista).
 - **`juego_records`**: la mejor partida de cada usuario (más tiempo; en empate, más nivel), con el mote y el avatar para el ranking.
@@ -374,8 +374,10 @@ stateDiagram-v2
     pending --> deleted: un administrador la elimina
     deleted --> [*]
     note right of deleted
-        No puede entrar ni con contraseña ni con Google.
+        La fila se conserva, pero no puede entrar.
         Su sesión deja de valer en la siguiente petición.
+        Sale del ranking y suelta su email y su mote:
+        con ese email se puede crear otra cuenta (también con Google).
     end note
 ```
 
@@ -531,9 +533,9 @@ sequenceDiagram
         A->>G: POST token (code + client_secret, desde el servidor)
         G-->>A: id del perfil: email y email_verified
         A->>S: loginWithOAuth(google, email, verificado)
-        alt Email sin verificar o cuenta eliminada
+        alt Email sin verificar
             S-->>A: error → 303 aviso=google-rechazado
-        else No existía
+        else No existía (o solo había una cuenta eliminada)
             S->>R: create(active, provider google, sin contraseña)
         else Existía pendiente
             S->>R: update(status active)
@@ -646,7 +648,8 @@ sequenceDiagram
     alt Es el último administrador
         S-->>A: 403
     else
-        S->>S: status deleted, deleted_at = ahora (baja lógica)
+        S->>S: status deleted, deleted_at = ahora, suelta el mote (baja lógica)
+        A->>A: juegoService.olvidarCuenta(id): sale del ranking
         A-->>V: 204 (log user.deleted) → aviso y vuelta al inicio
         Note over A: La sesión deja de valer en la siguiente petición (currentUser ya no la acepta)
     end
@@ -966,13 +969,13 @@ Cada logro esconde un dato real del club (por ejemplo, que Griezmann fue tercero
 
 | Fichero | Pruebas | Qué comprueba |
 |---|---:|---|
-| `userService.test.js` | 26 | Registro, email repetido o inválido, contraseña corta, autenticación, pendiente, eliminada, OAuth, roles, bajas, último administrador, primer administrador |
+| `userService.test.js` | 27 | Registro, email repetido o inválido, contraseña corta, autenticación, pendiente, eliminada, volver con el mismo email tras la baja, OAuth, roles, bajas, último administrador, primer administrador |
 | `api.auth.test.js` | 16 | Registro (201 sin hash), 409/400, login, mismo mensaje en 401, cookie `HttpOnly`, `me`, logout, sesión de una cuenta eliminada, confirmación, enlace no válido, URL pública, reenvío 202, correo caído (503) |
-| `userRepository.test.js` | 14 | Contrato del repositorio en memoria y en PostgreSQL |
+| `userRepository.test.js` | 16 | Contrato del repositorio en memoria y en PostgreSQL, incluida la cuenta eliminada que no ocupa su email |
 | `frontend.test.js` | 14 | Separación interfaz/cliente, sin HTML de usuario, módulos importables |
 | `domainPolicy.test.js` | 13 | Prueba técnica (8 de rechazo o error) |
 | `api.users.test.js` | 11 | 401, 403, listado, activo, cambio de rol, bajas propias y ajenas, último administrador |
-| `googleOAuth.test.js` | 10 | Proveedores disponibles, redirección con `state`, cuenta nueva, existente y pendiente que se confirma, `state` incorrecto, ausente y reutilizado, cancelación, eliminada o sin email verificado, cliente real con `fetch` falso y configuración |
+| `googleOAuth.test.js` | 11 | Proveedores disponibles, redirección con `state`, cuenta nueva, existente y pendiente que se confirma, `state` incorrecto, ausente y reutilizado, cancelación, email sin verificar, volver a entrar con Google tras darse de baja (cuenta nueva), cliente real con `fetch` falso y configuración |
 | `config.test.js` | 8 | Secretos obligatorios en producción, valores por defecto, `.env` fuera del repositorio |
 | `accountConfirmation.test.js` | 6 | Correo con enlace, confirmación, enlace manipulado/caducado, eliminada, doble confirmación, reenvío |
 | `logger.test.js` | 6 | JSON, niveles, ocultación de datos sensibles |
@@ -984,14 +987,14 @@ Cada logro esconde un dato real del club (por ejemplo, que Griezmann fue tercero
 | `api.database.test.js` | CI | Recorrido completo con PostgreSQL real |
 | `juego-club.test.js` | 27 | Club, contratos, entrenamiento, rarezas, ranking |
 | `juego-movilidad.test.js` | 22 | Mundo, colisiones, mesetas, alcance del mapa, ambientes |
-| `api.juego.test.js` | 14 | API del juego, anti-trampas, logros en el servidor, concurrencia |
+| `api.juego.test.js` | 15 | API del juego, anti-trampas, logros en el servidor, concurrencia, cuenta eliminada que sale del ranking |
 | `juego-personajes.test.js` | 14 | Personajes, entrenadores, habilidades por jugador |
 | `juego-habilidades.test.js` | 14 | Habilidades nuevas y niveles por minuto |
 | `juego-ultras.test.js` | 13 | Ultras: cómo se consiguen y qué hacen |
 | `juego-logros.test.js` | 13 | Logros, equipaciones, estadísticas, pantalla de fin, música y jefes más duros |
 | `game.test.js` | 10 | Simulación base (paso fijo, semilla, armas, jefes, ulti, dificultad) |
 | `juegoRepository.test.js` | 8 | Repositorio del juego en memoria y PostgreSQL |
-| **Total** | **271** | 136 del Sprint 1 (cuentas, API, datos, seguridad, prueba técnica) y 135 del juego |
+| **Total** | **276** | 140 del Sprint 1 (cuentas, API, datos, seguridad, prueba técnica) y 136 del juego |
 
 ### 10.3 Comprobaciones manuales y visuales
 
@@ -1052,6 +1055,7 @@ flowchart LR
 | Simulación lenta con muchos rivales | Búsqueda de obstáculos con claves de texto y demasiadas celdas | Búsqueda por radio con claves numéricas: unas 4,5 veces más rápida |
 | El regate hacía al jugador intocable demasiado pronto | Subía de nivel sin límite | Niveles que no salen hasta cierto minuto y recarga mínima |
 | Equilibrio difícil de ajustar a mano | Muchas variables | Todo el equilibrio en `config.js` y calibración con un bot que juega partidas simuladas |
+| Quien eliminaba su cuenta (sobre todo de Google) no podía volver a entrar nunca con ese email (lo encontró un amigo probando la app, 29/10/2026) | Por la baja lógica la fila seguía en `users` con su email, que era `UNIQUE`; además, por diseño, una cuenta eliminada no podía entrar «ni con Google» | Migración 005: el email solo es único entre las cuentas no eliminadas (índice parcial); `findByEmail` ignora las eliminadas, así que registrarse o entrar con Google crea una cuenta nueva; al eliminar se suelta el mote y la cuenta sale del ranking. Pruebas nuevas del caso completo |
 | Al pulsar «Reenviar el correo» después de un error de inicio de sesión, el primer clic se perdía | Al salir del campo de contraseña vacío aparecía su error, la página se movía y el clic caía fuera del botón | Un campo vacío que no se ha tocado ya no da error al salir de él; tras un fallo del servidor la contraseña se vacía sin marcar error (encontrado al hacer las capturas, 27/10/2026) |
 
 ## 14. Métricas del proyecto
@@ -1061,9 +1065,9 @@ flowchart LR
 | PBIs / tareas del Sprint 1 | 19 / 32 |
 | Pull requests | Más de 50 (uno por tarea, uno por cierre de hito y uno por fase del juego) |
 | Releases | `hito-1`, `hito-2`, `hito-3`, `hito-4`, `sprint-1` |
-| Pruebas automáticas | 271 (+ el recorrido con PostgreSQL real en el CI) |
+| Pruebas automáticas | 276 (+ el recorrido con PostgreSQL real en el CI) |
 | Endpoints de la API | 23 |
-| Migraciones | 4 |
+| Migraciones | 5 |
 | Líneas de código del backend (`src/`, con SQL) | ~2.300 |
 | Líneas de la interfaz web (`ui.js`, `api.js`, `ui/`) | ~1.150 |
 | Líneas de CSS | ~950 |

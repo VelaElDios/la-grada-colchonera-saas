@@ -211,12 +211,30 @@ describe('Servicio de usuarios', () => {
       await assert.rejects(service.authenticate({ email: 'joao@grada.es', password: 'partido-a-partido' }), AccountPendingError);
     });
 
-    test('una cuenta eliminada no puede volver a iniciar sesión', async () => {
+    test('una cuenta eliminada no puede volver a iniciar sesión (para el login ya no existe)', async () => {
       const user = await service.registerUser({ email: 'witsel@grada.es', password: 'partido-a-partido' });
       await service.confirmUser(user.id);
       await service.deleteUser(user, user.id);
 
-      await assert.rejects(service.authenticate({ email: 'witsel@grada.es', password: 'partido-a-partido' }), ForbiddenError);
+      await assert.rejects(service.authenticate({ email: 'witsel@grada.es', password: 'partido-a-partido' }), UnauthorizedError);
+    });
+
+    test('tras darse de baja, el email queda libre: se puede registrar de nuevo o entrar con Google (cuenta nueva)', async () => {
+      const vieja = await service.registerUser({ email: 'witsel@grada.es', password: 'partido-a-partido' });
+      await service.confirmUser(vieja.id);
+      await service.deleteUser(vieja, vieja.id);
+
+      const nueva = await service.registerUser({ email: 'witsel@grada.es', password: 'otra-clave-123' });
+      assert.notEqual(nueva.id, vieja.id);
+      assert.equal(nueva.status, STATUS.PENDING);
+      await assert.rejects(service.registerUser({ email: 'witsel@grada.es', password: 'otra-clave-123' }), ConflictError);
+      assert.equal((await service.getUserById(vieja.id)).status, STATUS.DELETED); // la eliminada se conserva
+
+      await service.deleteUser(nueva, nueva.id);
+      const { user: conGoogle, created } = await service.loginWithOAuth({ provider: 'google', email: 'witsel@grada.es', emailVerified: true });
+      assert.equal(created, true);
+      assert.equal(conGoogle.status, STATUS.ACTIVE);
+      assert.ok(![vieja.id, nueva.id].includes(conGoogle.id));
     });
 
     test('sin confirmación de correo obligatoria, la cuenta queda activa al registrarse', async () => {

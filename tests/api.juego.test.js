@@ -160,6 +160,22 @@ describe('API /api/juego', () => {
     assert.deepEqual(otra.body.recompensas.logrosNuevos, []);
   });
 
+  test('al eliminar la cuenta sale del ranking y su mote queda libre', async () => {
+    const { cookie } = await nuevoUsuario();
+    const [a] = Object.keys((await get(cookie, '/perfil')).body.jugadores);
+    assert.equal((await srv.request('PUT', '/juego/identidad', { cookie, body: { apodo: 'Se Va Del Club' } })).status, 200);
+    await jugar(cookie, a, { tiempo: 3000, nivel: 40 });
+    const enRanking = (c) => get(c, '/ranking').then((r) => r.body.filas.some((f) => f.alias === 'Se Va Del Club'));
+    assert.ok(await enRanking(cookie));
+
+    const yo = (await srv.request('GET', '/auth/me', { cookie })).body;
+    assert.equal((await srv.request('DELETE', `/users/${yo.id}`, { cookie })).status, 204);
+
+    const otro = await nuevoUsuario();
+    assert.equal(await enRanking(otro.cookie), false);
+    assert.equal((await srv.request('PUT', '/juego/identidad', { cookie: otro.cookie, body: { apodo: 'Se Va Del Club' } })).status, 200);
+  });
+
   test('el ranking ordena por tiempo, guarda quién y a qué nivel, y solo cuenta la mejor partida de cada uno', async () => {
     const ana = await nuevoUsuario('ana');
     const luis = await nuevoUsuario('luis');

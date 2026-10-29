@@ -30,7 +30,7 @@ function createApiRouter({ userService, accountConfirmation, juegoService, oauth
   // Público (sin sesión): comprueba si el dominio de un email está permitido
   router.use('/prueba', createPruebaRouter({ allowedDomains: config.allowedDomains || [] }));
   // Rutas protegidas: solo con sesión iniciada
-  router.use('/users', requireAuth, createUsersRouter({ userService }));
+  router.use('/users', requireAuth, createUsersRouter({ userService, juegoService }));
   router.use('/juego', requireAuth, createJuegoRouter({ juegoService }));
 
   router.use(notFoundHandler);

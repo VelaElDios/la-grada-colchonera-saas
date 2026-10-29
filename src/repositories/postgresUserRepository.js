@@ -69,7 +69,11 @@ function createPostgresUserRepository(pool) {
     },
 
     async findByEmail(email) {
-      const { rows } = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
+      // Solo cuentas no eliminadas: tras una baja, el email queda libre para una cuenta nueva (migración 005)
+      const { rows } = await pool.query(
+        "SELECT * FROM users WHERE email = $1 AND status <> 'deleted' ORDER BY created_at DESC LIMIT 1",
+        [email],
+      );
       return toUser(rows[0]);
     },
 

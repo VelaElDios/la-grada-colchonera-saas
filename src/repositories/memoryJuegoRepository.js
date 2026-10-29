@@ -41,6 +41,10 @@ function createMemoryJuegoRepository() {
     },
 
     /** Los mejores récords: más tiempo primero y, a igualdad, más nivel. */
+    async borrarRecord(userId) {
+      records.delete(userId);
+    },
+
     async mejoresRecords(limite) {
       return [...records.values()]
         .sort((a, b) => b.tiempo - a.tiempo || b.nivel - a.nivel || a.createdAt.localeCompare(b.createdAt))
