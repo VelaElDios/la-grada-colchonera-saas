@@ -9,8 +9,9 @@ Documento de referencia del proyecto, pensado como **base para escribir la memor
 | **Autor** | Javier Vela |
 | **Repositorio** | https://github.com/VelaElDios/la-grada-colchonera-saas |
 | **Aplicación** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (Google Cloud Run) |
-| **Sprint 1** | 29/09/2026 – 27/10/2026 (Hitos 1 a 4) |
-| **Estado del documento** | 27/10/2026, versión con el juego hasta la Fase 6 |
+| **Sprint 1** | 29/09/2026 – 27/10/2026 (Hitos 1 a 4: la base SaaS) |
+| **Sprint 2** | 23/10/2026 – 29/10/2026 (la lógica del juego, Fases 1 a 6) |
+| **Estado del documento** | 29/10/2026, con los dos sprints cerrados en DoneTonic |
 
 ## Índice
 
@@ -75,9 +76,9 @@ El trabajo de PIS se plantea como si fuera un TFG: un producto software real, de
 | **Sprint 1, Hitos 1–3** (29/09 – 12/10/2026) | Repositorio, CI, despliegue continuo, lógica de usuarios con pruebas, API REST, frontend separado en interfaz y cliente, registro e inicio de sesión locales, sesión, rutas protegidas, PostgreSQL, secretos, roles, panel de administración y logs |
 | **Sprint 1, Hito 4** (hasta el 23/10/2026) | Confirmación de cuenta por correo, inicio de sesión con Google, manejo de errores de principio a fin, política de privacidad y aplicación de Google publicada |
 | **Cierre del sprint** (24/10/2026) | README, capturas, revisión de la entrega frente al enunciado, despliegue en Google Cloud Run y estructura de la memoria |
-| **Después del sprint** (octubre de 2026) | Rediseño de la interfaz y el juego, en seis fases |
+| **Sprint 2** (23/10 – 29/10/2026) | La lógica del juego: rediseño de la interfaz y el juego en seis fases (29 PBIs, P20–P48) |
 
-**Por qué un juego y no una red social.** La idea inicial era una red social tipo Twitter para aficionados del Atleti. Cerrado el Sprint 1, el profesor dejó libertad para la lógica y el diseño del producto, y se decidió hacer un juego porque: (1) es más original y diferenciador que otro clon de red social; (2) permite trabajar problemas técnicos más ricos (simulación determinista, rendimiento en canvas, generación procedural, sonido sintetizado, validación anti-trampas en el servidor); y (3) reutiliza entera la base SaaS del sprint: un juego con cuentas, progreso en el servidor, ranking y roles necesita exactamente lo que piden los hitos.
+**Por qué un juego y no una red social.** La idea inicial era una red social tipo Twitter para aficionados del Atleti. Cerrado el Sprint 1, el profesor dejó libertad para la lógica y el diseño del producto (y fijó después que el Sprint 2 sería esa lógica), y se decidió hacer un juego porque: (1) es más original y diferenciador que otro clon de red social; (2) permite trabajar problemas técnicos más ricos (simulación determinista, rendimiento en canvas, generación procedural, sonido sintetizado, validación anti-trampas en el servidor); y (3) reutiliza entera la base SaaS del sprint: un juego con cuentas, progreso en el servidor, ranking y roles necesita exactamente lo que piden los hitos.
 
 **Fuera de alcance (por ahora):** multijugador en tiempo real, amigos y partidas en grupo, y aplicaciones nativas (ver la [sección 15](#15-conclusiones-y-trabajo-futuro)).
 
@@ -101,21 +102,32 @@ El trabajo de PIS se plantea como si fuera un TFG: un producto software real, de
 | RF-12 | Manejo de errores con información clara al usuario | 4 | P17 | `errorHandler.js`, `componentes.js`, `avisos.js`, `api.js` (timeout) | `api.*`, `frontend` |
 | RF-13 | Prueba técnica: solo dominios de correo permitidos | Prueba | — | `domainPolicy.js`, `POST /api/prueba/dominio` | `domainPolicy` (13) |
 
-### 3.2 Requisitos funcionales del juego
+### 3.2 Requisitos funcionales del juego (Sprint 2)
 
-| Id | Requisito | Dónde se cumple |
-|---|---|---|
-| RJ-01 | Solo juegan los usuarios con sesión; el progreso va ligado a la cuenta | `requireAuth` en `/api/juego`, tablas `juego_perfiles` y `juego_records` |
-| RJ-02 | Partida *survivor* infinita con oleadas, jefes, mejoras al subir de nivel y dificultad creciente | `public/js/game/mundo.js` y módulos de la simulación |
-| RJ-03 | Elegir jugador (36, con rareza) y entrenador (2) | Vestuario y Dirección (`juego.js`), `config.js` |
-| RJ-04 | Club: fichas de contrato, fichajes y entrenamiento | `club.js`, `POST /api/juego/contratar`, `POST /api/juego/entrenar` |
-| RJ-05 | Ranking de la grada con la mejor partida de cada usuario | `juego_records`, `GET /api/juego/ranking` |
-| RJ-06 | Mote único y avatar | `PUT /api/juego/identidad`, migración `004` |
-| RJ-07 | Resultados y logros validados en el servidor (anti-trampas) | `juegoService.finalizarPartida`, `logros.js` |
-| RJ-08 | Logros con datos de la historia del Atleti y equipaciones desbloqueables | `logros.js`, `fin-ui.js` |
-| RJ-09 | Sonido y música propios, con ajustes de volumen | `audio.js`, `musica.js`, `ajustes.js` |
-| RJ-10 | Jugable con teclado, ratón y pantalla táctil | `entrada.js` (joystick táctil) |
-| RJ-11 | Modo pruebas para administradores | `POST /api/juego/desbloquear`, `scripts/desbloquear-juego.js` |
+Cada requisito sale de uno o varios PBIs del Sprint 2 (sus historias de usuario y criterios de aceptación están en [`docs/gestion/README.md`](gestion/README.md#historias-de-usuario-y-criterios-de-aceptación)).
+
+| Id | Requisito | PBI | Dónde se cumple | Pruebas |
+|---|---|---|---|---|
+| RJ-01 | Con sesión, el inicio es el menú del juego; sin sesión no se juega y el progreso va ligado a la cuenta | P20, P29 | `ui.js` (ruta `#/jugar`), `requireAuth` en `/api/juego`, tablas `juego_perfiles` y `juego_records` | `api.juego`, `frontend` |
+| RJ-02 | Partida *survivor* infinita: oleadas, experiencia, mejoras al subir de nivel y dificultad creciente | P21, P24, P34 | `mundo.js`, `oleadas.js`, `mejoras.js`, `config.js` | `game`, `juego-personajes`, `juego-club` |
+| RJ-03 | Gráficos pixel art generados por código y cámara 3/4 | P22, P45 | `sprites.js`, `render.js`, `render-mundo.js` | `juego-movilidad`, `juego-habilidades` |
+| RJ-04 | Elegir jugador (36, con estadísticas por posición, habilidades propias y rareza por historia) y entrenador (2, con ulti) | P23, P38 | Vestuario y Dirección (`juego.js`), `config.js`, `ulti.js` | `juego-personajes`, `juego-club` |
+| RJ-05 | Armas automáticas con 5 niveles, pasivas y habilidades que solo suben a partir de cierto minuto | P24, P39 | `armas.js`, `mejoras.js`, `combate.js` | `juego-habilidades` |
+| RJ-06 | Rivales con comportamiento propio (embisten, disparan, rodean obstáculos, élites) | P25 | `rivales.js`, `oleadas.js` | `juego-movilidad`, `juego-personajes` |
+| RJ-07 | Jefes con tres fases, avisos de ataque, escolta, furia y jugada estrella | P26, P46 | `jefes.js`, `oleadas.js` | `juego-movilidad`, `juego-logros` |
+| RJ-08 | Mundo procedural con terreno, obstáculos macizos y colisiones exactas | P27, P35, P41 | `terreno.js`, `mundo.js` | `juego-movilidad` |
+| RJ-09 | Ambientes que cambian cada 5 minutos (de la pretemporada a la Final del Mundial) | P36 | `config.js`, `render-mundo.js`, `musica.js` | `juego-movilidad` |
+| RJ-10 | Jugable con teclado, ratón y pantalla táctil; pausa, pantalla completa y ajustes | P28 | `entrada.js`, `ajustes.js`, `juego.js` | `game`, `frontend` |
+| RJ-11 | Club guardado en el servidor con validación anti-trampas de cada partida | P29 | `juegoService.finalizarPartida`, migración `003` | `api.juego`, `juegoRepository` |
+| RJ-12 | Fichar jugadores con fichas de contrato (una por cada 3 jefes), sorteadas por rareza | P30, P38 | `club.js`, `POST /api/juego/contratar`, `firma.js` | `juego-club`, `api.juego`, `frontend` |
+| RJ-13 | Entrenar a los jugadores con puntos ganados por bajas y jefes | P31 | `club.js`, `POST /api/juego/entrenar` | `juego-club`, `api.juego` |
+| RJ-14 | Ranking de la grada con la mejor partida de cada usuario (sin mostrar el correo) | P32 | `juego_records`, `GET /api/juego/ranking` | `api.juego`, `juegoRepository` |
+| RJ-15 | Combinaciones y ULTRAS, con una pantalla que muestra lo que pide cada una | P33, P40 | `ultras.js`, `render-ultras.js`, pantalla Combinaciones | `juego-ultras`, `juego-habilidades`, `frontend` |
+| RJ-16 | Modo pruebas solo para administradores | P34 | `POST /api/juego/desbloquear`, `scripts/desbloquear-juego.js` | `api.juego` |
+| RJ-17 | Mote único y avatar, en la cabecera, Mi cuenta y el ranking | P37 | `PUT /api/juego/identidad`, migración `004` | `api.juego`, `juegoRepository`, `frontend` |
+| RJ-18 | Logros con datos de la historia del Atleti, validados en el servidor, y equipaciones desbloqueables | P42 | `logros.js`, `juegoService` | `juego-logros`, `api.juego` |
+| RJ-19 | Pantalla de fin con estadísticas y daño por habilidad | P43 | `fin-ui.js`, `combate.js` | `juego-logros` |
+| RJ-20 | Música chiptune, efectos y la grada, con ajustes de volumen | P44 | `audio.js`, `musica.js`, `ajustes.js` | `juego-logros` |
 
 ### 3.3 Requisitos no funcionales
 
@@ -139,10 +151,12 @@ El trabajo de PIS se plantea como si fuera un TFG: un producto software real, de
 ### 4.1 Scrum con DoneTonic
 
 - **Herramienta:** DoneTonic, espacio de trabajo *TFG*, equipo *Colchoneros*.
-- **Sprint 1:** del 29/09/2026 al 27/10/2026.
-- **Product Backlog:** 19 PBIs (P1–P19) con 32 tareas (T1–T32), etiquetados por hito (H1–H4). Todos son **MUST** porque son requisitos obligatorios del enunciado.
+- **Sprint 1:** del 29/09/2026 al 27/10/2026. 19 PBIs (P1–P19) con 32 tareas (T1–T32), etiquetados por hito (*Hito 1* a *Hito 4*). Todos son **MUST** porque son requisitos obligatorios del enunciado.
+- **Sprint 2:** del 23/10/2026 al 29/10/2026. 29 PBIs (P20–P48) con 50 tareas (T33–T82), etiquetados por fase del juego (*Base del juego*, *Fase 2 · Club*, *Fase 3 · Ultras*, *Fase 4 · Mundo*, *Fase 5 · Rarezas*, *Fase 6 · Logros y sonido* y *Calidad*). También son **MUST**: el profesor fijó la lógica del juego como objetivo del sprint.
+- **Historias de usuario:** cada PBI tiene la suya («Como aficionado quiero … para …») y sus criterios de aceptación.
 - **Del enunciado al backlog:** cada requisito se convirtió en un PBI con descripción y criterios de aceptación; cada PBI se dividió en una o dos tareas; cada tarea es una rama y un PR.
-- **Seguimiento:** tablero por estados, Sprint Burnup y Burndown, Backlog Burndown y Burnup y Velocity Chart (capturas en `docs/capturas/donetonic/`).
+- **Seguimiento:** tablero por estados, Sprint Burnup y Burndown, Backlog Burndown y Burnup y Velocity Chart (capturas en `docs/capturas/donetonic/`, tomadas el 29/10/2026 con los dos sprints cerrados).
+- **Registro del Sprint 2:** el juego se programó del 23 al 26/10, antes de que el profesor fijara el contenido del Sprint 2, y su backlog se registró en DoneTonic al cerrar el sprint (29/10). Por eso DoneTonic marca todos sus PBIs como hechos ese día; la evolución real se reconstruye con las fechas de los PRs (sección 4.5).
 - **Cambio de alcance durante el sprint:** el profesor repartió créditos de Google Cloud para educación y se añadió el PBI **P19** (despliegue en Google Cloud Run, tareas T29 y T30). Render se mantiene como despliegue alternativo.
 
 ### 4.2 Definición de hecho (DoD)
@@ -170,7 +184,7 @@ flowchart TB
 - `main` y `hito-*/integracion` están **protegidas**: solo admiten cambios por PR y exigen el CI en verde.
 - Commits en español, en imperativo y con el identificador de la tarea (`[T5] Añade el repositorio de usuarios en memoria`), según [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 - **Hito 4:** una rama por tarea (`hito-4/T22-google-oauth`, `T23-correo`, `T24-confirmacion`, `T25-secretos-hito4`, `T26-privacidad`) integrada directamente en `main` con su PR (#37–#41). Como dependían unas de otras, se reubicaron (rebase) sobre el `main` real antes de abrir los PRs.
-- **Juego:** ramas `feature/rediseno-y-juego`, `juego/personajes-pixel` y `juego/movilidad-hub`, con un PR a `main` por fase (por ejemplo, #53 para la Fase 5 y #54 para la Fase 6).
+- **Sprint 2 (juego):** ramas `feature/rediseno-y-juego`, `juego/personajes-pixel` y `juego/movilidad-hub`, con un PR a `main` por fase (#36 y #44–#54) y uno por arreglo (#51, #55, #56). Cada tarea de DoneTonic indica en su descripción el PR donde está.
 
 ### 4.4 Backlog, trazabilidad y entregas
 
@@ -198,6 +212,40 @@ flowchart TB
 
 Cierres de hito: #9 (Hito 1), #17 (Hito 2), #24 (Hito 3), #29 (cierre del sprint) y #32 (revisión final y memoria). La trazabilidad completa, con el nombre de cada rama, está en [`docs/gestion/README.md`](gestion/README.md).
 
+**Sprint 2.** «Hecho» es el día en que se fusionó en `main` el último PR del PBI; la trazabilidad tarea a tarea está en [`docs/gestion/README.md`](gestion/README.md#trazabilidad-del-sprint-2-tarea--pull-request).
+
+| PBI | Etiqueta | Título | Tareas | PRs | Hecho | Estado |
+|---|---|---|---|---|---|---|
+| P20 | Base del juego | Rediseño de la interfaz web y menú del juego | T33, T34 | #36, #45 | 24/10/2026 | Hecho |
+| P21 | Base del juego | Motor de la partida survivor | T35, T36 | #36 | 23/10/2026 | Hecho |
+| P22 | Base del juego | Gráficos pixel art y cámara 3/4 | T37, T38 | #44, #46 | 24/10/2026 | Hecho |
+| P23 | Base del juego | Jugadores, entrenadores y Vestuario | T39–T41 | #44, #48 | 24/10/2026 | Hecho |
+| P24 | Base del juego | Armas, habilidades y mejoras | T42, T43 | #36, #48 | 24/10/2026 | Hecho |
+| P25 | Base del juego | Rivales con comportamiento propio | T44, T45 | #44, #45, #47 | 24/10/2026 | Hecho |
+| P26 | Base del juego | Jefes con fases | T46, T47 | #45, #48 | 24/10/2026 | Hecho |
+| P27 | Base del juego | Mapa con terreno y obstáculos | T48, T49 | #45, #47 | 24/10/2026 | Hecho |
+| P28 | Base del juego | Controles, pantalla completa y ajustes | T50, T51 | #36, #47 | 24/10/2026 | Hecho |
+| P29 | Fase 2 · Club | Progreso del juego guardado en el servidor | T52, T53 | #49 | 24/10/2026 | Hecho |
+| P30 | Fase 2 · Club | Contratos: fichar jugadores | T54 | #49 | 24/10/2026 | Hecho |
+| P31 | Fase 2 · Club | Entrenamiento de jugadores | T55 | #49, #50 | 24/10/2026 | Hecho |
+| P32 | Fase 2 · Club | Ranking de la grada | T56 | #49 | 24/10/2026 | Hecho |
+| P33 | Fase 3 · Ultras | Combinaciones y ULTRAS | T57, T58 | #50 | 24/10/2026 | Hecho |
+| P34 | Fase 3 · Ultras | Dificultad equilibrada y modo pruebas | T59, T60 | #50 | 24/10/2026 | Hecho |
+| P35 | Fase 4 · Mundo | Mundo procedural natural | T61 | #52 | 24/10/2026 | Hecho |
+| P36 | Fase 4 · Mundo | Ambientes por finales | T62 | #52 | 24/10/2026 | Hecho |
+| P37 | Fase 4 · Mundo | Mote y avatar | T63 | #52 | 24/10/2026 | Hecho |
+| P38 | Fase 5 · Rarezas | Rarezas por historia rojiblanca y fichajes | T64, T65 | #53 | 26/10/2026 | Hecho |
+| P39 | Fase 5 · Rarezas | Habilidades niveladas por minuto | T66 | #53 | 26/10/2026 | Hecho |
+| P40 | Fase 5 · Rarezas | Combinaciones y ultras a la vista | T67 | #53 | 26/10/2026 | Hecho |
+| P41 | Fase 5 · Rarezas | Colisiones exactas | T68 | #53 | 26/10/2026 | Hecho |
+| P42 | Fase 6 · Logros y sonido | Logros con historia y equipaciones | T69, T70 | #54 | 26/10/2026 | Hecho |
+| P43 | Fase 6 · Logros y sonido | Pantalla de fin con estadísticas | T71 | #54 | 26/10/2026 | Hecho |
+| P44 | Fase 6 · Logros y sonido | Música chiptune y la grada | T72–T74 | #54 | 26/10/2026 | Hecho |
+| P45 | Fase 6 · Logros y sonido | Muñecos con más detalle | T75 | #54 | 26/10/2026 | Hecho |
+| P46 | Fase 6 · Logros y sonido | Jefes más duros | T76 | #54 | 26/10/2026 | Hecho |
+| P47 | Calidad | Corrección de errores detectados | T77–T79 | #51, #55, #56 | 29/10/2026 | Hecho |
+| P48 | Calidad | Documentación y gestión del Sprint 2 | T80–T82 | #55 | 29/10/2026 | Hecho |
+
 ### 4.5 Evolución del sprint
 
 | Momento | PBIs hechos | PBIs pendientes (alcance de la entrega) |
@@ -218,6 +266,24 @@ xychart-beta
     line [15, 9, 5, 1, 2, 0]
 ```
 
+**Sprint 2** (PBIs pendientes según la fecha del último PR de cada uno):
+
+| Día | PBIs hechos ese día | PBIs pendientes |
+|---|---:|---:|
+| Inicio (23/10/2026) | 0 | 29 |
+| 23/10 (PR #36) | 1 | 28 |
+| 24/10 (PRs #44–#52) | 17 | 11 |
+| 26/10 (PRs #53 y #54) | 9 | 2 |
+| 29/10 (PR #56 y documentación) | 2 | 0 |
+
+```mermaid
+xychart-beta
+    title "Burndown real del Sprint 2 (PBIs pendientes)"
+    x-axis ["23/10", "24/10", "25/10", "26/10", "27/10", "28/10", "29/10"]
+    y-axis "PBIs pendientes" 0 --> 29
+    line [28, 11, 11, 2, 2, 2, 0]
+```
+
 ### 4.6 Cronología
 
 | Fecha | Hito |
@@ -226,9 +292,11 @@ xychart-beta
 | Primeras semanas | Hitos 1, 2 y 3 (releases `hito-1`, `hito-2`, `hito-3`) |
 | 12/10/2026 | Primera entrega (Hitos 1–3, P18, P19); capturas de DoneTonic de ese día |
 | 23/10/2026 | Hito 4 en producción y comprobado (correo real, Google publicado) |
-| 24/10/2026 | Cierre del sprint; prueba técnica (PR #34) |
-| Finales de octubre | Rediseño de la interfaz y Fases 1–6 del juego |
-| 27/10/2026 | Fin del Sprint 1; capturas nuevas y esta documentación |
+| 23/10/2026 | Empieza el Sprint 2: rediseño de la interfaz y base del survivor (PR #36) |
+| 24/10/2026 | Cierre del sprint; prueba técnica (PR #34). Juego: personajes, movilidad, cámara, mapa, contenido y Fases 2–4 (PRs #44–#52) |
+| 26/10/2026 | Fases 5 y 6 del juego (PRs #53 y #54) |
+| 27/10/2026 | Fin del Sprint 1; capturas nuevas y esta documentación (PR #55) |
+| 29/10/2026 | Arreglo de la baja con Google (PR #56); Sprint 2 registrado y cerrado en DoneTonic; fin del Sprint 2 |
 
 ## 5. Arquitectura y decisiones de diseño
 
@@ -938,6 +1006,8 @@ Cada logro esconde un dato real del club (por ejemplo, que Griezmann fue tercero
 
 ### 9.7 Evolución por fases
 
+Cada fase es una etiqueta del Sprint 2 en DoneTonic (sección 4.4).
+
 | Fase | Qué se añadió | Problemas que resolvió |
 |---|---|---|
 | Rediseño | Nueva interfaz (tokens, tipografía, modo oscuro rojiblanco), menú del juego como inicio con sesión | La interfaz del sprint era funcional pero sobria |
@@ -1063,6 +1133,7 @@ flowchart LR
 | Métrica | Valor |
 |---|---|
 | PBIs / tareas del Sprint 1 | 19 / 32 |
+| PBIs / tareas del Sprint 2 | 29 / 50 |
 | Pull requests | Más de 50 (uno por tarea, uno por cierre de hito y uno por fase del juego) |
 | Releases | `hito-1`, `hito-2`, `hito-3`, `hito-4`, `sprint-1` |
 | Pruebas automáticas | 276 (+ el recorrido con PostgreSQL real en el CI) |
@@ -1080,7 +1151,7 @@ flowchart LR
 
 ### 15.1 Conclusiones
 
-- Los **cuatro hitos del Sprint 1 están completos**, desplegados y comprobados en producción, con trazabilidad completa desde el backlog hasta la release.
+- Los **cuatro hitos del Sprint 1 están completos**, desplegados y comprobados en producción, con trazabilidad completa desde el backlog hasta la release. El **Sprint 2** (la lógica del juego) también está cerrado: 29 PBIs hechos.
 - La **arquitectura en capas con inyección de dependencias** permitió cambiar de memoria a PostgreSQL, añadir correo y Google o montar un juego entero encima sin tocar la lógica existente.
 - Probar primero los **casos de error** y tener el CI como requisito para fusionar evitó regresiones durante todo el desarrollo.
 - Pasar de red social a **juego** fue una buena decisión: reutiliza toda la base del sprint y obliga a resolver problemas técnicos interesantes (determinismo, rendimiento, validación en el servidor, generación procedural, audio sintetizado).
@@ -1097,7 +1168,7 @@ flowchart LR
 
 ## 16. Índice de capturas
 
-Capturas de la versión actual (27/10/2026), hechas con la aplicación real en local y datos de ejemplo, salvo las de `produccion/` (aplicación desplegada, 23/10/2026).
+Capturas de la versión actual (27/10/2026 las de los Hitos y 29/10/2026 las del juego y DoneTonic), hechas con la aplicación real en local y datos de ejemplo, salvo las de `produccion/` (aplicación desplegada, 23/10/2026).
 
 ### Hitos 1–3 (`docs/capturas/app/`)
 
@@ -1141,18 +1212,52 @@ Capturas de la versión actual (27/10/2026), hechas con la aplicación real en l
 | `02-actions-verde.png` | GitHub Actions: CI y despliegue en Cloud Run en verde tras los PRs del Hito 4 |
 | `03-google-publicada.png` | Google Auth Platform: aplicación publicada («En producción», usuarios externos) |
 
+### Sprint 2: el juego (`docs/capturas/juego/`)
+
+| Fichero | Qué muestra | Requisito |
+|---|---|---|
+| `01-menu.png` | Menú del juego (inicio con sesión): el jugador paseando, la ficha del aficionado, tus tiempos y el menú | RJ-01 |
+| `02-vestuario.png` | Vestuario: lista de jugadores con filtros, ficha con estadísticas y habilidades, y equipaciones | RJ-04, RJ-18 |
+| `03-partida.png` | Partida en curso: mundo procedural, rivales, armas automáticas y HUD | RJ-02, RJ-06, RJ-08 |
+| `04-mejora.png` | Subida de nivel: elegir una de tres mejoras | RJ-02, RJ-05 |
+| `05-jefe.png` | Un jefe (Vinicius Jr.) con su barra de vida | RJ-07 |
+| `06-fin.png` | Fin de la partida: tiempo, estadísticas, daño por habilidad y logro nuevo | RJ-18, RJ-19 |
+| `07-entrenamiento.png` | Entrenamiento con el botón del modo pruebas (administrador) | RJ-13, RJ-16 |
+| `08-contratar.png` | Mercado de fichajes con las fichas de contrato | RJ-12 |
+| `09-logros.png` | Vitrina de logros con su dato de historia | RJ-18 |
+| `10-combinaciones.png` | Combinaciones y ultras con lo que pide cada una | RJ-15 |
+| `11-direccion.png` | Dirección: elegir entrenador y su ulti | RJ-04 |
+| `12-ranking.png` | Ranking de la grada (mote y avatar, nunca el correo) | RJ-14, RJ-17 |
+| `13-identidad.png` | Tu ficha: mote y avatar | RJ-17 |
+| `14-ajustes.png` | Ajustes de sonido, gráficos y controles | RJ-10, RJ-20 |
+| `15-pausa.png` | Menú de pausa | RJ-10 |
+| `16-final-copa.png` | Ambiente de la Final de la Copa del Rey (a partir del minuto 5) | RJ-09 |
+
+### DoneTonic (`docs/capturas/donetonic/`, 29/10/2026)
+
+| Fichero | Qué muestra |
+|---|---|
+| `01-tablero-sprint.png` | Tablero del Sprint 1 al 100 % |
+| `02-graficas-sprint.png` | Sprint Burndown y Burnup del Sprint 1 |
+| `03-backlog.png` | Product Backlog y los dos sprints |
+| `04-tablero-sprint2.png` | Tablero del Sprint 2 al 100 % con las etiquetas de fase |
+| `05-sprint2-tareas-hechas.png` | Tareas de P48 en la columna Hecho (50 tareas en total) |
+| `06-graficas-sprint2.png` | Sprint Burndown y Burnup del Sprint 2 |
+| `07-graficas-backlog.png` | Backlog Burndown y Burnup de los dos sprints |
+| `08-pbi-detalle.png` | Detalle de P44: historia de usuario, criterios de aceptación y tareas |
+
 ### Otras
 
 | Carpeta | Contenido |
 |---|---|
 | `docs/capturas/prueba-tecnica/` | Respuestas de `POST /api/prueba/dominio` en producción (permitido y subdominio rechazado) |
-| `docs/capturas/donetonic/` | Tablero del Sprint 1, gráficas de burnup y burndown y backlog en DoneTonic (12/10/2026) |
 
 ## 17. Glosario
 
 | Término | Significado |
 |---|---|
 | **PBI** | *Product Backlog Item*: elemento del backlog (requisito) con criterios de aceptación |
+| **Historia de usuario** | Requisito escrito desde el punto de vista de quien lo usa: «Como … quiero … para …» |
 | **DoD** | *Definition of Done*: condiciones para dar una tarea o un hito por terminados |
 | **GitHub Flow** | Flujo de trabajo con ramas cortas y pull requests hacia una rama principal siempre desplegable |
 | **CI/CD** | Integración continua (pruebas automáticas en cada cambio) y despliegue continuo (publicar sin intervención manual) |
