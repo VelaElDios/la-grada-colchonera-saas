@@ -6,23 +6,24 @@
 
 Juego web rojiblanco tipo *survivor* en pixel art que se juega en el navegador: eliges a un jugador de la historia del Atleti, aguantas oleadas de rivales y jefes de final en final (Copa, Liga, Champions y Mundial), fichas a nuevos jugadores, los entrenas y compites en el ranking de la grada.
 
-Es el proyecto individual de **Procesos de Ingeniería del Software (curso 2026-2027)**, planteado como un TFG. Por debajo es una aplicación SaaS organizada en capas: cuentas de usuario con registro y confirmación por correo, inicio de sesión local y con Google, roles, base de datos PostgreSQL (el progreso del juego se guarda en el servidor), integración y despliegue continuos, y gestión ágil del trabajo. El **Sprint 1** (Hitos 1 a 4) construyó esa base; el juego se ha desarrollado después sobre ella.
+Es el proyecto individual de **Procesos de Ingeniería del Software (curso 2026-2027)**, planteado como un TFG. Por debajo es una aplicación SaaS organizada en capas: cuentas de usuario con registro y confirmación por correo, inicio de sesión local y con Google, roles, base de datos PostgreSQL (el progreso del juego se guarda en el servidor), integración y despliegue continuos, y gestión ágil del trabajo. El **Sprint 1** (Hitos 1 a 4) construyó esa base y el **Sprint 2** es la lógica del juego, hecha sobre ella.
 
 > Proyecto de aficionado sin relación oficial con el Club Atlético de Madrid. Todos los dibujos, la música y los textos son originales: no se usan escudos, imágenes ni himnos oficiales.
 
 ## Índice
 
 1. [Entrega](#entrega) · [Enlaces rápidos](#enlaces-rápidos)
-2. [Capturas (Hitos 1–4)](#capturas-hitos-14)
-3. [Qué incluye cada hito](#qué-incluye-cada-hito)
-4. [Arquitectura](#arquitectura): capas, modelo de datos y flujos principales
-5. [Tecnologías](#tecnologías) · [Estructura del proyecto](#estructura-del-proyecto)
-6. [Seguridad](#seguridad) · [Roles](#roles) · [API](#api) · [Registro de actividad](#registro-de-actividad-logs)
-7. [Variables de entorno y secretos](#variables-de-entorno-y-secretos) · [Ejecutar en local](#ejecutar-en-local) · [Pruebas](#pruebas)
-8. [Despliegue](#despliegue) · [Flujo de trabajo](#flujo-de-trabajo) · [Gestión del proyecto](#gestión-del-proyecto)
-9. [Prueba técnica del Sprint 1](#prueba-técnica-del-sprint-1-variante-3)
-10. [El juego (después del Sprint 1)](#el-juego-después-del-sprint-1)
-11. [Documentación y memoria](#documentación-y-memoria)
+2. [Capturas del Sprint 1 (Hitos 1–4)](#capturas-del-sprint-1-hitos-14)
+3. [Capturas del Sprint 2 (el juego)](#capturas-del-sprint-2-el-juego)
+4. [Qué incluye cada sprint](#qué-incluye-cada-sprint): hitos del Sprint 1 y fases del Sprint 2
+5. [Arquitectura](#arquitectura): capas, modelo de datos y flujos principales
+6. [Tecnologías](#tecnologías) · [Estructura del proyecto](#estructura-del-proyecto)
+7. [Seguridad](#seguridad) · [Roles](#roles) · [API](#api) · [Registro de actividad](#registro-de-actividad-logs)
+8. [Variables de entorno y secretos](#variables-de-entorno-y-secretos) · [Ejecutar en local](#ejecutar-en-local) · [Pruebas](#pruebas)
+9. [Despliegue](#despliegue) · [Flujo de trabajo](#flujo-de-trabajo) · [Gestión del proyecto](#gestión-del-proyecto-donetonic)
+10. [Prueba técnica del Sprint 1](#prueba-técnica-del-sprint-1-variante-3)
+11. [El juego en detalle (Sprint 2)](#el-juego-en-detalle-sprint-2)
+12. [Documentación y memoria](#documentación-y-memoria)
 
 ## Entrega
 
@@ -30,7 +31,9 @@ Es el proyecto individual de **Procesos de Ingeniería del Software (curso 2026-
 |---|---|
 | **Repositorio** | https://github.com/VelaElDios/la-grada-colchonera-saas |
 | **Aplicación desplegada** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (Google Cloud Run) |
-| **Alcance del Sprint 1** | Hitos 1, 2, 3 y 4 del enunciado: registro y acceso locales, roles y administración, persistencia, confirmación por correo, inicio de sesión con Google y manejo de errores |
+| **Sprint 1** (29/09 – 27/10/2026) | Hitos 1, 2, 3 y 4 del enunciado: registro y acceso locales, roles y administración, persistencia, confirmación por correo, inicio de sesión con Google y manejo de errores. 19 PBIs, todos hechos |
+| **Sprint 2** (23/10 – 29/10/2026) | La lógica del juego: partida *survivor*, jugadores y entrenadores, armas, rivales, jefes, mundo procedural, club guardado en el servidor (contratos, entrenamiento, ranking), combinaciones y ultras, logros, música y pantalla de fin. 29 PBIs, todos hechos |
+| **Gestión (DoneTonic)** | [`docs/gestion/README.md`](docs/gestion/README.md): backlog de los dos sprints, historias de usuario, trazabilidad tarea → PR, evolución y capturas |
 | **Política de privacidad** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app/privacidad.html (necesaria para publicar la aplicación de Google) |
 | **Acceso de administrador** | Ver [Acceso como administrador para la revisión](#acceso-como-administrador-para-la-revisión). Las credenciales se envían junto con la entrega |
 | **Revisión requisito a requisito** | [`docs/revision-entrega.md`](docs/revision-entrega.md) |
@@ -41,15 +44,15 @@ Es el proyecto individual de **Procesos de Ingeniería del Software (curso 2026-
 | Qué | Dónde |
 |---|---|
 | Aplicación desplegada | Google Cloud Run (principal): https://la-grada-colchonera-1081564062572.europe-southwest1.run.app · Render (alternativo): https://la-grada-colchonera.onrender.com |
-| Entregas por hito (releases) | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · [hito-4](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-4) · [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) |
+| Entregas por hito (releases) | [hito-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-1) · [hito-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-2) · [hito-3](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-3) · [hito-4](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/hito-4) · [sprint-1](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-1) · [sprint-2](https://github.com/VelaElDios/la-grada-colchonera-saas/releases/tag/sprint-2) |
 | Pull requests (uno por tarea y uno por cierre de hito) | [VelaElDios/la-grada-colchonera-saas/pulls](https://github.com/VelaElDios/la-grada-colchonera-saas/pulls?q=is%3Apr+is%3Aclosed+sort%3Acreated-asc) |
 | Integración continua (GitHub Actions) | [Ejecuciones del workflow *CI*](https://github.com/VelaElDios/la-grada-colchonera-saas/actions/workflows/ci.yml) |
-| Gestión del proyecto (DoneTonic: PBIs, tareas, sprint y gráficas) | [`docs/gestion/README.md`](docs/gestion/README.md) |
+| Gestión del proyecto (DoneTonic: PBIs, tareas, sprints y gráficas) | [`docs/gestion/README.md`](docs/gestion/README.md) |
 | Revisión de la entrega frente al enunciado | [`docs/revision-entrega.md`](docs/revision-entrega.md) |
 | Configuración del Hito 4 (correo y Google) | [`docs/hito4-configuracion.md`](docs/hito4-configuracion.md) |
 | Memoria del proyecto (LuaLaTeX) | [`memoria/`](memoria/README.md) |
 
-## Capturas (Hitos 1–4)
+## Capturas del Sprint 1 (Hitos 1–4)
 
 Capturas de la **versión actual** de la aplicación (27/10/2026), con la interfaz rediseñada. Solo muestran lo que piden los hitos del Sprint 1: cuentas, sesión, roles, administración, confirmación por correo, Google y errores. Están hechas en local con datos de ejemplo, porque así se pueden enseñar estados que en producción necesitarían cuentas reales (una cuenta pendiente, una eliminada, un enlace manipulado, un fallo del servidor…). Debajo están las comprobaciones hechas en producción.
 
@@ -107,9 +110,55 @@ Pruebas hechas en la aplicación desplegada el 23/10/2026. El enlace del correo 
 
 </details>
 
-Las capturas de la [prueba técnica](#prueba-técnica-del-sprint-1-variante-3) y de [DoneTonic](#gestión-del-proyecto) están en sus apartados.
+Las capturas de la [prueba técnica](#prueba-técnica-del-sprint-1-variante-3) y de [DoneTonic](#gestión-del-proyecto-donetonic) están en sus apartados.
 
-## Qué incluye cada hito
+## Capturas del Sprint 2 (el juego)
+
+Capturas del juego (29/10/2026), hechas en local con datos de ejemplo: una cuenta de administrador con el *modo pruebas* (todos los jugadores fichados y Griezmann entrenado), unos cuantos logros conseguidos y un ranking con varios aficionados. Las partidas son reales: se jugaron en el navegador, manejadas por un script, y las capturas se tomaron durante la partida.
+
+### Menú del juego y club
+
+| Menú del juego (inicio con sesión) | Vestuario: elegir jugador y equipación |
+|---|---|
+| ![Menú del juego con el jugador paseando por el campo y el menú lateral](docs/capturas/juego/01-menu.png) | ![Vestuario con la lista de jugadores, la ficha de Griezmann y las equipaciones](docs/capturas/juego/02-vestuario.png) |
+
+| Entrenamiento | Contratar con fichas |
+|---|---|
+| ![Entrenamiento: puntos para subir vida, defensa, disparo y suerte](docs/capturas/juego/07-entrenamiento.png) | ![Mercado de fichajes con las fichas de contrato](docs/capturas/juego/08-contratar.png) |
+
+| Dirección: elegir entrenador | Tu ficha: mote y avatar |
+|---|---|
+| ![Dirección deportiva con Cholo Simeone y Luis Aragonés](docs/capturas/juego/11-direccion.png) | ![Pantalla para ponerse un mote y elegir la cara](docs/capturas/juego/13-identidad.png) |
+
+### La partida
+
+| En juego: oleadas, armas automáticas y HUD | Subir de nivel: elegir una mejora |
+|---|---|
+| ![Partida en curso con el jugador rodeado de rivales en un mundo procedural](docs/capturas/juego/03-partida.png) | ![Pantalla de subida de nivel con tres mejoras](docs/capturas/juego/04-mejora.png) |
+
+| Un jefe (con su barra de vida) | Pausa |
+|---|---|
+| ![Jefe Vinicius Jr. en el campo con su barra de vida arriba](docs/capturas/juego/05-jefe.png) | ![Menú de pausa de la partida](docs/capturas/juego/15-pausa.png) |
+
+| Final de la Copa del Rey (minuto 5) | Fin de la partida con estadísticas |
+|---|---|
+| ![Ambiente de la Final de la Copa del Rey a partir del minuto 5](docs/capturas/juego/16-final-copa.png) | ![Pantalla de fin con el tiempo, el daño por habilidad y un logro nuevo](docs/capturas/juego/06-fin.png) |
+
+### Metas, ranking y ajustes
+
+| Logros con historia rojiblanca | Combinaciones y ultras |
+|---|---|
+| ![Vitrina de logros, cada uno con un dato de la historia del Atleti](docs/capturas/juego/09-logros.png) | ![Las metas de la grada: ultras y combinaciones con lo que pide cada una](docs/capturas/juego/10-combinaciones.png) |
+
+| Ranking de la grada | Ajustes de sonido, gráficos y controles |
+|---|---|
+| ![Ranking con la mejor partida de cada aficionado](docs/capturas/juego/12-ranking.png) | ![Ajustes de volumen, gráficos, cámara y controles](docs/capturas/juego/14-ajustes.png) |
+
+Las capturas de DoneTonic del Sprint 2 están en [Gestión del proyecto](#gestión-del-proyecto-donetonic).
+
+## Qué incluye cada sprint
+
+### Sprint 1: los cuatro hitos
 
 | Hito | Contenido | PBIs (DoneTonic) | Entrega |
 |---|---|---|---|
@@ -121,7 +170,7 @@ Las capturas de la [prueba técnica](#prueba-técnica-del-sprint-1-variante-3) y
 
 La primera entrega se limitó a los Hitos 1–3. El Hito 4 (P15 OAuth, P16 confirmación por correo y P17 manejo de errores) se completó después, apoyándose en lo que ya había: el modelo de usuario con el estado `pending` y el campo `authProvider` (`local` o `google`). Está desplegado y comprobado en producción.
 
-### Hito 4 en detalle
+#### Hito 4 en detalle
 
 | PBI | Qué hace | Dónde |
 |---|---|---|
@@ -130,6 +179,42 @@ La primera entrega se limitó a los Hitos 1–3. El Hito 4 (P15 OAuth, P16 confi
 | **P17 · Manejo de errores** | Toda la interfaz traduce los errores a avisos legibles y los registra en la consola; hay estados de carga, vacío y error con reintento, timeout de 15 s en las peticiones, captura global de promesas rechazadas, y las redirecciones de OAuth y de confirmación vuelven a la web con un aviso en lugar de mostrar JSON. | `public/js/ui/componentes.js`, `public/js/ui.js`, `src/api/errorHandler.js` |
 | **Secretos y despliegue** (T25) | El workflow de despliegue entrega a Cloud Run los secretos `smtp-url`, `mail-from`, `google-client-id` y `google-client-secret`. Un script de Cloud Shell los crea en Secret Manager y da acceso a la cuenta de servicio. | `.github/workflows/deploy-cloud-run.yml`, `scripts/gcp/configurar-hito4.sh`, [`docs/hito4-configuracion.md`](docs/hito4-configuracion.md) |
 | **Política de privacidad** (T26) | Página pública que explica qué datos se guardan, para qué y cómo borrarlos. Google la exige para publicar la aplicación de inicio de sesión. | [`public/privacidad.html`](public/privacidad.html) |
+
+### Sprint 2: la lógica del juego
+
+Cerrado el Sprint 1, el profesor fijó que el **Sprint 2 es la lógica del juego**. El backlog tiene 29 PBIs (P20–P48) con 50 tareas (T33–T82), etiquetados por fase; el detalle con las historias de usuario está en [`docs/gestion/README.md`](docs/gestion/README.md#sprint-2-la-lógica-del-juego).
+
+| Etiqueta (fase) | Contenido | PBIs (DoneTonic) | PRs |
+|---|---|---|---|
+| **Base del juego** | Interfaz rediseñada con el menú del juego como inicio, motor *survivor* de paso fijo, muñecos pixel art y cámara 3/4, jugadores y entrenadores con Vestuario y Dirección, armas con 5 niveles y mejoras, rivales que embisten y disparan, jefes con tres fases, mapa con barro, lluvia y gradas, y controles con teclado, joystick táctil, pausa y pantalla completa | P20–P28 · T33–T51 | [#36](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/36), [#44](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/44)–[#48](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/48) |
+| **Fase 2 · Club** | Progreso guardado en el servidor (migración `003`) con validación anti-trampas, contratos con fichas, entrenamiento y ranking de la grada | P29–P32 · T52–T56 | [#49](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/49) |
+| **Fase 3 · Ultras** | Combinaciones con nombre y bonus, seis ULTRAS, dificultad calibrada y modo pruebas para administradores | P33–P34 · T57–T60 | [#50](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/50) |
+| **Fase 4 · Mundo** | Mundo procedural natural, cinco ambientes por finales y mote y avatar (migración `004`) | P35–P37 · T61–T63 | [#52](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/52) |
+| **Fase 5 · Rarezas** | Rarezas por historia rojiblanca (36 jugadores), firma del contrato, habilidades niveladas por minuto, combinaciones a la vista y colisiones exactas | P38–P41 · T64–T68 | [#53](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/53) |
+| **Fase 6 · Logros y sonido** | Logros con historia y equipaciones, pantalla de fin con estadísticas, música chiptune y la grada, muñecos con más detalle y jefes más duros | P42–P46 · T69–T76 | [#54](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/54) |
+| **Calidad** | Errores corregidos (el juego no cargaba, el primer reenvío del correo se perdía, no se podía volver con Google tras la baja), documentación y gestión del sprint | P47–P48 · T77–T82 | [#51](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/51), [#55](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/55), [#56](https://github.com/VelaElDios/la-grada-colchonera-saas/pull/56) y este PR |
+
+**Requisitos funcionales del Sprint 2** (la tabla completa, con dónde se cumple cada uno y sus pruebas, está en la [documentación técnica](docs/documentacion-tecnica.md#32-requisitos-funcionales-del-juego-sprint-2)):
+
+| Id | Requisito | PBI |
+|---|---|---|
+| RJ-01 | Con sesión, el inicio es el menú del juego; sin sesión no se juega | P20, P29 |
+| RJ-02 | Partida *survivor* infinita: oleadas, experiencia, mejoras al subir de nivel y dificultad creciente | P21, P24, P34 |
+| RJ-03 | Jugadores con estadísticas y habilidades propias, entrenadores con ulti | P23, P38 |
+| RJ-04 | Rivales con comportamiento propio y jefes con fases | P25, P26, P46 |
+| RJ-05 | Mundo procedural con obstáculos y ambientes que cambian cada 5 minutos | P27, P35, P36, P41 |
+| RJ-06 | El progreso (plantilla, entrenamiento, fichas, logros) se guarda en el servidor | P29 |
+| RJ-07 | Fichar jugadores con fichas de contrato ganadas a los jefes | P30, P38 |
+| RJ-08 | Entrenar a los jugadores con puntos | P31 |
+| RJ-09 | Ranking de la grada con la mejor partida de cada usuario | P32 |
+| RJ-10 | Combinaciones y ULTRAS, visibles con lo que pide cada una | P33, P40 |
+| RJ-11 | Modo pruebas solo para administradores | P34 |
+| RJ-12 | Mote único y avatar | P37 |
+| RJ-13 | Logros con datos de la historia del Atleti y equipaciones | P42 |
+| RJ-14 | Estadísticas al terminar la partida | P43 |
+| RJ-15 | Música, efectos y la grada, con ajustes de volumen | P44 |
+| RJ-16 | Jugable con teclado, ratón y pantalla táctil; pausa y pantalla completa | P28 |
+| RJ-17 | El servidor valida cada resultado (no se pueden inventar tiempos, jefes ni logros) | P29, P42 |
 
 ## Arquitectura
 
@@ -595,24 +680,38 @@ gitGraph
 - `hito-N/Tx-descripcion`: una rama por tarea de DoneTonic, que se integra en la rama de su hito mediante un PR titulado `[Tx] ...`.
 - `main` y `hito-*/integracion` están protegidas: solo admiten cambios por PR y exigen que el check **Pruebas** del CI esté en verde.
 - **Hito 4:** se hizo con una rama por tarea (T22–T26) integrada directamente en `main` con su PR (#37–#41), cada una con el CI en verde y desplegada al fusionarse. Como las ramas dependían unas de otras, se reubicaron sobre el `main` real antes de abrir los PRs.
-- **El juego** se ha desarrollado después del Sprint 1 en las ramas `feature/rediseno-y-juego` (rediseño de la interfaz), `juego/personajes-pixel` y `juego/movilidad-hub`, con un PR a `main` por fase y el mismo CI y despliegue.
+- **Sprint 2 (el juego):** ramas `feature/rediseno-y-juego` (rediseño de la interfaz), `juego/personajes-pixel` y `juego/movilidad-hub`, con **un PR a `main` por fase** (#36 y #44–#54) y el mismo CI y despliegue. Cada tarea de DoneTonic dice en su descripción en qué PR está. Los arreglos posteriores también van por PR (#51, #55, #56).
 - Antes de abrir cada PR se ejecuta `npm test` en local. Después, el CI vuelve a ejecutar las pruebas en el PR y otra vez al llegar a `main`, y entonces se despliega en Cloud Run sin intervención manual.
 
-## Gestión del proyecto
+## Gestión del proyecto (DoneTonic)
 
-El trabajo se ha planificado y seguido en **DoneTonic** (espacio *TFG*, equipo *Colchoneros*, Sprint 1 del 29/09/2026 al 27/10/2026). Hay 19 PBIs priorizados por hito, cada uno con sus tareas, y cada tarea corresponde a una rama y a un PR de este repositorio. Los cuatro hitos están completados.
+El trabajo se ha planificado y seguido en **DoneTonic** (espacio *TFG*, equipo *Colchoneros*) con Scrum y dos sprints, los dos cerrados:
 
-En [`docs/gestion/README.md`](docs/gestion/README.md) están:
+| Sprint | Fechas | Backlog | Etiquetas | Estado |
+|---|---|---|---|---|
+| **Sprint 1** | 29/09/2026 – 27/10/2026 | 19 PBIs (P1–P19), 32 tareas (T1–T32) | Hito 1 a Hito 4 | Hecho (100 %) |
+| **Sprint 2** | 23/10/2026 – 29/10/2026 | 29 PBIs (P20–P48), 50 tareas (T33–T82) | Base del juego, Fase 2 a Fase 6 y Calidad | Hecho (100 %) |
 
-- el backlog completo con el estado de cada PBI;
-- la definición de hecho (DoD) de tareas y de hitos;
+Cada PBI tiene su historia de usuario y sus criterios de aceptación, y cada tarea corresponde a una rama o a un PR de este repositorio. En [`docs/gestion/README.md`](docs/gestion/README.md) están:
+
+- el backlog completo de los dos sprints con el estado de cada PBI;
+- las historias de usuario y los criterios de aceptación del Sprint 2;
+- la definición de hecho (DoD);
 - la trazabilidad tarea → rama → PR → release;
-- el burndown del sprint y las gráficas de seguimiento que hay en DoneTonic (burnup, burndown y velocity);
-- capturas del tablero, de las gráficas y del backlog en DoneTonic.
+- la evolución de cada sprint (burndown) y las gráficas de DoneTonic (burnup, burndown y backlog);
+- capturas del backlog, de los tableros, del detalle de un PBI y de las gráficas.
 
-| Tablero del Sprint 1 | Gráficas del sprint |
+| Tablero del Sprint 2 | Gráficas del Sprint 2 |
 |---|---|
-| ![Tablero del Sprint 1 en DoneTonic](docs/capturas/donetonic/01-tablero-sprint.png) | ![Sprint Burnup y Burndown en DoneTonic](docs/capturas/donetonic/02-graficas-sprint.png) |
+| ![Tablero del Sprint 2 en DoneTonic con los 29 PBIs hechos](docs/capturas/donetonic/04-tablero-sprint2.png) | ![Sprint Burndown y Burnup del Sprint 2](docs/capturas/donetonic/06-graficas-sprint2.png) |
+
+| Tablero del Sprint 1 | Gráficas del Sprint 1 |
+|---|---|
+| ![Tablero del Sprint 1 en DoneTonic con los 19 PBIs hechos](docs/capturas/donetonic/01-tablero-sprint.png) | ![Sprint Burndown y Burnup del Sprint 1](docs/capturas/donetonic/02-graficas-sprint.png) |
+
+![Backlog de DoneTonic con los dos sprints](docs/capturas/donetonic/03-backlog.png)
+
+> El juego se programó del 23 al 26/10 y su backlog se registró en DoneTonic al cerrar el Sprint 2 (29/10), por eso las gráficas de DoneTonic del Sprint 2 marcan todo hecho ese día. La evolución real, por fechas de los PRs, está en [`docs/gestion/README.md`](docs/gestion/README.md#evolución-del-sprint-2).
 
 ## Prueba técnica del Sprint 1 (variante 3)
 
@@ -648,9 +747,9 @@ Ejercicio de la prueba técnica del Sprint 1, realizado sobre este mismo reposit
 |---|---|
 | ![Respuesta permitido: true en la app desplegada](docs/capturas/prueba-tecnica/01-dominio-permitido.png) | ![Respuesta permitido: false en la app desplegada](docs/capturas/prueba-tecnica/02-subdominio-rechazado.png) |
 
-## El juego (después del Sprint 1)
+## El juego en detalle (Sprint 2)
 
-Cerrado el Sprint 1, el profesor dejó libertad para el diseño y la lógica del juego. El proyecto pasó de la idea inicial de red social a un **juego**: un *survivor* con estética de píxeles «chibi» (cabeza grande, camiseta y botas) que reutiliza toda la base del sprint (cuentas, sesión, roles, base de datos, CI/CD). Solo pueden jugar usuarios con sesión, y el progreso (jugadores, entrenamiento, fichas, logros) y el **ranking de la grada** se guardan en el servidor.
+Cerrado el Sprint 1, el profesor dejó libertad para el diseño y fijó que el **Sprint 2** sería la lógica del juego. El proyecto pasó de la idea inicial de red social a un **juego**: un *survivor* con estética de píxeles «chibi» (cabeza grande, camiseta y botas) que reutiliza toda la base del sprint (cuentas, sesión, roles, base de datos, CI/CD). Solo pueden jugar usuarios con sesión, y el progreso (jugadores, entrenamiento, fichas, logros) y el **ranking de la grada** se guardan en el servidor.
 
 ### Cómo se juega
 
@@ -686,6 +785,8 @@ Cerrado el Sprint 1, el profesor dejó libertad para el diseño y la lógica del
 
 ### Evolución por fases
 
+Cada fase es una etiqueta del Sprint 2 en DoneTonic y un PR a `main` ([qué PBIs tiene cada una](#sprint-2-la-lógica-del-juego)).
+
 | Fase | Qué se añadió |
 |---|---|
 | 1 | Base del survivor: simulación, oleadas, armas, mejoras, jefes y menú |
@@ -701,6 +802,6 @@ Para el detalle de cada sistema, ver [`docs/documentacion-tecnica.md`](docs/docu
 
 - [`docs/documentacion-tecnica.md`](docs/documentacion-tecnica.md): documentación técnica completa del proyecto (requisitos, decisiones, diseño, flujos con diagramas de secuencia, pruebas, despliegue, gestión y juego), pensada como base para escribir la memoria.
 - [`docs/revision-entrega.md`](docs/revision-entrega.md): revisión frase a frase del enunciado del Sprint 1.
-- [`docs/gestion/README.md`](docs/gestion/README.md): gestión en DoneTonic.
+- [`docs/gestion/README.md`](docs/gestion/README.md): gestión en DoneTonic de los dos sprints (backlog, historias de usuario, trazabilidad, evolución y capturas).
 - [`docs/hito4-configuracion.md`](docs/hito4-configuracion.md): configuración del correo y de Google en producción.
 - [`memoria/`](memoria/README.md): la memoria del proyecto, planteada como un TFG, en LaTeX. Se compila con **LuaLaTeX** (y sola en GitHub Actions); allí se explica cómo generar el PDF.
