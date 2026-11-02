@@ -74,10 +74,13 @@ export const nubes = (t, x, y) => ruido(t.semilla, x, y, TERRENO.escalaNubes, CA
 export const bosque = (t, x, y) => ruido(t.semilla, x, y, TERRENO.escalaBosque, CANAL.bosque, 3);
 /** Tono del césped (zonas más verdes o más secas): solo es visual. */
 export const tono = (t, x, y) => ruido(t.semilla, x, y, 520, CANAL.tono, 2);
+/** Valor del ruido de caminos (0..1): el camino pasa por donde vale 0,5. El dibujo lo usa para los bordes. */
+export const caminoValor = (t, x, y) => ruido(t.semilla, x, y, 1500, CANAL.camino, 2);
+/** Semiancho del camino en el ruido de caminos (por debajo de esto, a 0,5, hay camino). */
+export const ANCHO_CAMINO = 0.016;
 /** Caminos: las «crestas» del ruido (donde vale 0,5) forman sendas que serpentean y se cruzan. */
 export function caminoEn(t, x, y) {
-  const c = ruido(t.semilla, x, y, 1500, CANAL.camino, 2);
-  return Math.abs(c - 0.5) < 0.016;
+  return Math.abs(caminoValor(t, x, y) - 0.5) < ANCHO_CAMINO;
 }
 
 /** Distancia del punto de salida (0, 0) a un rectángulo centrado en (x, y). */

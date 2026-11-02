@@ -1,7 +1,7 @@
 // Animación de la firma de un contrato (pixel art, unos 5 segundos): el contrato del Atleti llega a la mesa,
 // se rellenan las cláusulas, el boli escribe el nombre del fichaje y cae el sello de «¡FICHADO!».
 // Se dibuja en un lienzo pequeño que se amplía sin suavizar. Se puede saltar con un clic o una tecla.
-import { obtenerSprite } from './sprites.js';
+import { obtenerSprite, encuadreCara } from './sprites.js';
 
 const W = 256;
 const H = 160;
@@ -155,14 +155,15 @@ export function animarFirma(contenedor, { nombre, aspecto, rareza, posicion = ''
       ctx.fillRect(px0, py0 + 7, PW, 2);
       escribir(ctx, 'CONTRATO PROFESIONAL', px0 + 8, py0 + 14, '#1b2a5c', 1);
       escribir(ctx, 'CLUB ATLETICO DE MADRID', px0 + 8, py0 + 22, '#c8102e', 1);
-      // Foto del jugador (esquina superior derecha)
-      const fx = px0 + PW - 34;
-      const fy = py0 + 13;
+      // Foto del jugador (esquina superior derecha): cabeza y hombros a tamaño real, píxel a píxel
+      const fx = px0 + PW - 36;
+      const fy = py0 + 12;
+      const cara = encuadreCara(sprite);
       ctx.fillStyle = '#1b2a5c';
-      ctx.fillRect(fx - 1, fy - 1, 26, 30);
+      ctx.fillRect(fx - 1, fy - 1, cara.lado + 2, cara.lado + 2);
       ctx.fillStyle = '#d9e4f2';
-      ctx.fillRect(fx, fy, 24, 28);
-      ctx.drawImage(sprite.frames[0], 0, 0, 16, 14, fx, fy + 4, 24, 21);
+      ctx.fillRect(fx, fy, cara.lado, cara.lado);
+      ctx.drawImage(sprite.frames[0], cara.x, cara.y, cara.lado, cara.lado, fx, fy, cara.lado, cara.lado);
 
       // 2) Cláusulas que se van escribiendo (0,12 – 0,32)
       const clausulas = Math.max(0, Math.min(1, (t - 0.12) / 0.2));

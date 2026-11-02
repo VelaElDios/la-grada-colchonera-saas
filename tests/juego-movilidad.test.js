@@ -284,7 +284,8 @@ test('las habilidades nuevas de los jefes existen: espiral, muro, salto de Crist
   assert.ok(m2.united >= 5, 'Mourinho levanta un muro de defensas');
   const c3 = await correr(2, 3, 10, (w, j, v) => { v.salto = v.salto || j.estado === 'salto'; v.impacto = v.impacto || w.avisosJefe.some((a) => a.tipo === 'impacto'); });
   assert.ok(c3.salto && c3.impacto, 'Cristiano salta y avisa dónde cae');
-  const me3 = await correr(3, 3, 12, (w, j, v) => { v.dash = (v.dash || 0) + (j.estado === 'preparar' && j.carga > 0.44 ? 1 : 0); v.curvos = v.curvos || w.disparosEnemigos.some((d) => d.giro); });
+  // La embestida se mira por su estado (antes se deducía de la espera de la carga, que depende de qué ataque toque)
+  const me3 = await correr(3, 3, 12, (w, j, v) => { v.dash = (v.dash || 0) + (j.estado === 'embestida' ? 1 : 0); v.curvos = v.curvos || w.disparosEnemigos.some((d) => d.giro); });
   assert.ok(me3.dash >= 1 && me3.curvos, 'Messi embiste y tira con rosca');
 });
 
@@ -482,7 +483,7 @@ test('el suelo se pinta por celdas y cambia de colores con cada ambiente (con un
   const contexto = () => new Proxy({}, {
     get: (obj, k) => {
       if (k === 'createImageData') return (w, h) => ({ data: new Uint8ClampedArray(w * h * 4) });
-      if (k === 'putImageData') return (img) => imagenes.push(img.data);
+      if (k === 'putImageData') return (img) => imagenes.push(img.data.slice()); // como el canvas de verdad: copia los píxeles
       if (k in obj) return obj[k];
       return () => {};
     },

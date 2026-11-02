@@ -60,6 +60,14 @@ const ICONOS = {
   zamora: `<path d="M12 3l7 3v5c0 5-3 8.5-7 10-4-1.5-7-5-7-10V6z" ${trazo}/><path d="M9 9.5h6l-6 5h6" ${trazo}/>`,
   mundial: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18" ${trazo}/>`,
   reloj: `<circle cx="12" cy="12" r="9" ${trazo}/><path d="M12 7v5l3 2" ${trazo}/>`,
+  // Habilidades nuevas
+  carambola: `<circle cx="18" cy="6" r="2.6" ${trazo}/><path d="M3 18l5-9 5 7 5-8" ${trazo}/><path d="M3 21h18" ${trazo}/>`,
+  presion: `<path d="M3 6l5 5M21 6l-5 5M3 18l5-5M21 18l-5-5" ${trazo}/><circle cx="12" cy="12" r="2.6" ${trazo}/><path d="M6 11h2v-2M18 11h-2V9M6 13h2v2M18 13h-2v2" ${trazo}/>`,
+  ola: `<path d="M2 16c2.5-4 4.5-4 7 0s4.5 4 7 0 4.5-4 6-2" ${trazo}/><path d="M5 11V7M9 14V9M13 11V5M17 14V9M21 11V8" ${trazo}/>`,
+  fuera: `<path d="M6 21V3" ${trazo}/><path d="M6 4h12v8H6" ${trazo}/><path d="M10 4v8M14 4v8M6 8h12" ${trazo}/>`,
+  ruleta: `<path d="M20 12a8 8 0 11-2.3-5.6" ${trazo}/><path d="M18 2.5l-.3 4-4-.3" ${trazo}/><circle cx="12" cy="12" r="2.5" ${trazo}/>`,
+  vision: `<path d="M2 12s3.8-6.5 10-6.5S22 12 22 12s-3.8 6.5-10 6.5S2 12 2 12z" ${trazo}/><circle cx="12" cy="12" r="3" ${trazo}/>`,
+  grandes: `<path d="M8 4h8v5a4 4 0 01-8 0z" ${trazo}/><path d="M8 6H5a3 3 0 003 4M16 6h3a3 3 0 01-3 4M12 13v4M8 21h8M9.5 17h5" ${trazo}/>`,
 };
 
 /** Devuelve el SVG (como cadena) de un icono; si no existe, un círculo. */

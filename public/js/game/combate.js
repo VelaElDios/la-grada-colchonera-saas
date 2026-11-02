@@ -3,25 +3,17 @@ import {
   MUNDO, EQUIPOS, JEFES, MOVIMIENTO, CURAS, ELITES, AYUDA_INICIAL, resistenciaCurtidos,
 } from './config.js';
 import { explosionDeFuego } from './ultras.js';
+import {
+  emitir, texto, numeroDeDano, chispasDeImpacto, restosDeBaja,
+} from './efectos.js';
 
-const MAX_TEXTOS = 40;
-const MAX_PARTICULAS = 260;
-
-export function crearTexto(mundo, x, y, texto, color = '#ffffff') {
-  if (mundo.textos.length >= MAX_TEXTOS) mundo.textos.shift();
-  mundo.textos.push({ x, y, texto, color, vida: 0.7, total: 0.7 });
+export function crearTexto(mundo, x, y, contenido, color = '#ffffff') {
+  texto(mundo, x, y, contenido, color);
 }
 
+/** Partículas sencillas (con tope y reutilizando objetos: ver efectos.js). */
 export function crearParticulas(mundo, x, y, color, cantidad = 6, velocidad = 120) {
-  if (!mundo.efectosReducidos) {
-    for (let i = 0; i < cantidad; i += 1) {
-      if (mundo.particulas.length >= MAX_PARTICULAS) mundo.particulas.shift();
-      const ang = mundo.rng.rango(0, Math.PI * 2);
-      const v = mundo.rng.rango(0.3, 1) * velocidad;
-      const vida = mundo.rng.rango(0.25, 0.5);
-      mundo.particulas.push({ x, y, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v, vida, total: vida, color, r: mundo.rng.rango(2, 4) });
-    }
-  }
+  emitir(mundo, x, y, color, cantidad, velocidad);
 }
 
 /** Suelta una gema de experiencia; si hay demasiadas, la suma a una existente. */
@@ -56,21 +48,21 @@ export function multiplicadorDano(jugador, tipo) {
  */
 export function danar(mundo, enemigo, base, empuje = null, velEmpuje = 0, tipo = 'cuerpo') {
   if (enemigo.muerto) return;
-  let cantidad = Math.max(1, Math.round(base * multiplicadorDano(mundo.jugador, tipo) * resistenciaCurtidos(mundo.tiempo / 60)));
+  // «Partidos grandes»: más daño a jefes y élites
+  const grandes = enemigo.jefe || enemigo.elite ? 1 + (mundo.jugador.mult.grandes ?? 0) : 1;
+  let cantidad = Math.max(1, Math.round(base * multiplicadorDano(mundo.jugador, tipo) * grandes * resistenciaCurtidos(mundo.tiempo / 60)));
   // Golpe crítico (Trébol y suerte): el doble de daño
   const critico = (mundo.jugador.mult.critico ?? 0) > 0 && mundo.rng.siguiente() < mundo.jugador.mult.critico;
   if (critico) cantidad *= 2;
   anotarDano(mundo, enemigo, cantidad, critico);
   enemigo.vida -= cantidad;
   enemigo.flash = 0.1;
-  crearParticulas(mundo, enemigo.x, enemigo.y, '#ffffff', 3, 110); // chispas del golpe
+  chispasDeImpacto(mundo, enemigo, empuje, critico); // chispas del color de la habilidad
   if (empuje && velEmpuje) {
     enemigo.kx += empuje[0] * velEmpuje * enemigo.freno;
     enemigo.ky += empuje[1] * velEmpuje * enemigo.freno;
   }
-  if (!mundo.sinNumeros) {
-    crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, critico ? `${cantidad}!` : String(cantidad), critico ? '#ff9a3c' : enemigo.jefe ? '#ffd166' : '#ffffff');
-  }
+  if (!mundo.sinNumeros) numeroDeDano(mundo, enemigo, cantidad, critico, critico ? '#ffd23f' : enemigo.jefe ? '#ffe08a' : '#ffffff');
   if (enemigo.vida <= 0) matar(mundo, enemigo);
   else mundo.eventos.push({ tipo: 'golpe' });
 }
@@ -96,7 +88,7 @@ export function danoFijo(mundo, enemigo, cantidad, color = '#ff9a3c') {
   anotarDano(mundo, enemigo, cantidad, false, 'fuego');
   enemigo.vida -= cantidad;
   enemigo.flash = Math.max(enemigo.flash, 0.05);
-  if (!mundo.sinNumeros && mundo.textos.length < 24) crearTexto(mundo, enemigo.x, enemigo.y - enemigo.r, String(cantidad), color);
+  if (!mundo.sinNumeros && mundo.textos.length < 30) numeroDeDano(mundo, enemigo, cantidad, false, color);
   if (enemigo.vida <= 0) matar(mundo, enemigo);
 }
 
@@ -136,7 +128,7 @@ function matar(mundo, enemigo) {
   if (enemigo.quemado && mundo.jugador.ultras.includes('botaOro')) explosionDeFuego(mundo, enemigo);
   mundo.cargaPendiente += enemigo.jefe ? 12 : 1;
   soltarGema(mundo, enemigo.x, enemigo.y, enemigo.xp);
-  crearParticulas(mundo, enemigo.x, enemigo.y, colorDe(enemigo), enemigo.jefe ? 30 : 7, enemigo.jefe ? 260 : 130);
+  restosDeBaja(mundo, enemigo.x, enemigo.y, colorDe(enemigo), !!enemigo.jefe);
 
   if (enemigo.jefe) {
     for (let i = 0; i < 4; i += 1) soltarGema(mundo, enemigo.x, enemigo.y, enemigo.xp);
