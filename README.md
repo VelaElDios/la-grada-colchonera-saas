@@ -14,7 +14,7 @@ Es el proyecto individual de **Procesos de Ingeniería del Software (curso 2026-
 
 1. [Entrega](#entrega) · [Enlaces rápidos](#enlaces-rápidos)
 2. [Capturas del Sprint 1 (Hitos 1–4)](#capturas-del-sprint-1-hitos-14)
-3. [Capturas del Sprint 2 (el juego)](#capturas-del-sprint-2-el-juego)
+3. [Capturas del Sprint 2 (el juego)](#capturas-del-sprint-2-el-juego) · [Fase 7: pixel art, menú y habilidades nuevas](#fase-7-pixel-art-menú-y-habilidades-nuevas)
 4. [Qué incluye cada sprint](#qué-incluye-cada-sprint): hitos del Sprint 1 y fases del Sprint 2
 5. [Arquitectura](#arquitectura): capas, modelo de datos y flujos principales
 6. [Tecnologías](#tecnologías) · [Estructura del proyecto](#estructura-del-proyecto)
@@ -155,6 +155,58 @@ Capturas del juego (29/10/2026), hechas en local con datos de ejemplo: una cuent
 | ![Ranking con la mejor partida de cada aficionado](docs/capturas/juego/12-ranking.png) | ![Ajustes de volumen, gráficos, cámara y controles](docs/capturas/juego/14-ajustes.png) |
 
 Las capturas de DoneTonic del Sprint 2 están en [Gestión del proyecto](#gestión-del-proyecto-donetonic).
+
+## Fase 7: pixel art, menú y habilidades nuevas
+
+Después del Sprint 2 se mejoró el aspecto del juego y se añadió contenido, sin cambiar sus reglas básicas ni el servidor. El trabajo se repartió en cuatro áreas, cada una en su propia rama, y se integró con las pruebas en verde (305).
+
+| Área | Qué cambia |
+|---|---|
+| **Muñecos** | Nuevo estilo **chibi**: cabeza grande, cuerpo y zapatones, **sin piernas**, en una cuadrícula de **32×32 píxeles** (antes 16×20 con piernas). Se pintan por capas con contorno de color y luz desde arriba a la izquierda. Cada jugador, entrenador y jefe tiene rasgos propios: 18 peinados, 6 tipos de barba, formas de mandíbula, complexión, estatura, gestos, gafas, cinta, guantes y brazalete. Caminan con 4 fotogramas (un zapatón y luego el otro) y los rivales genéricos son mucho más variados. Sin escudos ni marcas |
+| **Mapa** | Píxeles el doble de finos y mucho más detalle: césped con flores y piedras, campos con franjas de corte, caminos con borde, charcos que reflejan el cielo, árboles con volumen, gradas con público que hace la ola y agita bufandas, vallas con textos inventados, porterías con red, banquillos y focos. Sombras coherentes y una luz propia para cada ambiente. La generación del terreno y las colisiones no cambian |
+| **Menú** | Rediseñado con **paneles translúcidos** (de cristal, dejan ver el campo) con un ribete rojiblanco arriba. El centro queda despejado para ver al muñeco paseando por el mapa. A la izquierda, en un solo panel: tu ficha, tu equipo (jugador y míster con sus datos y un consejo del míster), tus tiempos y tu club. Título nuevo: «LA GRADA» en un parche a rayas y «COLCHONERA» en blanco con contorno azul y relieve rojo. El botón de jugar es una **entrada de partido** (talón rojiblanco, troquel y cuerpo azul con «JUGAR» centrado) y las demás opciones van en una rejilla con iconos de color. Papelitos, focos, transiciones y la cortinilla «¡Saltan al campo!». El menú cabe entero sin barras de desplazamiento; las pantallas del menú (ajustes, cómo se juega…) son anchas para caber enteras, «Volver» queda siempre a la vista y se cierran también con un clic fuera. **En la pausa** ves tus datos de la partida, los ajustes y un **árbol de tus habilidades**: cada una con su nivel, las combinaciones que forman (con lo que te falta) y tu avance hacia las ultras; «Volver al menú» pregunta antes de salir y avisa de que lo conseguido en la partida se guarda. Funciona en el móvil, con teclado y con movimiento reducido |
+| **Habilidades** | 5 armas nuevas, 2 pasivas y 5 combinaciones (ver abajo). Además, todas las habilidades se ven mejor: estelas, brillos, chispas del color de su familia (disparo dorado, cuerpo a cuerpo rojo, área azul, movilidad verde), números de daño que se suman y críticos destacados. Las partículas tienen tope y usan su propio azar, así que no cambian la partida |
+
+**Habilidades nuevas**
+
+| Habilidad | Tipo | Qué hace |
+|---|---|---|
+| Gol de carambola | Disparo | Un balón que rebota de rival en rival; cada rebote pega un 10 % más |
+| Presión alta | Cuerpo a cuerpo | Canteranos rojiblancos te acompañan y salen a presionar: golpean, frenan y vuelven |
+| La ola | Área | Un frente de aficionados sale de ti, barre el campo y arrastra a los rivales (dos olas a nivel 4) |
+| Fuera de juego | Área | Adelantas la línea: quien la pisa se queda clavado, recibe daño y le levantan la bandera |
+| Ruleta | Movilidad | Giras sobre el balón, apartas a los que te rodean y devuelves sus balones como disparos tuyos |
+| Visión de juego (pasiva) | — | +8 % de área y alcance de las habilidades por nivel |
+| Partidos grandes (pasiva) | — | +10 % de daño a jefes y élites por nivel |
+
+**Combinaciones nuevas:** *Coraje y corazón* (presión alta, entrada y bufanda), *El bloque del Cholo* (fuera de juego, barrera y despeje), *El Calderón ruge* (la ola, cánticos y bengala), *Nunca dejes de creer* (carambola, volea y balón) y *La final del 92* (ruleta, regate y pared). Todas cuentan para alguna ULTRA.
+
+| Muñecos antes | Muñecos después |
+|---|---|
+| ![Hoja con los muñecos antes: todos muy parecidos](docs/capturas/fase7/01-sprites-antes.png) | ![Hoja con los muñecos después, en estilo chibi sin piernas: cada jugador, entrenador y jefe con rasgos propios](docs/capturas/fase7/02-sprites-despues.png) |
+
+| Menú nuevo | Menú en el móvil |
+|---|---|
+| ![Menú del juego: panel translúcido de tu equipo a la izquierda, título rojiblanco, el muñeco en el centro y el botón de entrada](docs/capturas/fase7/03-menu.png) | ![El menú en un móvil](docs/capturas/fase7/04-menu-movil.png) |
+
+| Partida | Un jefe |
+|---|---|
+| ![Partida con el mapa nuevo](docs/capturas/fase7/06-partida.png) | ![Mourinho en su primera fase, con su barra de vida](docs/capturas/fase7/07-jefe.png) |
+
+| Habilidades nuevas (fuera de juego y presión alta) | Efectos de las habilidades de disparo |
+|---|---|
+| ![Línea de fuera de juego con banderines sobre los rivales cazados](docs/capturas/fase7/08-habilidades-nuevas.png) | ![Estelas, brillos y números de daño de las habilidades de disparo](docs/capturas/fase7/09-efectos.png) |
+
+| Pausa con el árbol de habilidades | Salir pide confirmación |
+|---|---|
+| ![Pausa: tus datos, los botones con ajustes y el árbol de habilidades y combinaciones](docs/capturas/fase7/11-pausa.png) | ![Confirmación al salir: lo conseguido en la partida se guarda](docs/capturas/fase7/12-pausa-salir.png) |
+
+<details>
+<summary>Los cinco ambientes del mapa, antes (arriba) y después (abajo)</summary>
+
+![Comparación de los ambientes del mapa antes y después](docs/capturas/fase7/05-mapa-ambientes.png)
+
+</details>
 
 ## Qué incluye cada sprint
 
@@ -416,7 +468,7 @@ public/
   js/ui/vistas/        Una vista por módulo: inicio, entrar, registro, perfil, admin, jugar y 404
   js/api.js            Cliente de comunicación con la API (único sitio con fetch, timeout de 15 s)
   js/game/             El juego: simulación pura, dibujo en canvas, HUD, sonido, logros y club
-tests/                 276 pruebas automatizadas (unitarias, de API, de base de datos y del juego)
+tests/                 305 pruebas automatizadas (unitarias, de API, de base de datos y del juego)
 docs/                  Capturas, gestión, configuración del Hito 4, revisión de la entrega y documentación técnica
 memoria/               Memoria del proyecto en LuaLaTeX
 scripts/               Preparación de Google Cloud y modo pruebas del juego
@@ -570,7 +622,7 @@ No hace falta tener PostgreSQL: en local, las pruebas de base de datos usan `pg-
 TEST_DATABASE_URL=postgresql://usuario:clave@localhost:5432/grada_test npm test
 ```
 
-Son **276 pruebas** en 25 ficheros (más el recorrido con PostgreSQL real, que solo se ejecuta en el CI). Muchas comprueban casos de error, no solo el camino feliz.
+Son **305 pruebas** en 29 ficheros (más el recorrido con PostgreSQL real, que solo se ejecuta en el CI). Muchas comprueban casos de error, no solo el camino feliz.
 
 | Fichero | Pruebas | Qué comprueba |
 |---|---:|---|
@@ -588,6 +640,7 @@ Son **276 pruebas** en 25 ficheros (más el recorrido con PostgreSQL real, que s
 | `bootstrap.test.js` · `health.test.js` | 2 + 1 | Arranque con memoria o PostgreSQL y comprobación de salud |
 | `api.database.test.js` | (CI) | Recorrido completo con PostgreSQL real: registro, inicio de sesión y sesión guardada en la base de datos |
 | **Juego:** `juego-club` · `juego-movilidad` · `api.juego` · `juego-personajes` · `juego-habilidades` · `juego-ultras` · `juego-logros` · `game` · `juegoRepository` | 27 · 22 · 15 · 14 · 14 · 13 · 13 · 10 · 8 | Simulación (paso fijo, semilla), mundo y colisiones, personajes, habilidades, ultras, jefes, logros, club, ranking y validación anti-trampas en el servidor |
+| **Fase 7:** `juego-sprites` · `juego-habilidades-nuevas` · `juego-mapa` · `juego-menu` | 9 · 8 · 5 · 7 | Muñecos chibi de 32×32 sin piernas (cada persona distinta, peinados, barbas, fotogramas, caché), habilidades, pasivas y combinaciones nuevas, mapa (sombras, edificios en su sitio, público animado, texturas repartidas entre fotogramas) y menú animado |
 
 El CI ejecuta todas las pruebas contra un **PostgreSQL 17 real** y, en otro trabajo, construye la imagen Docker y comprueba que el contenedor responde en `/api/health`.
 
@@ -765,8 +818,8 @@ Cerrado el Sprint 1, el profesor dejó libertad para el diseño y fijó que el *
 |---|---|
 | **Jugadores** | 36 de la historia del Atleti (4 porteros, 9 defensas, 13 medios y 10 delanteros) con **rareza según lo que fueron en el club**: Leyenda (Oblak, Godín, Koke, Griezmann, Torres, Gabi, Adelardo, Luis Aragonés), Épico (Simeone, Futre, Diego Costa, Forlán, Miranda, Saúl, Courtois, Pantić), Raro (Kun Agüero, Falcao, Julián Álvarez, Llorente, Savić, Trippier, Tiago, Partey) y Común. La posición marca las estadísticas y cada uno puede aprender de 8 a 16 habilidades según su rareza y su forma de jugar |
 | **Entrenadores** | Cholo Simeone (ulti «¡Partido a partido!») y Luis Aragonés (ulti «Furia Roja») |
-| **Habilidades** | 24 armas que se disparan solas, con 5 niveles (balón, cañonazo de falta, córner, cabezazo, entrada rasante, barrera, chilena, volea, penalti, regate, caño, pared, cántico, VAR, bengala…) y 14 pasivas. Las muy fuertes no suben de nivel hasta cierto minuto |
-| **Combinaciones y ultras** | 24 combinaciones («metas») que se activan al juntar ciertas habilidades y dan bonus; completando varias se consiguen 6 **ULTRAS** (Premio Puskás, Ganador del Balón de Oro, MVP de la Champions, Trofeo Zamora, Bota de Oro histórica y Mejor jugador del Mundial) |
+| **Habilidades** | 29 armas que se disparan solas, con 5 niveles (gol de carambola, presión alta, la ola, fuera de juego, ruleta, balón, cañonazo de falta, córner, cabezazo, entrada rasante, barrera, chilena, volea, penalti, regate, caño, pared, cántico, VAR, bengala…) y 16 pasivas. Las muy fuertes no suben de nivel hasta cierto minuto |
+| **Combinaciones y ultras** | 29 combinaciones («metas») que se activan al juntar ciertas habilidades y dan bonus; completando varias se consiguen 6 **ULTRAS** (Premio Puskás, Ganador del Balón de Oro, MVP de la Champions, Trofeo Zamora, Bota de Oro histórica y Mejor jugador del Mundial) |
 | **Rivales** | 16 equipos famosos con jugadores genéricos; unos embisten y otros disparan, y aparecen élites (blindado, veloz, furioso) |
 | **Jefes** | 10 (Guardiola, Mourinho, Cristiano, Messi, Vinicius, Yamal, Neymar, Bale, Benzema y Suárez) con tres fases, escolta de élites desde el segundo, furia si tardas en ganarles y una **jugada estrella** en la fase 3. Desde la oleada 24 pueden salir dos a la vez y cada vuelta completa los hace un 25 % más duros |
 | **Mundo** | Procedural e infinito, distinto en cada partida: barrios de estadios con gradas, plazas, campos de entrenamiento, parques y prados con mesetas y escaleras, barro, lluvia y caminos |
@@ -778,7 +831,7 @@ Cerrado el Sprint 1, el profesor dejó libertad para el diseño y fijó que el *
 ### Cómo está hecho
 
 - **Simulación pura** (`public/js/game/mundo.js` y sus módulos `armas`, `combate`, `jefes`, `oleadas`, `terreno`, `ultras`, `ulti`, `mejoras`): paso fijo de 1/60 s y generador aleatorio con semilla, sin DOM, así que se prueba con `node:test` igual que el backend. Todo el equilibrio está en `config.js`.
-- **Dibujo** en Canvas 2D (`render.js`, `render-mundo.js`, `render-ultras.js`) con cámara 3/4; los muñecos se pintan con código en una cuadrícula de 16×20 (`sprites.js`), sin imágenes.
+- **Dibujo** en Canvas 2D (`render.js`, `render-mundo.js` con `render-suelo.js`, `render-obstaculos.js` y `render-paletas.js`, `render-habilidades.js`, `render-ultras.js`) con cámara 3/4; los muñecos se pintan con código en una cuadrícula de 32×32 en estilo chibi, sin piernas, con 4 fotogramas de caminar (`sprites.js`), sin imágenes.
 - **Interfaz del juego** (`juego.js`, `hud.js`, `club-ui.js`, `fin-ui.js`), **sonido** (`audio.js` y `musica.js`), **logros** (`logros.js`), **ajustes** y **entrada** (teclado, táctil y joystick).
 - **Las reglas se comparten con el servidor**: `club.js`, `config.js` y `logros.js` se cargan también en `juegoService.js`, así que cliente y servidor aplican exactamente las mismas reglas. El servidor valida cada partida con su propio reloj (no se puede decir que has aguantado más de lo que ha pasado, ni ganar jefes imposibles), solo apunta los logros que puede comprobar y usa **concurrencia optimista** (`version`) para que dos peticiones a la vez no gasten dos veces la misma ficha.
 - Respeta `prefers-reduced-motion` (sin sacudidas ni partículas), las pantallas se manejan con teclado y los avisos importantes se anuncian a los lectores de pantalla.
@@ -795,6 +848,7 @@ Cada fase es una etiqueta del Sprint 2 en DoneTonic y un PR a `main` ([qué PBIs
 | 4 | Mundo procedural, 5 ambientes por finales, mote y avatar |
 | 5 | Rarezas por historia rojiblanca, habilidades niveladas, combinaciones a la vista, firma del contrato y colisiones exactas |
 | 6 | Logros con historia, equipaciones, estadísticas de fin de partida, música chiptune y grada, muñecos con más detalle y jefes más duros |
+| 7 (después del Sprint 2) | Muñecos chibi de 32×32 con rasgos propios, mapa con mucho más detalle, menú rediseñado (translúcido, centro despejado, botón de entrada), 5 habilidades, 2 pasivas y 5 combinaciones nuevas, y mejores efectos ([detalle](#fase-7-pixel-art-menú-y-habilidades-nuevas)) |
 
 Para el detalle de cada sistema, ver [`docs/documentacion-tecnica.md`](docs/documentacion-tecnica.md#9-el-juego).
 

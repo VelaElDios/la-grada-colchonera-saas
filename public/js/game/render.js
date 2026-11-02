@@ -11,6 +11,11 @@ import {
   dibujarCambioDeAmbiente, ambienteVisible, esDeSuelo, PALETAS,
 } from './render-mundo.js';
 import { dibujarUltrasSuelo, dibujarUltrasAire, dibujarUltrasPantalla } from './render-ultras.js';
+import {
+  dibujarBalon, dibujarProyectil, dibujarDisparoEnemigo, dibujarTajo, dibujarOnda, dibujarImpacto, dibujarImpactoAire, dibujarRayo,
+  dibujarTarjeta, dibujarBanderin, dibujarFuego, dibujarEscudo, dibujarParticulas, dibujarTextos,
+  dibujarHabilidadesSuelo, dibujarHabilidadesAire, canteranosParaOrdenar,
+} from './render-habilidades.js';
 
 // ---------------------------------------------------------------------------------------------
 // Cámara 3/4: el suelo se aplasta en vertical (como si lo vieras desde arriba y de lado) y los
@@ -104,166 +109,6 @@ function dibujarCura(ctx, c, t) {
   ctx.fillRect(c.x - 6, c.y - 2.5, 12, 5);
 }
 
-function dibujarBalon(ctx, x, y, r, oscuro = false, oro = false) {
-  const u = r / 3;
-  ctx.fillStyle = oro ? '#5a3d00' : '#10254a';
-  ctx.fillRect(x - r - 1, y - r * 0.6, r * 2 + 2, r * 1.2);
-  ctx.fillRect(x - r * 0.6, y - r - 1, r * 1.2, r * 2 + 2);
-  ctx.fillStyle = oro ? '#ffd24a' : oscuro ? '#ff5b3a' : BLANCO;
-  ctx.fillRect(x - r, y - r * 0.6, r * 2, r * 1.2);
-  ctx.fillRect(x - r * 0.6, y - r, r * 1.2, r * 2);
-  ctx.fillStyle = oro ? '#b8860b' : oscuro ? '#7a1100' : '#222222';
-  ctx.fillRect(x - u, y - u, u * 2, u * 2);
-}
-
-/** Estela de cuadraditos detrás de un balón, tanto más larga cuanto más rápido va. */
-function estela(ctx, p, color, n) {
-  const v = Math.hypot(p.vx, p.vy) || 1;
-  const largo = Math.min(14, 5 + v / 90);
-  for (let i = 1; i <= n; i += 1) {
-    ctx.globalAlpha = 0.4 / i;
-    ctx.fillStyle = color;
-    const r = p.r * (1 - i * 0.16);
-    ctx.fillRect(p.x - (p.vx / v) * i * largo - r * 0.7, p.y - (p.vy / v) * i * largo - r * 0.7, r * 1.4, r * 1.4);
-  }
-  ctx.globalAlpha = 1;
-}
-
-function dibujarProyectil(ctx, p) {
-  sombra(ctx, p.x, p.y + p.r * 1.6, p.r * 0.9, p.r * 0.3);
-  recto(ctx, p.x, p.y, () => {
-    estela(ctx, p, p.fuego ? '#ff7a1a' : p.oro ? '#ffd24a' : p.pared ? '#8fd8ff' : p.grande ? '#ffd166' : '#ffffff', p.grande || p.pared || p.oro || p.fuego ? 4 : 3);
-    dibujarBalon(ctx, p.x, p.y, p.r, false, p.oro);
-    if (p.fuego) { // llamitas sobre el balón
-      ctx.fillStyle = '#ff7a1a';
-      ctx.fillRect(p.x - p.r * 0.5, p.y - p.r * 1.8, p.r * 0.6, p.r * 1.0);
-      ctx.fillStyle = '#ffd24a';
-      ctx.fillRect(p.x - p.r * 0.2, p.y - p.r * 1.5, p.r * 0.35, p.r * 0.7);
-    }
-  });
-}
-
-/** Fuego en el suelo dejado por las bengalas. */
-function dibujarFuego(ctx, f, t) {
-  const k = Math.min(1, f.t / 0.6);
-  ctx.save();
-  ctx.globalAlpha = 0.28 * k;
-  ctx.fillStyle = '#ff5a1a';
-  ctx.beginPath();
-  ctx.arc(f.x, f.y, f.radio, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.85 * k;
-  for (let i = 0; i < 7; i += 1) {
-    const a = (i / 7) * Math.PI * 2 + t * 0.5;
-    const d = f.radio * (0.25 + 0.55 * ((i * 37) % 10) / 10);
-    const h = 8 + 8 * Math.abs(Math.sin(t * 9 + i * 1.7));
-    const x = f.x + Math.cos(a) * d;
-    const y = f.y + Math.sin(a) * d * 0.8;
-    ctx.fillStyle = '#ff7a1a';
-    ctx.fillRect(x - 3, y - h, 6, h);
-    ctx.fillStyle = '#ffd24a';
-    ctx.fillRect(x - 1.5, y - h * 0.6, 3, h * 0.6);
-  }
-  ctx.restore();
-}
-
-function dibujarBanderin(ctx, b, t) {
-  ctx.save();
-  ctx.translate(b.x, b.y);
-  ctx.fillStyle = '#10254a';
-  ctx.fillRect(-2, -10, 4, 20);
-  ctx.fillStyle = BLANCO;
-  ctx.fillRect(-1, -9, 2, 18);
-  const onda = Math.round(Math.sin(t * 12 + b.ang) * 1.5);
-  ctx.fillStyle = ROJO;
-  ctx.fillRect(1, -9, 6, 3);
-  ctx.fillRect(1, -6 + onda, 10, 3);
-  ctx.fillRect(1, -3 + onda, 6, 2);
-  ctx.restore();
-}
-
-function dibujarTajo(ctx, tj) {
-  const k = tj.vida / tj.total;
-  ctx.save();
-  ctx.translate(tj.x, tj.y);
-  ctx.rotate(tj.ang);
-  ctx.globalAlpha = Math.min(1, k * 1.6);
-  const grad = ctx.createRadialGradient(0, 0, 8, 0, 0, tj.largo);
-  grad.addColorStop(0, 'rgba(255,255,255,0)');
-  grad.addColorStop(0.7, 'rgba(255,255,255,.85)');
-  grad.addColorStop(1, tj.color ?? 'rgba(200,16,46,.9)');
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.moveTo(0, 0);
-  ctx.arc(0, 0, tj.largo, -tj.ancho, tj.ancho);
-  ctx.closePath();
-  ctx.fill();
-  ctx.restore();
-}
-
-function dibujarOnda(ctx, o) {
-  const k = 1 - o.vida / o.total;
-  ctx.save();
-  ctx.globalAlpha = (1 - k) * 0.9;
-  ctx.strokeStyle = o.color ?? (o.enemiga ? '#ff3b3b' : o.ulti ? '#ffd166' : o.silbato ? '#8fd8ff' : ROJO_CLARO);
-  ctx.lineWidth = (o.ulti ? 12 : 6) * (1 - k) + 2;
-  ctx.beginPath();
-  ctx.arc(o.x, o.y, o.radio * (0.2 + 0.8 * k), 0, Math.PI * 2);
-  ctx.stroke();
-  if (o.silbato || o.ulti) {
-    ctx.globalAlpha = (1 - k) * 0.12;
-    ctx.fillStyle = o.ulti ? '#ffd166' : '#8fd8ff';
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-/** Marcas en el suelo (dónde caerá una vaselina, a quién va el penalti) y la línea del penalti. */
-function dibujarImpacto(ctx, im, t) {
-  const k = im.vida / im.total;
-  ctx.save();
-  ctx.strokeStyle = im.color ?? '#ffffff';
-  if (im.tipo === 'linea') {
-    ctx.globalAlpha = Math.min(1, k * 1.5);
-    ctx.lineWidth = 4;
-    ctx.beginPath();
-    ctx.moveTo(im.x, im.y);
-    ctx.lineTo(im.x2, im.y2);
-    ctx.stroke();
-  } else {
-    // Un círculo que se cierra sobre el objetivo
-    ctx.globalAlpha = 0.85;
-    ctx.lineWidth = 3;
-    ctx.setLineDash([8, 6]);
-    ctx.beginPath();
-    ctx.arc(im.x, im.y, im.radio, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    ctx.globalAlpha = 0.25 * (1 - k);
-    ctx.fillStyle = im.color ?? '#ffffff';
-    ctx.beginPath();
-    ctx.arc(im.x, im.y, im.radio * (1 - k), 0, Math.PI * 2);
-    ctx.fill();
-  }
-  ctx.restore();
-}
-
-/** La barrera defensiva: un círculo en el suelo alrededor del jugador. */
-function dibujarEscudo(ctx, j, t) {
-  const final = j.escudo < 0.6 ? 0.5 + 0.5 * Math.sin(t * 30) : 1; // parpadea al acabarse
-  ctx.save();
-  ctx.globalAlpha = 0.28 * final;
-  ctx.fillStyle = '#9fd8ff';
-  ctx.beginPath();
-  ctx.arc(j.x, j.y, j.escudoRadio, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.globalAlpha = 0.9 * final;
-  ctx.strokeStyle = '#e8f6ff';
-  ctx.lineWidth = 3;
-  ctx.stroke();
-  ctx.restore();
-}
-
 /** Estrellitas girando sobre un rival aturdido. */
 function dibujarAturdido(ctx, e, alto, t) {
   ctx.fillStyle = '#ffd166';
@@ -271,31 +116,6 @@ function dibujarAturdido(ctx, e, alto, t) {
     const a = t * 6 + (i * Math.PI * 2) / 3;
     ctx.fillRect(e.x + Math.cos(a) * alto * 0.22 - 2, e.y - alto / 2 - 4 + Math.sin(a) * 4 - 2, 5, 5);
   }
-}
-
-function dibujarRayo(ctx, r) {
-  const k = r.vida / r.total;
-  ctx.save();
-  ctx.globalAlpha = Math.min(1, k * 2);
-  ctx.fillStyle = '#fff7b0';
-  ctx.fillRect(r.x - 4, r.y - 420, 8, 420);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(r.x - 2, r.y - 420, 4, 420);
-  ctx.globalAlpha = k * 0.5;
-  ctx.fillStyle = '#ffe96b';
-  ctx.beginPath();
-  ctx.arc(r.x, r.y, r.radio, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
-}
-
-function dibujarTarjeta(ctx, t) {
-  ctx.globalAlpha = Math.min(1, (t.vida / t.total) * 2);
-  ctx.fillStyle = '#ffffff';
-  ctx.fillRect(t.x - 7, t.y - 10, 14, 20);
-  ctx.fillStyle = '#e11d2e';
-  ctx.fillRect(t.x - 5, t.y - 8, 10, 16);
-  ctx.globalAlpha = 1;
 }
 
 function dibujarAvisoJefe(ctx, a) {
@@ -351,15 +171,6 @@ function dibujarAvisoJefe(ctx, a) {
   }
   ctx.restore();
 }
-
-function dibujarDisparoEnemigo(ctx, d) {
-  sombra(ctx, d.x, d.y + d.r * 1.6, d.r * 0.9, d.r * 0.3);
-  recto(ctx, d.x, d.y, () => {
-    estela(ctx, d, '#ff5b3a', 3);
-    dibujarBalon(ctx, d.x, d.y, d.r, true);
-  });
-}
-
 
 // ---------------------------------------------------------------------------------------------
 // Adornos pequeños del suelo (el resto del terreno se dibuja en render-mundo.js)
@@ -556,7 +367,7 @@ function dibujarEnemigo(ctx, e, t) {
   const alto = e.jefe ? e.r * 3.3 : e.r * 3.1;
   const sprite = spriteRival(e);
   const quieto = e.jefe && e.estado === 'preparar';
-  const frame = quieto ? 0 : Math.floor(t * 8 + e.anim) % 2;
+  const frame = quieto ? 0 : Math.floor(t * 16 + e.anim * 2) % 4; // 4 fotogramas de caminar (ver sprites.js)
   const bote = quieto ? 0 : Math.abs(Math.sin(t * 9 + e.anim)) * 1.5;
   const altura = (e.altura || 0) * 70;
   sombra(ctx, e.x, e.y + alto * 0.46, alto * 0.26 * (1 - altura / 160), alto * 0.07);
@@ -649,7 +460,7 @@ function dibujarJugador(ctx, j, t) {
     const a = aspectoDe('personaje', j.personaje);
     sprite = obtenerSprite(`p:${j.personaje}:eq:${j.equipacion}`, { ...a, camiseta: { ...kit.camiseta }, pantalon: kit.pantalon, medias: kit.medias });
   } else sprite = obtenerSprite(`p:${j.personaje}`, aspectoDe('personaje', j.personaje));
-  const frame = j.moviendo ? Math.floor(t * 10) % 2 : 0;
+  const frame = j.moviendo ? Math.floor(t * 20) % 4 : 0; // 4 fotogramas de caminar (ver sprites.js)
   const parpadeo = j.invul > 0 && Math.floor(t * 20) % 2 === 0;
 
   if (j.escudo > 0) dibujarEscudo(ctx, j, t);
@@ -781,9 +592,10 @@ export function dibujar(ctx, mundo, vista) {
   mundo.premios.forEach((p) => visible(p) && dibujarPremio(ctx, p, t));
   mundo.gemas.forEach((g) => visible(g) && recto(ctx, g.x, g.y, () => dibujarGema(ctx, g, t)));
   mundo.curas.forEach((c) => visible(c) && recto(ctx, c.x, c.y, () => dibujarCura(ctx, c, t)));
-  mundo.impactos.forEach((im) => dibujarImpacto(ctx, im, t));
-  mundo.fuegos.forEach((f) => visible(f) && dibujarFuego(ctx, f, t));
-  mundo.ondas.forEach((o) => dibujarOnda(ctx, o));
+  mundo.impactos.forEach((im) => dibujarImpacto(ctx, im));
+  mundo.fuegos.forEach((f) => visible(f) && dibujarFuego(ctx, f, t, mundo.efectosReducidos));
+  mundo.ondas.forEach((o) => dibujarOnda(ctx, o, t));
+  dibujarHabilidadesSuelo(ctx, mundo, t);
   dibujarUltrasSuelo(ctx, mundo, t);
 
   // Rivales, jugador y obstáculos se ordenan por su «suelo»: lo que está más abajo en pantalla se dibuja delante
@@ -810,6 +622,7 @@ export function dibujar(ctx, mundo, vista) {
       },
     }));
   }
+  canteranosParaOrdenar(ctx, mundo, lista, t, recto, sombra); // presión alta
   if (mundo.estado !== 'fin') lista.push({ y: j.y + j.r, f: () => dibujarJugador(ctx, j, t) });
   lista.sort((a, b) => a.y - b.y);
   for (const d of lista) d.f();
@@ -820,40 +633,19 @@ export function dibujar(ctx, mundo, vista) {
   dibujarLuz(ctx, mundo, amb, obstaculos, ancho, alto, escala, aPantalla, t);
 
   camara();
-  mundo.tajos.forEach(dibujarTajo.bind(null, ctx));
-  j.banderines.forEach((b) => recto(ctx, b.x, b.y, () => dibujarBanderin(ctx, b, t)));
-  mundo.proyectiles.forEach((p) => dibujarProyectil(ctx, p));
+  // Habilidades y efectos (ver render-habilidades.js)
+  const reducidos = mundo.efectosReducidos;
+  mundo.tajos.forEach((tj) => dibujarTajo(ctx, tj));
+  j.banderines.forEach((b) => dibujarBanderin(ctx, b, t, j, recto));
+  mundo.proyectiles.forEach((p) => dibujarProyectil(ctx, p, t, reducidos, recto, sombra));
+  mundo.impactos.forEach((im) => dibujarImpactoAire(ctx, im, t, recto));
   dibujarUltrasAire(ctx, mundo, t);
-  mundo.disparosEnemigos.forEach((d) => dibujarDisparoEnemigo(ctx, d));
-  mundo.rayos.forEach((r) => dibujarRayo(ctx, r));
+  mundo.disparosEnemigos.forEach((d) => dibujarDisparoEnemigo(ctx, d, recto, sombra));
+  mundo.rayos.forEach((r) => dibujarRayo(ctx, r, t));
   mundo.tarjetas.forEach((tr) => recto(ctx, tr.x, tr.y, () => dibujarTarjeta(ctx, tr)));
-
-  mundo.particulas.forEach((p) => {
-    ctx.globalAlpha = Math.max(0, p.vida / p.total);
-    ctx.fillStyle = p.color;
-    ctx.fillRect(p.x - p.r / 2, p.y - p.r / 2, p.r, p.r);
-  });
-  ctx.globalAlpha = 1;
-
-  ctx.textAlign = 'center';
-  ctx.font = '700 14px "Plus Jakarta Sans", system-ui, sans-serif';
-  mundo.textos.forEach((tx) => {
-    ctx.globalAlpha = Math.min(1, (tx.vida / tx.total) * 1.5);
-    const edad = 1 - tx.vida / tx.total;
-    const pop = 1 + 0.7 * Math.max(0, 1 - edad * 7); // nace grande y se encoge de golpe
-    recto(ctx, tx.x, tx.y, () => {
-      ctx.save();
-      ctx.translate(tx.x, tx.y);
-      ctx.scale(pop, pop);
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(0,0,0,.6)';
-      ctx.strokeText(tx.texto, 0, 0);
-      ctx.fillStyle = tx.color;
-      ctx.fillText(tx.texto, 0, 0);
-      ctx.restore();
-    });
-  });
-  ctx.globalAlpha = 1;
+  dibujarHabilidadesAire(ctx, mundo, t, reducidos, recto);
+  dibujarParticulas(ctx, mundo.particulas);
+  dibujarTextos(ctx, mundo.textos, recto, reducidos);
   ctx.restore();
 
   dibujarAmbiente(ctx, j, ancho, alto, t);

@@ -11,7 +11,7 @@ Documento de referencia del proyecto, pensado como **base para escribir la memor
 | **Aplicación** | https://la-grada-colchonera-1081564062572.europe-southwest1.run.app (Google Cloud Run) |
 | **Sprint 1** | 29/09/2026 – 27/10/2026 (Hitos 1 a 4: la base SaaS) |
 | **Sprint 2** | 23/10/2026 – 29/10/2026 (la lógica del juego, Fases 1 a 6) |
-| **Estado del documento** | 29/10/2026, con los dos sprints cerrados en DoneTonic |
+| **Estado del documento** | 02/11/2026: los dos sprints cerrados en DoneTonic y la Fase 7 del juego (pixel art, menú y habilidades nuevas) |
 
 ## Índice
 
@@ -136,7 +136,7 @@ Cada requisito sale de uno o varios PBIs del Sprint 2 (sus historias de usuario 
 | RNF-01 | **Seguridad** de credenciales y sesiones | Hash bcrypt, cookie `httpOnly` + `secure` + `sameSite`, regeneración de la sesión, permisos en el servidor, consultas parametrizadas (sección 8) |
 | RNF-02 | **Secretos fuera del código** | Variables de entorno; Secret Manager en producción; la app no arranca si falta un secreto obligatorio |
 | RNF-03 | **Separación en capas** | API → lógica → datos/integraciones, con inyección de dependencias (sección 5) |
-| RNF-04 | **Pruebas automáticas** y CI obligatorio | 276 pruebas con `node:test`; las ramas protegidas exigen el CI en verde |
+| RNF-04 | **Pruebas automáticas** y CI obligatorio | 305 pruebas con `node:test`; las ramas protegidas exigen el CI en verde |
 | RNF-05 | **Despliegue continuo** en una URL pública | Cloud Run (principal) y Render (alternativo), sin intervención manual |
 | RNF-06 | **Disponibilidad y coste** | Escala a cero (capas gratuitas y créditos de educación); si una versión no arranca, sigue sirviendo la anterior |
 | RNF-07 | **Accesibilidad** | HTML semántico, foco gestionado al navegar, `aria-live` en los avisos, errores de formulario enlazados con `aria-describedby`, manejo con teclado, `prefers-reduced-motion` |
@@ -937,7 +937,7 @@ flowchart TB
     end
     subgraph Presentación
         JUEGO["juego.js<br/>pantallas y bucle"] --> RENDER["render.js<br/>render-mundo.js<br/>render-ultras.js"]
-        RENDER --> SPRITES["sprites.js<br/>muñecos 16×20"]
+        RENDER --> SPRITES["sprites.js<br/>muñecos chibi 32×32"]
         JUEGO --> HUD["hud.js"]
         JUEGO --> AUDIO["audio.js + musica.js"]
         JUEGO --> UI2["club-ui.js, fin-ui.js, firma.js"]
@@ -957,7 +957,7 @@ flowchart TB
 - **Eventos.** La simulación no toca el DOM ni el audio: deja eventos (`oleada`, `aviso`, `jefe-derrotado`, `ambiente`, `ultra`…) que `juego.js` traduce a sonido, avisos y anuncios para lectores de pantalla.
 - **Estadísticas.** Cada fuente de daño (arma, ultra, ulti, quemaduras) se apunta en `mundo.stats` para la pantalla de fin.
 - **Rendimiento.** Búsqueda de obstáculos por celdas con claves numéricas (unas 4,5 veces más rápida que la primera versión), una textura de suelo por celda y ambiente, pintada como mucho una por fotograma y por adelantado, y muñecos cacheados.
-- **Dibujo.** Canvas 2D con cámara 3/4 (el suelo se aplasta en vertical y los muñecos están de pie). Los muñecos se pintan con código en una cuadrícula de 16×20 (pelo, piel, camiseta, botas y rasgos como brazalete, cinta, pecas, barba o pendientes), así que se generan las equipaciones y las camisetas de 26 selecciones sin imágenes.
+- **Dibujo.** Canvas 2D con cámara 3/4 (el suelo se aplasta en vertical y los muñecos están de pie). Los muñecos se pintan con código en una cuadrícula de 32×32 en estilo chibi (16×20 con piernas hasta la Fase 6): cabeza grande, cuerpo y zapatones, sin piernas. Se pintan por capas y píxel a píxel: zapatos, pantalón, torso, brazos y cabeza, cada una con su contorno de color y luz desde arriba a la izquierda. Cada persona tiene sus rasgos (18 peinados, 6 tipos de barba, mandíbula, complexión, estatura, gesto, gafas, cinta, guantes, brazalete…) y caminan con 4 fotogramas. Así se generan las equipaciones y las camisetas de 26 selecciones sin imágenes. El mapa (Fase 7) se pinta con píxeles de 2 unidades en `render-suelo.js` y `render-obstaculos.js`, con las paletas de cada ambiente en `render-paletas.js`, y los efectos de las habilidades en `render-habilidades.js` (partículas con tope y azar propio en `efectos.js`, para que encenderlas o apagarlas no cambie la partida).
 - **Audio.** Todo sintetizado con Web Audio: ondas de pulso (12,5 %, 25 % y 50 %), triángulo y ruido. La música es un secuenciador propio que programa las notas por adelantado; la grada usa voces con formantes de vocales y palmas.
 
 ### 9.5 Servidor del juego y anti-trampas
@@ -1017,6 +1017,7 @@ Cada fase es una etiqueta del Sprint 2 en DoneTonic (sección 4.4).
 | 4 | Mundo procedural natural, 5 ambientes por finales, mote y avatar | Mapa repetitivo; correo visible en el ranking |
 | 5 | Rarezas por historia rojiblanca, habilidades niveladas, combinaciones a la vista, animación de la firma, colisiones exactas | Regate demasiado fuerte; esconderse detrás de los tejados |
 | 6 | 29 logros con historia y 10 equipaciones, estadísticas de fin, música chiptune y grada, muñecos con más detalle, jefes con escolta, furia y jugada estrella | Falta de objetivos a largo plazo; sonido pobre; jefes fáciles |
+| 7 | Muñecos chibi de 32×32 (sin piernas) con rasgos propios, mapa con mucho más detalle y luz por ambiente, menú rediseñado (paneles translúcidos, centro despejado y botón de entrada), 5 habilidades (carambola, presión alta, la ola, fuera de juego y ruleta), 2 pasivas (visión de juego y partidos grandes), 5 combinaciones y mejores efectos de todas las habilidades | Muñecos casi iguales entre sí; mapa plano; menú estático; efectos poco legibles |
 
 ## 10. Pruebas
 
@@ -1064,7 +1065,11 @@ Cada fase es una etiqueta del Sprint 2 en DoneTonic (sección 4.4).
 | `juego-logros.test.js` | 13 | Logros, equipaciones, estadísticas, pantalla de fin, música y jefes más duros |
 | `game.test.js` | 10 | Simulación base (paso fijo, semilla, armas, jefes, ulti, dificultad) |
 | `juegoRepository.test.js` | 8 | Repositorio del juego en memoria y PostgreSQL |
-| **Total** | **276** | 140 del Sprint 1 (cuentas, API, datos, seguridad, prueba técnica) y 136 del juego |
+| `juego-sprites.test.js` | 9 | Fase 7: muñecos chibi de 32×32 sin piernas, una cabeza distinta por persona, peinados y barbas, fotogramas, rivales variados y caché |
+| `juego-habilidades-nuevas.test.js` | 8 | Fase 7: carambola, presión alta, la ola, fuera de juego, ruleta, pasivas y combinaciones nuevas |
+| `juego-mapa.test.js` | 5 | Fase 7: sombras coherentes, edificios en su rectángulo de colisión, público animado, texturas repartidas entre fotogramas |
+| `juego-menu.test.js` | 7 | Fase 7: menú animado, tarjetas y consejos del míster, movimiento reducido, pausa con árbol de habilidades y salida con confirmación |
+| **Total** | **305** | 140 del Sprint 1 (cuentas, API, datos, seguridad, prueba técnica), 136 del juego hasta la Fase 6 y 29 de la Fase 7 |
 
 ### 10.3 Comprobaciones manuales y visuales
 
@@ -1136,16 +1141,16 @@ flowchart LR
 | PBIs / tareas del Sprint 2 | 29 / 50 |
 | Pull requests | Más de 50 (uno por tarea, uno por cierre de hito y uno por fase del juego) |
 | Releases | `hito-1`, `hito-2`, `hito-3`, `hito-4`, `sprint-1` |
-| Pruebas automáticas | 276 (+ el recorrido con PostgreSQL real en el CI) |
+| Pruebas automáticas | 305 (+ el recorrido con PostgreSQL real en el CI) |
 | Endpoints de la API | 23 |
 | Migraciones | 5 |
 | Líneas de código del backend (`src/`, con SQL) | ~2.300 |
 | Líneas de la interfaz web (`ui.js`, `api.js`, `ui/`) | ~1.150 |
 | Líneas de CSS | ~950 |
-| Líneas del juego (`public/js/game/`, 29 módulos) | ~11.100 |
-| Líneas de pruebas | ~4.350 |
+| Líneas del juego (`public/js/game/`, 35 módulos) | ~14.800 |
+| Líneas de pruebas | ~5.050 |
 | Dependencias de producción | 6 (`express`, `express-session`, `connect-pg-simple`, `pg`, `bcryptjs`, `nodemailer`) |
-| Contenido del juego | 36 jugadores, 2 entrenadores, 24 armas, 14 pasivas, 24 combinaciones, 6 ultras, 16 equipos, 10 jefes, 5 ambientes, 26 selecciones, 29 logros, 10 equipaciones |
+| Contenido del juego | 36 jugadores, 2 entrenadores, 29 armas, 16 pasivas, 29 combinaciones, 6 ultras, 16 equipos, 10 jefes, 5 ambientes, 26 selecciones, 29 logros, 10 equipaciones |
 
 ## 15. Conclusiones y trabajo futuro
 
@@ -1232,6 +1237,18 @@ Capturas de la versión actual (27/10/2026 las de los Hitos y 29/10/2026 las del
 | `14-ajustes.png` | Ajustes de sonido, gráficos y controles | RJ-10, RJ-20 |
 | `15-pausa.png` | Menú de pausa | RJ-10 |
 | `16-final-copa.png` | Ambiente de la Final de la Copa del Rey (a partir del minuto 5) | RJ-09 |
+
+### Fase 7 (`docs/capturas/fase7/`)
+
+| Fichero | Qué muestra |
+|---|---|
+| `01-sprites-antes.png` · `02-sprites-despues.png` | Todos los muñecos (jugadores, entrenadores, jefes y rivales) antes y después de la Fase 7 |
+| `03-menu.png` · `04-menu-movil.png` | Menú nuevo (translúcido, botón de entrada) en escritorio y en el móvil |
+| `05-mapa-ambientes.png` | Los cinco ambientes del mapa, antes (arriba) y después (abajo) |
+| `06-partida.png` · `07-jefe.png` | Partida y un jefe con el pixel art nuevo |
+| `08-habilidades-nuevas.png` · `09-efectos.png` | Fuera de juego y presión alta; efectos de las habilidades de disparo |
+| `10-combinaciones.png` | Pantalla de combinaciones y ultras |
+| `11-pausa.png` · `12-pausa-salir.png` | Pausa con el árbol de habilidades → combinaciones → ultras, y la confirmación al salir |
 
 ### DoneTonic (`docs/capturas/donetonic/`, 29/10/2026)
 

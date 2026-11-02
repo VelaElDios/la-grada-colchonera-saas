@@ -67,6 +67,8 @@ export function recalcular(jugador) {
     perfora: b.perfora,
     aturde: b.aturde,
     cdArbitro: Math.min(0.6, b.cdArbitro),
+    area: 1 + PASIVAS.vision.porNivel * (p.vision ?? 0), // Visión de juego: radios y alcances de las habilidades
+    grandes: PASIVAS.grandes.porNivel * (p.grandes ?? 0), // Partidos grandes: daño extra a jefes y élites
   };
   jugador.radioIman = JUGADOR.radioImanBase * (1 + PASIVAS.iman.porNivel * p.iman);
   jugador.regen = PASIVAS.masaje.porNivel * p.masaje + b.regen;
