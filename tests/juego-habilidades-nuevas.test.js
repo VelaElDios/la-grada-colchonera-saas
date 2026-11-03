@@ -167,3 +167,16 @@ test('las habilidades nuevas están repartidas: cada una la tienen varios jugado
   }
   for (const [k, p] of Object.entries(PERSONAJES)) assert.ok(p.habilidades.length >= 8 && p.habilidades.length <= 16, k);
 });
+
+test('experiencia: con el campo lleno de gemas, la nueva sale donde cae el rival (se trae la más lejana)', async () => {
+  const { MUNDO } = await cargar('config.js');
+  const { soltarGema } = await cargar('combate.js');
+  const { mundo, j } = await mundoCon(null);
+  mundo.gemas.length = 0;
+  for (let i = 0; i < MUNDO.maxGemas; i += 1) mundo.gemas.push({ x: 5000 + i, y: 5000, valor: 1, atraida: false });
+  const total0 = mundo.gemas.reduce((s, g) => s + g.valor, 0);
+  soltarGema(mundo, j.x + 100, j.y, 7);
+  assert.equal(mundo.gemas.length, MUNDO.maxGemas, 'no pasa del tope');
+  assert.equal(mundo.gemas.reduce((s, g) => s + g.valor, 0), total0 + 7, 'no se pierde experiencia');
+  assert.ok(mundo.gemas.some((g) => Math.hypot(g.x - (j.x + 100), g.y - j.y) < 10 && g.valor === 8), 'hay una gema junto al rival caído, con el valor sumado');
+});

@@ -1,14 +1,14 @@
 // Simulación del juego: sin dibujar nada y sin tocar el DOM, así se puede probar con node:test.
 // Estados: 'jugando' → 'mejora' (elegir mejora al subir de nivel) → 'jugando' ... → 'fin'.
 import {
-  JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PIES, PREMIOS, FISICA, xpParaSubir, CURAS, AYUDA_INICIAL, CURTIDOS, AMBIENTES, ambienteDe,
+  MUNDO, JUGADOR, POSICIONES, PERSONAJES, ENTRENADORES, ARMAS, PASIVAS, EXTRAS, ULTI, MOVIMIENTO, TERRENO, PIES, PREMIOS, FISICA, xpParaSubir, CURAS, AYUDA_INICIAL, CURTIDOS, AMBIENTES, ambienteDe,
 } from './config.js';
 import { crearRng, crearCuadricula, normalizar } from './util.js';
 import {
   actualizarArmas, actualizarAcciones, actualizarFuegos, actualizarQuemaduras,
 } from './armas.js';
 import {
-  curar, danar, aturdir, crearParticulas, crearTexto, quemar,
+  curar, danar, aturdir, crearParticulas, crearTexto, quemar, tocaCuerpo,
 } from './combate.js';
 import { generarOpciones, aplicarMejora, recalcular } from './mejoras.js';
 import { oleadaEn, empezarOleada, actualizarApariciones, reciclarLejanos } from './oleadas.js';
@@ -237,9 +237,9 @@ function moverJugador(mundo, dt, entrada) {
 function golpesDeDash(mundo, d) {
   const j = mundo.jugador;
   const alcance = j.r + d.ancho / 2;
-  mundo.cuadricula.cerca(j.x, j.y, alcance + 40, (e) => {
+  mundo.cuadricula.cerca(j.x, j.y, alcance + 60, (e) => {
     if (e.muerto || d.golpeados.has(e.id)) return;
-    if ((e.x - j.x) ** 2 + (e.y - j.y) ** 2 > (e.r + alcance) ** 2) return;
+    if ((e.x - j.x) ** 2 + (e.y + (e.pies ?? 0) - j.y - j.pies) ** 2 > (e.r + alcance) ** 2) return; // por los pies, como el contacto
     d.golpeados.add(e.id);
     mundo.fuente = d.fuente;
     danar(mundo, e, d.dano, normalizar(e.x - j.x + d.dx * 20, e.y - j.y + d.dy * 20), d.empuje, d.tipoDano);
@@ -250,6 +250,9 @@ function golpesDeDash(mundo, d) {
     mundo.ondas.push({ x: j.x, y: j.y + j.r, radio: 14, vida: 0.16, total: 0.16, color: d.color });
   }
 }
+
+/** Vecinos de un rival (lista reutilizada en cada búsqueda). */
+const VECINOS = [];
 
 function moverEnemigos(mundo, dt) {
   const j = mundo.jugador;
@@ -280,7 +283,13 @@ function moverEnemigos(mundo, dt) {
     const habilidadPropia = e.jefe ? actualizarJefe(mundo, e, dt) : false;
     if (!habilidadPropia) {
       const factor = e.jefe ? 1 : comportamiento(mundo, e, dt, dist);
-      let [dx, dy] = e.embestida > 0 ? [e.dirX, e.dirY] : normalizar(j.x - e.x, j.y - e.y);
+      // Hacia el jugador (normalizado aquí mismo, sin crear un array por rival y paso)
+      let dx = e.dirX;
+      let dy = e.dirY;
+      if (!(e.embestida > 0)) {
+        const l = Math.hypot(j.x - e.x, j.y - e.y);
+        if (l > 1e-9) { dx = (j.x - e.x) / l; dy = (j.y - e.y) / l; } else { dx = 0; dy = 0; }
+      }
       // Rodeando una pared: la sigue (pegado a ella) hasta que tenga camino libre hacia ti
       if (e.rodeo && e.embestida <= 0) {
         e.rodeoT += dt;
@@ -305,8 +314,10 @@ function moverEnemigos(mundo, dt) {
     e.ky *= decaimiento;
 
     // Separación: los rivales no se amontonan en un solo punto
-    cuadricula.cerca(e.x, e.y, e.r * 2, (otro) => {
-      if (otro === e || otro.muerto) return;
+    const vecinos = cuadricula.reunir(e.x, e.y, e.r * 2, VECINOS);
+    for (let k = 0; k < vecinos.length; k += 1) {
+      const otro = vecinos[k];
+      if (otro === e || otro.muerto) continue;
       const ox = e.x - otro.x;
       const oy = e.y - otro.y;
       const minimo = (e.r + otro.r) * 0.85;
@@ -317,7 +328,8 @@ function moverEnemigos(mundo, dt) {
         e.x += ox * empuje;
         e.y += oy * empuje;
       }
-    });
+    }
+    vecinos.length = 0;
 
     // Las gradas también les cierran el paso: la rodean para llegar a ti
     const rodeaba = e.rodeo;
@@ -330,18 +342,27 @@ function moverEnemigos(mundo, dt) {
     if (e.tAncla > 0.9) {
       const avance = Math.hypot(e.x - (e.axx ?? e.x), e.y - (e.ayy ?? e.y));
       if (e.chocoVentana && dist > e.r * 3 && avance < e.vel * 0.9 * 0.3 && Number.isFinite(e.nx)) e.rodeo = -(e.rodeo || 1);
+      // Sin avanzar casi nada y lejos de ti: si dura (MUNDO.atasco), reciclarLejanos lo recoloca (p. ej. un jefe
+      // metido en un entrante de una meseta, que antes se quedaba ahí para siempre)
+      e.atasco = avance < e.vel * e.tAncla * 0.25 && dist > MUNDO.distanciaAtasco ? (e.atasco || 0) + e.tAncla : 0;
       e.tAncla = 0;
       e.chocoVentana = false;
       e.axx = e.x;
       e.ayy = e.y;
     }
 
-    // Contacto con el jugador
-    if (j.invul <= 0 && (e.x - j.x) ** 2 + (e.y - j.y) ** 2 < (e.r + j.r * 0.8) ** 2) {
+    // Contacto con el jugador: se tocan los pies (en la vista 3/4 un jefe grande tiene el centro mucho más arriba
+    // que sus pies; comparando los centros te golpeaba desde lejos si venía por debajo y había que pegarse a él si
+    // venía por arriba)
+    const dyPies = e.y + (e.pies ?? 0) - j.y - j.pies;
+    if (j.invul <= 0 && (e.x - j.x) ** 2 + dyPies ** 2 < (e.r + j.r * 0.8) ** 2) {
       danarJugador(mundo, e.dano);
     }
   }
 }
+
+/** Rivales que puede tocar un balón (lista reutilizada; los golpes no vuelven a buscar en ella). */
+const CANDIDATOS = [];
 
 function moverProyectiles(mundo, dt) {
   const { proyectiles } = mundo;
@@ -379,9 +400,11 @@ function moverProyectiles(mundo, dt) {
     p.vida -= dt;
     if (p.vida > 0 && !p.vuelta && tocaGrada(mundo.terreno, p.x, p.y, p.r)) p.vida = 0; // se estrella contra la grada
     if (p.vida > 0) {
-      mundo.cuadricula.cerca(p.x, p.y, p.r + 24, (e) => {
-        if (p.perfora <= 0 || e.muerto || p.golpeados.has(e.id)) return;
-        if ((e.x - p.x) ** 2 + (e.y - p.y) ** 2 > (e.r + p.r) ** 2) return;
+      const candidatos = mundo.cuadricula.reunir(p.x, p.y, p.r + 72, CANDIDATOS); // +72: llega a la cabeza de los jefes más grandes
+      for (let c = 0; c < candidatos.length; c += 1) {
+        const e = candidatos[c];
+        if (p.perfora <= 0 || e.muerto || p.golpeados.has(e.id)) continue;
+        if (!tocaCuerpo(e, p.x, p.y, p.r)) continue;
         p.golpeados.add(e.id);
         p.perfora -= 1;
         mundo.fuente = p.fuente;
@@ -389,7 +412,8 @@ function moverProyectiles(mundo, dt) {
         mundo.fuente = undefined;
         if (p.fuego) quemar(mundo, e, p.dano * (0.2 + 0.08 * p.fuego) * mundo.jugador.mult.dano, 3);
         if (mundo.ondas.length < 40) mundo.ondas.push({ x: p.x, y: p.y, radio: 18, vida: 0.14, total: 0.14 });
-      });
+      }
+      candidatos.length = 0;
     }
     if (p.vida <= 0 || p.perfora <= 0) p.muerto = true;
   }
@@ -501,7 +525,9 @@ function recogerObjetos(mundo, dt) {
     const d2 = (g.x - j.x) ** 2 + (g.y - j.y) ** 2;
     if (!g.atraida && d2 < iman2) g.atraida = true;
     if (g.atraida) {
-      const [dx, dy] = normalizar(j.x - g.x, j.y - g.y);
+      const l = Math.hypot(j.x - g.x, j.y - g.y);
+      const dx = l > 1e-9 ? (j.x - g.x) / l : 0;
+      const dy = l > 1e-9 ? (j.y - g.y) / l : 0;
       const v = 300 + 200 * (1 - Math.min(1, Math.sqrt(d2) / radioIman));
       g.x += dx * v * dt;
       g.y += dy * v * dt;
@@ -531,9 +557,9 @@ function actualizarEfectos(mundo, dt) {
   for (let i = 0; i < mundo.tarjetas.length; i += 1) mundo.tarjetas[i].y -= 20 * dt;
   for (let i = 0; i < mundo.avisosJefe.length; i += 1) {
     const a = mundo.avisosJefe[i];
-    if (a.seguir && !a.seguir.muerto) {
+    if (a.seguir && !a.seguir.muerto) { // los círculos van en el suelo, a sus pies; la línea de tiro sale del cuerpo
       a.x = a.seguir.x;
-      a.y = a.seguir.y;
+      a.y = a.seguir.y + (a.tipo === 'linea' ? 0 : a.seguir.pies ?? 0);
     }
   }
   for (let i = 0; i < mundo.particulas.length; i += 1) {
@@ -544,6 +570,13 @@ function actualizarEfectos(mundo, dt) {
     p.vy *= 0.92;
   }
 }
+
+// Condiciones para seguir en su lista (fuera del paso: no se crean funciones nuevas en cada fotograma)
+const vivo = (o) => !o.muerto;
+const conVida = (o) => o.vida > 0;
+const sinRecoger = (o) => !o.recogida;
+const sinCobrar = (o) => !o.recogido;
+const ardiendo = (o) => o.t > 0;
 
 /** Quita de una lista los elementos que ya no valen (muertos, recogidos o con la vida agotada). */
 function compactar(lista, vale) {
@@ -600,21 +633,21 @@ export function avanzar(mundo, dt, entrada = SIN_ENTRADA) {
   actualizarEfectos(mundo, dt);
   reciclarLejanos(mundo);
 
-  compactar(mundo.enemigos, (e) => !e.muerto);
-  compactar(mundo.proyectiles, (p) => !p.muerto);
-  compactar(mundo.disparosEnemigos, (d) => d.vida > 0);
-  compactar(mundo.gemas, (g) => !g.recogida);
-  compactar(mundo.curas, (c) => !c.recogida);
-  compactar(mundo.premios, (p) => !p.recogido);
-  compactar(mundo.tajos, (t) => t.vida > 0);
-  compactar(mundo.fuegos, (f) => f.t > 0);
-  compactar(mundo.ondas, (o) => o.vida > 0);
-  compactar(mundo.rayos, (r) => r.vida > 0);
-  compactar(mundo.tarjetas, (t) => t.vida > 0);
-  compactar(mundo.impactos, (t) => t.vida > 0);
-  compactar(mundo.avisosJefe, (a) => a.vida > 0);
-  compactar(mundo.textos, (t) => t.vida > 0);
-  compactar(mundo.particulas, (p) => p.vida > 0);
+  compactar(mundo.enemigos, vivo);
+  compactar(mundo.proyectiles, vivo);
+  compactar(mundo.disparosEnemigos, conVida);
+  compactar(mundo.gemas, sinRecoger);
+  compactar(mundo.curas, sinRecoger);
+  compactar(mundo.premios, sinCobrar);
+  compactar(mundo.tajos, conVida);
+  compactar(mundo.fuegos, ardiendo);
+  compactar(mundo.ondas, conVida);
+  compactar(mundo.rayos, conVida);
+  compactar(mundo.tarjetas, conVida);
+  compactar(mundo.impactos, conVida);
+  compactar(mundo.avisosJefe, conVida);
+  compactar(mundo.textos, conVida);
+  compactar(mundo.particulas, conVida);
 
   // La ulti se carga con las bajas de este fotograma
   if (mundo.cargaPendiente > 0) {

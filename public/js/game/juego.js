@@ -23,6 +23,7 @@ import {
   salidaAlCampo,
 } from './menu-fx.js';
 import { animarFirma } from './firma.js';
+import { enviarConReintentos, motivoSinGuardar } from './envio.js';
 import { htmlEstadisticas, htmlLogros } from './fin-ui.js';
 import { LOGROS, EQUIPACIONES, logrosDePartida, logroDeEquipacion } from './logros.js';
 import {
@@ -96,6 +97,7 @@ const PLANTILLA = `
       </section>
       <h3 id="juego-t-tiempos" class="panel__titulo">Tus tiempos</h3>
       <p class="club-estado" data-campo="club-estado" hidden></p>
+      <p class="club-estado aviso-guardado" data-campo="aviso-guardado" data-estado="error" role="alert" hidden></p>
       <div class="hub__marcas" data-campo="tiempos"></div>
       <div class="hub__club" data-campo="club-bloque" hidden>
         <h3 id="juego-t-club" class="panel__titulo">Tu club</h3>
@@ -430,6 +432,11 @@ export function montarJuego(contenedor, {
   let seleccionEntrena = null;
   let pestanaRanking = 'grada';
   let partida = null; // { id, enviada } de la partida en curso
+  let sinGuardar = null; // { id, datos } de una partida que no se pudo guardar ni reintentando (fallo de red): «Reintentar»
+  let avisoGuardado = null; // texto visible en el menú y en el final cuando una partida no se ha podido guardar
+  let reintentando = false;
+  let sinPartida = null; // por qué la partida en curso no se va a guardar (el servidor no la pudo abrir al empezar)
+  let ultimoResumen = null; // resumen de la última partida terminada (para repintar el final tras «Reintentar»)
   let ocupado = false; // hay una petición del club en marcha
   let marcaGrada = null; // tu mejor partida guardada en el servidor: { tiempo, puesto }
   let destruido = false;
@@ -1169,7 +1176,10 @@ export function montarJuego(contenedor, {
     if (tipo === 'personaje') pintarVestuario();
   }
 
-  /** Cierra la partida en curso en el servidor: reparte puntos y fichas y actualiza el ranking. Devuelve la respuesta o null. */
+  /**
+   * Cierra la partida en curso en el servidor: reparte puntos y fichas y actualiza el ranking.
+   * Devuelve (promesa) `{ respuesta }` si se guardó, `{ quizaGuardada: true }` o `{ fallo: { texto, reintentable } }`.
+   */
   async function cerrarPartida({ alCerrarPagina = false } = {}) {
     const p = partida;
     if (!p || p.enviada || !servidor) return null;
@@ -1182,14 +1192,61 @@ export function montarJuego(contenedor, {
       servidor.finalizarAlCerrar?.(p.id, datos);
       return null;
     }
-    try {
-      const respuesta = await servidor.finalizar(p.id, datos);
-      aplicarClub(respuesta.perfil);
-      return respuesta;
-    } catch (error) {
-      console.error('[grada] no se pudo guardar la partida', error);
-      return null;
+    return enviarResultado(p.id, datos);
+  }
+
+  /**
+   * Manda el resultado con reintentos (ver envio.js): un corte de red al acabar ya no hace perder la partida. Si ni
+   * así se puede, se avisa con claridad (en el final y en el menú) y, si es cosa de la red, queda en `sinGuardar`
+   * para el botón «Reintentar», para la siguiente partida o para el cierre de la página.
+   */
+  async function enviarResultado(id, datos) {
+    const r = await enviarConReintentos(() => servidor.finalizar(id, datos));
+    if (sinGuardar?.id === id) sinGuardar = null;
+    if (r.ok) {
+      avisoGuardado = null;
+      if (!destruido) { aplicarClub(r.respuesta.perfil); pintarAvisoGuardado(); }
+      return { respuesta: r.respuesta };
     }
+    console.error('[grada] no se pudo guardar la partida', r.error);
+    if (r.quizaGuardada) { // llegó aunque no hubo respuesta: se recarga el club para verlo
+      if (!destruido) cargarClub();
+      return { quizaGuardada: true };
+    }
+    const fallo = motivoSinGuardar(r.error);
+    if (fallo.reintentable) sinGuardar = { id, datos };
+    avisoGuardado = fallo.texto;
+    if (!destruido) {
+      pintarAvisoGuardado();
+      anunciar(fallo.texto);
+      if (fase === 'jugando' || fase === 'pausa') hud.aviso('No se ha podido guardar la partida anterior', 'alerta');
+    }
+    return { fallo };
+  }
+
+  /** «Reintentar»: vuelve a mandar la partida que no se pudo guardar por la red. */
+  async function reintentarGuardado() {
+    if (!sinGuardar || reintentando) return null;
+    reintentando = true;
+    const { id, datos } = sinGuardar;
+    if (fase === 'fin') q('[data-campo="recompensas"]').innerHTML = '<p class="panel__vacio">Guardando tu partida…</p>';
+    try {
+      const res = await enviarResultado(id, datos);
+      if (fase === 'fin' && ultimoResumen) pintarGuardado(res, ultimoResumen);
+      if (res.respuesta) cargarMarcaGrada();
+      return res;
+    } finally {
+      reintentando = false;
+      pintarAvisoGuardado();
+    }
+  }
+
+  /** Aviso del menú: la última partida no se ha podido guardar (con «Reintentar» si es cosa de la red). */
+  function pintarAvisoGuardado() {
+    const nota = q('[data-campo="aviso-guardado"]');
+    nota.hidden = !avisoGuardado;
+    if (!avisoGuardado) { nota.textContent = ''; return; }
+    nota.innerHTML = `${esc(avisoGuardado)}${sinGuardar ? ` <button type="button" class="btn btn--secundario btn--pequeno" data-accion="reintentarGuardado"${reintentando ? ' disabled' : ''}>Reintentar</button>` : ''}`;
   }
 
   // En partida la cabecera de la web se esconde para no quitar visión (la clase la oculta con CSS)
@@ -1246,6 +1303,7 @@ export function montarJuego(contenedor, {
       pintarTiempos({ contarMarca: estreno });
       pintarCartelJugador();
       pintarAvisosClub();
+      pintarAvisoGuardado();
       if (estreno && efectosMenu()) lanzarPapelitos();
       requestAnimationFrame(medirEscenario);
     } else if (panel === 'vestuario') {
@@ -1278,9 +1336,13 @@ export function montarJuego(contenedor, {
    */
   async function empezar({ conEntrada = false } = {}) {
     if (ocupado || salida) return;
-    if (fase === 'jugando' || fase === 'pausa' || fase === 'mejora') await cerrarPartida();
+    // «Empezar de nuevo» desde la pausa: la partida que dejas se cierra y se guarda. No hace falta esperar a que
+    // llegue: el servidor guarda varias partidas en curso, así que la nueva no tira la anterior.
+    if (fase === 'jugando' || fase === 'pausa' || fase === 'mejora') cerrarPartida();
+    if (sinGuardar) reintentarGuardado(); // la que no se pudo guardar por la red: otra oportunidad, sin esperar
     audio.activar();
     partida = null;
+    sinPartida = null;
     logrosAvisados = new Set();
     proximaRevisionLogros = 0;
     entrada.soltarTodo(); // lo que pulses durante la cortinilla ya cuenta para la partida
@@ -1291,16 +1353,21 @@ export function montarJuego(contenedor, {
       salida = salidaAlCampo(q('[data-campo="salida"]'), { reducido: movimientoReducido(), alCartel: () => audio.reproducir('oleada') });
       anunciar(`¡Saltan al campo! ${quien}.`);
     }
+    // Se pide aunque el club aún se esté cargando o haya fallado al cargar: antes, en esos casos la partida no se
+    // registraba en el servidor y al acabar no contaba nada (ni bajas, ni jefes, ni ranking) sin decir por qué.
     const pedirPartida = async () => {
-      if (!servidor || estadoClub !== 'listo') return;
+      if (!servidor) return;
       ocupado = true;
       try {
-        const r = await servidor.iniciar(eleccion.personaje, eleccion.entrenador);
-        partida = { id: r.partidaId, enviada: false };
-        aplicarClub(r.perfil);
-      } catch (error) {
-        console.error('[grada] no se pudo iniciar la partida en el servidor', error);
-        anunciar('No se ha podido conectar con el servidor: esta partida no se guardará.');
+        const r = await enviarConReintentos(() => servidor.iniciar(eleccion.personaje, eleccion.entrenador), { esperas: [700] });
+        if (r.ok) {
+          partida = { id: r.respuesta.partidaId, enviada: false };
+          aplicarClub(r.respuesta.perfil);
+        } else {
+          console.error('[grada] no se pudo iniciar la partida en el servidor', r.error);
+          const motivo = r.error?.status === 400 && r.error.message ? `${r.error.message}` : 'No se ha podido conectar con el servidor';
+          sinPartida = `${motivo}: esta partida no se guardará.`;
+        }
       } finally {
         ocupado = false;
       }
@@ -1318,6 +1385,10 @@ export function montarJuego(contenedor, {
     audio.saqueInicial();
     procesarEventos();
     if (salida) { salida.abrir(); salida = null; }
+    if (sinPartida) { // a la vista, no solo para el lector de pantalla
+      hud.aviso('Esta partida no se guardará', 'alerta');
+      anunciar(sinPartida);
+    }
     lienzo.focus({ preventScroll: true });
   }
 
@@ -1507,20 +1578,13 @@ export function montarJuego(contenedor, {
     q('[data-campo="record"]').hidden = !record;
     const cajaRecompensas = q('[data-campo="recompensas"]');
     const cajaResultado = q('[data-campo="resultado"]');
-    cajaRecompensas.innerHTML = partida ? '<p class="panel__vacio">Guardando tu partida…</p>' : '';
+    ultimoResumen = r;
+    cajaRecompensas.innerHTML = partida ? '<p class="panel__vacio">Guardando tu partida…</p>'
+      : (servidor && sinPartida ? `<p class="aviso-guardado" role="alert">${esc(sinPartida)}</p>` : '');
     cajaResultado.innerHTML = htmlEstadisticas(r);
-    cerrarPartida().then((respuesta) => {
-      if (fase !== 'fin') return;
-      cajaRecompensas.innerHTML = respuesta ? htmlRecompensas(respuesta, PERSONAJES[r.personaje].nombre)
-        : (partida ? '<p class="panel__vacio">No se ha podido guardar la partida en el servidor.</p>' : '');
-      if (respuesta?.record) q('[data-campo="record"]').hidden = false;
-      const nuevos = respuesta?.recompensas?.logrosNuevos ?? [];
-      if (nuevos.length) {
-        cajaResultado.innerHTML = htmlEstadisticas(r, { logrosNuevos: nuevos });
-        audio.reproducir('logro');
-      }
-      escalonar(cajaRecompensas.querySelectorAll('.recompensas > li'), { reducido: movimientoReducido(), retraso: 0 });
-      pintarAvisosClub();
+    cerrarPartida().then((res) => {
+      if (fase !== 'fin' || !res) return;
+      pintarGuardado(res, r);
       cargarMarcaGrada(); // tu marca y tu puesto pueden haber cambiado
     });
     // Pequeña pausa para que se vea el golpe final antes de tapar la pantalla
@@ -1532,6 +1596,26 @@ export function montarJuego(contenedor, {
       escalonar(pantallas.fin.querySelectorAll('.fin__cabeza, .resultado--fin > div, .danos > li'), { reducido: movimientoReducido(), paso: 30, retraso: 120 });
       anunciar(`Te han eliminado. Has aguantado ${formatearTiempo(r.tiempo)} y llegado a la oleada ${r.oleada}.`);
     }, 900);
+  }
+
+  /** En el final: lo que ha dado la partida en el club, o por qué no se ha guardado (con «Reintentar» si se puede). */
+  function pintarGuardado(res, r) {
+    const cajaRecompensas = q('[data-campo="recompensas"]');
+    const { respuesta } = res;
+    if (respuesta) cajaRecompensas.innerHTML = htmlRecompensas(respuesta, PERSONAJES[r.personaje].nombre);
+    else if (res.quizaGuardada) cajaRecompensas.innerHTML = '<p class="panel__vacio">Se cortó la conexión al guardar, pero el servidor ya tenía tu partida: mira tu club.</p>';
+    else {
+      const boton = sinGuardar ? ' <button type="button" class="btn btn--secundario btn--pequeno" data-accion="reintentarGuardado">Reintentar</button>' : '';
+      cajaRecompensas.innerHTML = `<p class="aviso-guardado" role="alert">${esc(res.fallo?.texto ?? 'No se ha podido guardar la partida en el servidor.')}${boton}</p>`;
+    }
+    if (respuesta?.record) q('[data-campo="record"]').hidden = false;
+    const nuevos = respuesta?.recompensas?.logrosNuevos ?? [];
+    if (nuevos.length) {
+      q('[data-campo="resultado"]').innerHTML = htmlEstadisticas(r, { logrosNuevos: nuevos });
+      audio.reproducir('logro');
+    }
+    escalonar(cajaRecompensas.querySelectorAll('.recompensas > li'), { reducido: movimientoReducido(), retraso: 0 });
+    pintarAvisosClub();
   }
 
   // --- Eventos de la simulación → sonido y avisos -----------------------------------------------
@@ -1645,11 +1729,15 @@ export function montarJuego(contenedor, {
 
   // --- Tamaño del lienzo --------------------------------------------------------------------------
 
+  const MAX_PIXELES_LIENZO = 1920 * 1080;
   function ajustarTamano() {
     const caja = contenedor.getBoundingClientRect();
-    const dpr = Math.min(2, window.devicePixelRatio || 1);
     const ancho = Math.max(280, Math.round(caja.width));
     const alto = Math.max(280, Math.round(caja.height));
+    // Densidad de píxeles con tope: como mucho 2 y, en pantallas grandes, no más píxeles que una 1920×1080
+    // (un portátil 1080p con el escalado de Windows al 125 % pintaba 2400×1350: un 56 % más por fotograma
+    // sin que se note en un juego de píxeles). En móviles, que son pequeños, se mantiene la nitidez.
+    const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1, Math.sqrt(MAX_PIXELES_LIENZO / (ancho * alto))));
     lienzo.width = Math.round(ancho * dpr);
     lienzo.height = Math.round(alto * dpr);
     // El zoom hace que en un móvil vertical se vea una zona parecida a la de un monitor ancho
@@ -1683,6 +1771,7 @@ export function montarJuego(contenedor, {
     ayuda: () => irAlHub('ayuda'),
     ulti: () => { if (fase === 'jugando') usarUlti(mundo); },
     reiniciar: empezar,
+    reintentarGuardado,
     reanudar,
     salir: alSalir,
     pausa: alternarPausa,
@@ -1802,7 +1891,10 @@ export function montarJuego(contenedor, {
   contenedor.addEventListener('pointerdown', alPrimerGesto, { once: true });
   window.addEventListener('keydown', alPrimerGesto, { once: true });
   const alCambiarVisibilidad = () => { if (document.hidden && fase === 'jugando') alternarPausa(); };
-  const alCerrarPagina = () => { if (partida && !partida.enviada && fase !== 'hub') cerrarPartida({ alCerrarPagina: true }); };
+  const alCerrarPagina = () => {
+    if (sinGuardar) { servidor?.finalizarAlCerrar?.(sinGuardar.id, sinGuardar.datos); sinGuardar = null; }
+    if (partida && !partida.enviada && fase !== 'hub') cerrarPartida({ alCerrarPagina: true });
+  };
   window.addEventListener('pagehide', alCerrarPagina);
 
   contenedor.addEventListener('click', alHacerClic);
@@ -1824,7 +1916,7 @@ export function montarJuego(contenedor, {
   return {
     destruir() {
       destruido = true;
-      if (partida && !partida.enviada && fase !== 'hub') cerrarPartida({ alCerrarPagina: true });
+      alCerrarPagina(); // la partida en curso y la que no se pudo guardar
       window.removeEventListener('pagehide', alCerrarPagina);
       cancelAnimationFrame(raf);
       clearInterval(relojConsejos);

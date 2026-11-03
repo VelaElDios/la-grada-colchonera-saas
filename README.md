@@ -158,7 +158,7 @@ Las capturas de DoneTonic del Sprint 2 están en [Gestión del proyecto](#gesti�
 
 ## Fase 7: pixel art, menú y habilidades nuevas
 
-Después del Sprint 2 se mejoró el aspecto del juego y se añadió contenido, sin cambiar sus reglas básicas ni el servidor. El trabajo se repartió en cuatro áreas, cada una en su propia rama, y se integró con las pruebas en verde (305).
+Después del Sprint 2 se mejoró el aspecto del juego y se añadió contenido, sin cambiar sus reglas básicas ni el servidor. El trabajo se repartió en cuatro áreas, cada una en su propia rama, y se integró con las pruebas en verde (322).
 
 | Área | Qué cambia |
 |---|---|
@@ -166,6 +166,14 @@ Después del Sprint 2 se mejoró el aspecto del juego y se añadió contenido, s
 | **Mapa** | Píxeles el doble de finos y mucho más detalle: césped con flores y piedras, campos con franjas de corte, caminos con borde, charcos que reflejan el cielo, árboles con volumen, gradas con público que hace la ola y agita bufandas, vallas con textos inventados, porterías con red, banquillos y focos. Sombras coherentes y una luz propia para cada ambiente. La generación del terreno y las colisiones no cambian |
 | **Menú** | Rediseñado con **paneles translúcidos** (de cristal, dejan ver el campo) con un ribete rojiblanco arriba. El centro queda despejado para ver al muñeco paseando por el mapa. A la izquierda, en un solo panel: tu ficha, tu equipo (jugador y míster con sus datos y un consejo del míster), tus tiempos y tu club. Título nuevo: «LA GRADA» en un parche a rayas y «COLCHONERA» en blanco con contorno azul y relieve rojo. El botón de jugar es una **entrada de partido** (talón rojiblanco, troquel y cuerpo azul con «JUGAR» centrado) y las demás opciones van en una rejilla con iconos de color. Papelitos, focos, transiciones y la cortinilla «¡Saltan al campo!». El menú cabe entero sin barras de desplazamiento; las pantallas del menú (ajustes, cómo se juega…) son anchas para caber enteras, «Volver» queda siempre a la vista y se cierran también con un clic fuera. **En la pausa** ves tus datos de la partida, los ajustes y un **árbol de tus habilidades**: cada una con su nivel, las combinaciones que forman (con lo que te falta) y tu avance hacia las ultras; «Volver al menú» pregunta antes de salir y avisa de que lo conseguido en la partida se guarda. Funciona en el móvil, con teclado y con movimiento reducido |
 | **Habilidades** | 5 armas nuevas, 2 pasivas y 5 combinaciones (ver abajo). Además, todas las habilidades se ven mejor: estelas, brillos, chispas del color de su familia (disparo dorado, cuerpo a cuerpo rojo, área azul, movilidad verde), números de daño que se suman y críticos destacados. Las partículas tienen tope y usan su propio azar, así que no cambian la partida |
+
+**Fallos arreglados y rendimiento**
+
+- **Partidas largas que no se guardaban:** el servidor rechazaba como «no creíble» cualquier partida con más de 20 rivales eliminados por segundo, y pasado el minuto 20 salen hasta 50. Ahora el tope (`bajasPosibles` en `config.js`) sale del ritmo real de aparición de rivales.
+- **Guardado más robusto:** el cliente reintenta si falla la red, avisa con claridad si una partida no se pudo guardar (con botón «Reintentar»), el servidor admite varias partidas en curso (otra pestaña, «Empezar de nuevo») y la pantalla final muestra lo guardado.
+- **Experiencia que dejaba de salir:** con 450 gemas en el campo, la experiencia nueva se sumaba a una gema al azar, casi siempre lejos. Ahora la más lejana se trae a donde cae el rival.
+- **Hitboxes:** los balones chocan con la cabeza y el cuerpo de los muñecos chibi, el contacto se mide por los pies, los ataques de los jefes en el suelo se miden desde los pies (como su aviso), el monumento ya no tiene paredes invisibles y los obstáculos ya no se pintan con el dibujo de un mapa anterior.
+- **Rendimiento:** no se dibuja lo que queda fuera de pantalla, la oscuridad de la noche se pinta a menor resolución, el lienzo tiene un tope de 1920×1080 píxeles reales y la búsqueda de vecinos no crea objetos en cada paso. El trabajo de dibujo en partidas largas baja a menos de la mitad.
 
 **Habilidades nuevas**
 
@@ -468,7 +476,7 @@ public/
   js/ui/vistas/        Una vista por módulo: inicio, entrar, registro, perfil, admin, jugar y 404
   js/api.js            Cliente de comunicación con la API (único sitio con fetch, timeout de 15 s)
   js/game/             El juego: simulación pura, dibujo en canvas, HUD, sonido, logros y club
-tests/                 305 pruebas automatizadas (unitarias, de API, de base de datos y del juego)
+tests/                 322 pruebas automatizadas (unitarias, de API, de base de datos y del juego)
 docs/                  Capturas, gestión, configuración del Hito 4, revisión de la entrega y documentación técnica
 memoria/               Memoria del proyecto en LuaLaTeX
 scripts/               Preparación de Google Cloud y modo pruebas del juego
@@ -622,7 +630,7 @@ No hace falta tener PostgreSQL: en local, las pruebas de base de datos usan `pg-
 TEST_DATABASE_URL=postgresql://usuario:clave@localhost:5432/grada_test npm test
 ```
 
-Son **305 pruebas** en 29 ficheros (más el recorrido con PostgreSQL real, que solo se ejecuta en el CI). Muchas comprueban casos de error, no solo el camino feliz.
+Son **322 pruebas** en 30 ficheros (más el recorrido con PostgreSQL real, que solo se ejecuta en el CI). Muchas comprueban casos de error, no solo el camino feliz.
 
 | Fichero | Pruebas | Qué comprueba |
 |---|---:|---|

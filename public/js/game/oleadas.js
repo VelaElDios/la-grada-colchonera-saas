@@ -2,16 +2,15 @@
 // La partida es infinita: los rivales ganan vida, daño y velocidad sin parar (ver ESCALADO en config.js).
 import {
   EQUIPOS, JEFES, ORDEN_JEFES, MUNDO, ESCALADO, ESCALADO_JEFE, ELITES, minutosDeOleada, PIELES, PELOS, fuerzaAmbiente, PIES,
+  intervaloAparicion, gruposPorAparicion,
 } from './config.js';
+import { tocaGrada } from './terreno.js';
 
 let contadorId = 1;
 
 /** Oleada actual (empieza en 1 y sube cada 30 s). */
 export const oleadaEn = (tiempo) => 1 + Math.floor(tiempo / MUNDO.duracionOleada);
 
-// Menos rivales que antes, pero cada uno más duro (y con élites): la tensión viene de la calidad, no de la cantidad.
-const intervaloAparicion = (oleada) => Math.max(0.25, 1.7 - 0.072 * (oleada - 1));
-const gruposPorAparicion = (oleada) => 1 + Math.floor((oleada - 1) / 4);
 
 /** `elite`: clave de ELITES.tipos para un rival más duro (ver config.js). */
 export function crearEnemigo(tipo, x, y, oleada, elite = null) {
@@ -190,19 +189,52 @@ export function actualizarApariciones(mundo, dt) {
   }
 }
 
-/** Recoloca delante del jugador a los rivales que se han quedado muy atrás. */
+/**
+ * Lleva a un rival (o a un jefe) a un sitio libre del anillo de aparición, alrededor del jugador. Prueba varios
+ * ángulos para no dejarlo con los pies dentro de una grada o de una tienda (de ahí no saldría bien).
+ */
+export function recolocar(mundo, e) {
+  const t = mundo.terreno;
+  let x;
+  let y;
+  const a0 = mundo.rng.rango(0, Math.PI * 2);
+  for (let i = 0; i < 8; i += 1) {
+    [x, y] = colocarEnAnillo(mundo, a0 + i * 2.39996); // ángulo áureo: ocho intentos bien repartidos
+    if (!t || !tocaGrada(t, x, y + (e.pies ?? 0), (e.rPies ?? e.r) + 4, true)) break;
+  }
+  e.x = x;
+  e.y = y;
+  e.kx = 0;
+  e.ky = 0;
+  e.rodeo = 0;
+  e.atasco = 0;
+  e.tAncla = 0;
+  e.axx = x;
+  e.ayy = y;
+  if (e.jefe) { // a mitad de un salto o de una embestida se quedaría a medias: vuelve a perseguirte
+    e.estado = 'normal';
+    e.altura = 0;
+    e.pendientes = 0;
+  }
+}
+
+/**
+ * Recoloca alrededor del jugador a los rivales que se han quedado muy atrás, a los jefes que se han quedado
+ * perdidos muy lejos (antes nunca volvían: el jefe seguía vivo a kilómetros y no había forma de vencerlo) y a
+ * quien lleva un rato atascado contra un obstáculo lejos de ti (`e.atasco`, ver moverEnemigos en mundo.js).
+ */
 export function reciclarLejanos(mundo) {
   const j = mundo.jugador;
   const lim2 = MUNDO.distanciaDescarte ** 2;
+  const limJefe2 = MUNDO.distanciaDescarteJefe ** 2;
   for (let i = 0; i < mundo.enemigos.length; i += 1) {
     const e = mundo.enemigos[i];
+    if (e.muerto) continue;
     if (!Number.isFinite(e.x + e.y)) { // red de seguridad: un rival con posición rota vuelve al campo
-      const [x, y] = colocarEnAnillo(mundo, mundo.rng.rango(0, Math.PI * 2));
-      e.x = x; e.y = y; e.kx = 0; e.ky = 0; e.rodeo = 0;
-    } else if ((e.x - j.x) ** 2 + (e.y - j.y) ** 2 > lim2 && !e.jefe) {
-      const [x, y] = colocarEnAnillo(mundo, mundo.rng.rango(0, Math.PI * 2));
-      e.x = x;
-      e.y = y;
+      recolocar(mundo, e);
+      continue;
     }
+    const d2 = (e.x - j.x) ** 2 + (e.y - j.y) ** 2;
+    if (d2 > (e.jefe ? limJefe2 : lim2) || (e.atasco ?? 0) >= MUNDO.atasco) recolocar(mundo, e);
   }
 }

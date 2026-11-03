@@ -140,6 +140,42 @@ describe('API /api/juego', () => {
     assert.equal(res.status, 404);
   });
 
+  test('empezar otra partida no tira la anterior (otra pestaña o «jugar otra vez» con el resultado en camino)', async () => {
+    const { cookie } = await nuevoUsuario();
+    const [a, b] = Object.keys((await get(cookie, '/perfil')).body.jugadores);
+    // Antes: la segunda partida sustituía a la primera y el resultado de la primera daba 404 (ni bajas ni ranking)
+    const p1 = await post(cookie, '/partidas', { personaje: a, entrenador: 'cholo' });
+    reloj += 300_000;
+    const p2 = await post(cookie, '/partidas', { personaje: b, entrenador: 'cholo' }); // la primera aún no ha llegado
+    let res = await post(cookie, `/partidas/${p1.body.partidaId}/fin`, { tiempo: 295, nivel: 20, jefes: 2, bajas: 300 });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.perfil.jugadores[a].bajas, 300);
+    assert.deepEqual([res.body.recompensas.bajas, res.body.recompensas.jefes, res.body.recompensas.personaje], [300, 2, a], 'lo guardado vuelve para enseñarlo');
+    reloj += 200_000;
+    res = await post(cookie, `/partidas/${p2.body.partidaId}/fin`, { tiempo: 198, nivel: 15, jefes: 1, bajas: 100 });
+    assert.equal(res.status, 200, JSON.stringify(res.body));
+    assert.equal(res.body.perfil.jugadores[b].bajas, 100);
+    assert.equal(res.body.perfil.partidas, 2);
+  });
+
+  test('dos partidas jugadas a la vez no se cobran las dos, y solo se guardan unas pocas en curso', async () => {
+    const { cookie } = await nuevoUsuario();
+    const [a] = Object.keys((await get(cookie, '/perfil')).body.jugadores);
+    const p1 = await post(cookie, '/partidas', { personaje: a, entrenador: 'cholo' });
+    const p2 = await post(cookie, '/partidas', { personaje: a, entrenador: 'cholo' });
+    reloj += 600_000;
+    assert.equal((await post(cookie, `/partidas/${p1.body.partidaId}/fin`, { tiempo: 600, nivel: 20, jefes: 5, bajas: 10 })).status, 200);
+    const res = await post(cookie, `/partidas/${p2.body.partidaId}/fin`, { tiempo: 600, nivel: 20, jefes: 5, bajas: 10 });
+    assert.equal(res.status, 400, 'los mismos 10 minutos no valen para dos partidas');
+    assert.match(res.body.error.message, /coincide/);
+    // Se guardan como mucho tres en curso: la cuarta empezada deja fuera a la más antigua
+    const ids = [];
+    for (let i = 0; i < 4; i += 1) ids.push((await post(cookie, '/partidas', { personaje: a, entrenador: 'cholo' })).body.partidaId);
+    reloj += 60_000;
+    assert.equal((await post(cookie, `/partidas/${ids[0]}/fin`, { tiempo: 10, nivel: 2, jefes: 0, bajas: 1 })).status, 404);
+    assert.equal((await post(cookie, `/partidas/${ids[3]}/fin`, { tiempo: 50, nivel: 5, jefes: 0, bajas: 20 })).status, 200);
+  });
+
   test('logros: el servidor guarda solo los creíbles, una vez, y desbloquea su equipación', async () => {
     const { cookie } = await nuevoUsuario();
     const perfil = (await get(cookie, '/perfil')).body;
@@ -257,4 +293,14 @@ describe('API /api/juego', () => {
     assert.equal(fila.alias, 'Niño Torres');
     assert.equal(fila.avatar, `p:${mio}`);
   });
+});
+
+test('bajasPosibles: una partida larga real (unos 50 rivales por segundo pasado el minuto 20) entra en el tope', async () => {
+  const C = await import(require('node:url').pathToFileURL(require('node:path').join(__dirname, '..', 'public', 'js', 'game', 'config.js')).href);
+  // Medido con una partida simulada a tope de armas: 24.500 bajas a los 21 min y 42.000 a los 26 min
+  assert.ok(C.bajasPosibles(21 * 60) > 24500 * 1.2);
+  assert.ok(C.bajasPosibles(26 * 60 + 20) > 42200 * 1.2);
+  // y sigue cortando lo imposible
+  assert.ok(C.bajasPosibles(60) < 500);
+  assert.ok(C.bajasPosibles(10 * 60) < 20000);
 });

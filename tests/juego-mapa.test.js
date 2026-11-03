@@ -181,3 +181,29 @@ test('la letra de píxeles escribe los textos de los carteles y caben en las val
   const ancho = Math.round(130 / 2) - 4; // valla del estadio
   for (const pal of Object.values(PALETAS)) assert.ok(pal.textos.some((t) => anchoTexto(t) <= ancho), 'algún texto cabe en la valla');
 });
+
+test('cada mapa dibuja sus propios obstáculos: el de la partida anterior (o el del menú) no se cuela en la nueva', async () => {
+  await conDocumento(async () => {
+    const RO = await cargar('render-obstaculos.js');
+    const { AMBIENTES } = await cargar('config.js');
+    const mundo = { jugador: { personaje: 'koke', x: 1e6, y: 1e6 } };
+    const a = (await muestra(101, 3)).obstaculos.filter((o) => o.tipo !== 'talud');
+    const b = (await muestra(202, 3)).obstaculos.filter((o) => o.tipo !== 'talud');
+    const dibujo = (o) => {
+      const { ctx, dibujos } = contextoQueApunta();
+      RO.dibujarObstaculo(ctx, o, AMBIENTES[0], mundo, 0);
+      return dibujos[0]?.img;
+    };
+    const deA = new Map(a.map((o) => [`${o.id.split(':').slice(1).join(':')}`, dibujo(o)]));
+    let mismaCasilla = 0;
+    for (const o of b) {
+      const casilla = o.id.split(':').slice(1).join(':'); // misma celda y mismo número de obstáculo que en el mapa A
+      if (!deA.has(casilla)) continue;
+      mismaCasilla += 1;
+      const img = dibujo(o);
+      if (!img) continue;
+      assert.notEqual(img, deA.get(casilla), `el ${o.tipo} ${o.id} no usa el dibujo del mapa anterior`);
+    }
+    assert.ok(mismaCasilla > 20, 'hay obstáculos que antes compartían identificador');
+  });
+});

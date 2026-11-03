@@ -181,9 +181,13 @@ function escalera(t, a, b, canal) {
 // Celda: obstáculos, adornos y «suelo» (lo que se pinta en la textura del césped)
 // ---------------------------------------------------------------------------------------------
 
+// El monumento (fuente con el trofeo del ambiente) tenía 110 y su dibujo solo llega a unos 60 por encima de la
+// pileta (el trofeo más alto, el del Mundial). Además el trofeo es estrecho (un tercio del ancho de la pileta), así
+// que ya no es «macizo»: choca solo la pileta y el trofeo se dibuja hacia arriba, como los árboles y las farolas.
+// Antes chocaba todo el rectángulo y había paredes invisibles a los lados del trofeo, detrás de la fuente.
 const ALTO = {
   grada: 64, cartel: 16, porteria: 46, banquillo: 30, foco: 130, arbol: 96, roca: 16, banco: 14, farola: 110,
-  tienda: 84, kiosco: 52, monumento: 110, pantalla: 120, valla: 22, fuente: 34, talud: 0,
+  tienda: 84, kiosco: 52, monumento: 60, pantalla: 120, valla: 22, fuente: 34, talud: 0,
 };
 /** Obstáculos «bajos»: no se pueden cruzar andando, pero los balones pasan por encima. */
 const BAJOS = new Set(['talud', 'valla', 'banco', 'roca', 'fuente']);
@@ -192,7 +196,7 @@ const BAJOS = new Set(['talud', 'valla', 'banco', 'roca', 'fuente']);
  * detrás de un tejado o de una grada y desaparecer. En ellos `y`/`h` describen el rectángulo completo que se ve
  * y `hBase` el fondo de la base (lo que usa el dibujo). Árboles, focos y farolas solo chocan por la base.
  */
-export const MACIZOS = new Set(['grada', 'tienda', 'kiosco', 'monumento', 'pantalla', 'porteria', 'banquillo', 'cartel', 'banco', 'roca']);
+export const MACIZOS = new Set(['grada', 'tienda', 'kiosco', 'pantalla', 'porteria', 'banquillo', 'cartel', 'banco', 'roca']);
 
 /** Contenido de la celda (cx, cy). Se calcula una vez y se guarda. */
 export function celda(t, cx, cy) {
@@ -209,7 +213,11 @@ export function celda(t, cx, cy) {
   const r = () => azar(s, cx, cy, canal++);
   c = { cx, cy, bioma: lote.tipo, lote, obstaculos: [], decor: [], suelo: [], reservado: [] };
   let n = 0;
-  const nuevaId = () => `${clave}:${n++}`;
+  // La semilla va en el identificador: cada partida (y el menú) tiene otro mapa, y los dibujos de los obstáculos se
+  // guardan por su id (render-obstaculos.js). Sin ella, «3,-1:4» de la partida nueva reutilizaba el dibujo del «3,-1:4»
+  // del mapa anterior: una grada pintada como una fuente, un árbol donde había una tienda... y lo que chocaba no era
+  // lo que se veía.
+  const nuevaId = () => `${s}:${clave}:${n++}`;
 
   const choca = (a, b, margen) => Math.abs(a.x - b.x) < (a.w + b.w) / 2 + margen && Math.abs(a.y - b.y) < (a.h + b.h) / 2 + margen;
   const dentro = (o) => o.x - o.w / 2 >= ox && o.x + o.w / 2 <= ox + L && o.y - o.h / 2 >= oy && o.y + o.h / 2 <= oy + L;
@@ -350,7 +358,7 @@ export function celda(t, cx, cy) {
     if (variante === 'monumento') {
       // Plaza de piedra (borde irregular) con el trofeo del ambiente sobre una fuente, bancos, farolas y árboles en maceta
       c.suelo.push({ tipo: 'plaza', x: mx + jx, y: my + jy, r: 210 + 60 * r() });
-      meter('monumento', mx + jx, my + jy, 110, 70);
+      meter('monumento', mx + jx, my + jy + ALTO.monumento / 2, 110, 70); // (x, y): la pileta; se dibuja igual que antes
       for (const [dx, dy] of [[-150, -140], [150, -140], [-150, 150], [150, 150]]) meter('farola', mx + jx + dx, my + jy + dy, 12, 10);
       for (const [dx, dy] of [[0, 120], [-150, 10], [150, 10]]) meter('banco', mx + jx + dx, my + jy + dy, 56, 16);
       for (const [dx, dy] of [[-230, 200], [230, 200], [-230, -170], [230, -170]]) if (r() < 0.7) meter('arbol', mx + jx + dx, my + jy + dy, 22, 14, { maceta: true, copa: 30 + 8 * r() });

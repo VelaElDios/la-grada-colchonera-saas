@@ -1,7 +1,7 @@
 // Armas automáticas: el jugador solo se mueve, las armas atacan solas.
 import { ARMAS } from './config.js';
 import {
-  danar, aturdir, danoFijo, quemar, crearTexto,
+  danar, aturdir, danoFijo, quemar, crearTexto, tocaCuerpo,
 } from './combate.js';
 import { normalizar } from './util.js';
 import { golpeUltra } from './ultras.js';
@@ -190,9 +190,9 @@ function girarBanderines(mundo, nivel, dt) {
     const bx = j.x + Math.cos(a) * radio;
     const by = j.y + Math.sin(a) * radio;
     j.banderines.push({ x: bx, y: by, ang: a });
-    mundo.cuadricula.cerca(bx, by, 40, (e) => {
+    mundo.cuadricula.cerca(bx, by, 80, (e) => { // 80: llega a la cabeza de los jefes más grandes
       if (e.muerto || e.cdBanderin > 0) return;
-      if ((e.x - bx) ** 2 + (e.y - by) ** 2 > (e.r + 11) ** 2) return;
+      if (!tocaCuerpo(e, bx, by, 11)) return; // vuelan a la altura del cuerpo, como los balones
       e.cdBanderin = 0.45;
       danar(mundo, e, dano, normalizar(e.x - j.x, e.y - j.y), 170, 'cuerpo');
     });

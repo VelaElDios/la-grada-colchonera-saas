@@ -768,7 +768,7 @@ function pileta(px, x0, y0, w, h, frame, alto) {
 
 function pintarMonumento(o, pw, ph, amb, frame) {
   const px = new Pixeles(pw, ph);
-  const base = Math.round((o.hBase ?? 70) / PX);
+  const base = Math.round((o.hBase ?? o.h ?? 70) / PX); // la pileta (lo único que choca); el trofeo, por encima
   const top = ph - base;
   pileta(px, 0, top, pw, base, frame, 0.22);
   // Pedestal de piedra con escalón y placa dorada
