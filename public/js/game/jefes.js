@@ -65,20 +65,31 @@ export function danarJugador(mundo, cantidad) {
 
 const programar = (e, t, hacer) => e.cola.push({ t, hacer });
 
-function golpePulso(mundo, e, radio, relativo = 0.9) {
-  const j = mundo.jugador;
-  mundo.ondas.push({ x: e.x, y: e.y, radio, vida: 0.5, total: 0.5, enemiga: true });
-  mundo.sacudida = Math.max(mundo.sacudida, 0.25);
-  const d = Math.hypot(j.x - e.x, j.y - e.y);
-  if (d <= radio + j.r && j.invul <= 0) danarJugador(mundo, Math.round(e.dano * relativo));
+/**
+ * Los avisos y los golpes de área de los jefes están en el SUELO, así que se miden contra los pies del jugador
+ * (y salen de los pies del jefe). Antes se medían desde los centros: en la vista 3/4 el centro queda por encima de
+ * los pies (más cuanto más grande el muñeco), así que te daba un pulso estando fuera del círculo rojo por abajo y
+ * te librabas estando dentro por arriba.
+ */
+export const piesDe = (e) => [e.x, e.y + (e.pies ?? 0)];
+export function pisaZona(j, x, y, radio) {
+  return Math.hypot(j.x - x, j.y + (j.pies ?? 0) - y) <= radio + (j.rPies ?? j.r);
 }
 
-/** Golpe en un punto fijo (el aterrizaje de Cristiano). */
+function golpePulso(mundo, e, radio, relativo = 0.9) {
+  const j = mundo.jugador;
+  const [x, y] = piesDe(e);
+  mundo.ondas.push({ x, y, radio, vida: 0.5, total: 0.5, enemiga: true });
+  mundo.sacudida = Math.max(mundo.sacudida, 0.25);
+  if (pisaZona(j, x, y, radio) && j.invul <= 0) danarJugador(mundo, Math.round(e.dano * relativo));
+}
+
+/** Golpe en un punto fijo del suelo (el aterrizaje de Cristiano, las bicicletas de Neymar). */
 function golpeEn(mundo, e, x, y, radio) {
   const j = mundo.jugador;
   mundo.ondas.push({ x, y, radio, vida: 0.5, total: 0.5, enemiga: true });
   mundo.sacudida = Math.max(mundo.sacudida, 0.3);
-  if (Math.hypot(j.x - x, j.y - y) <= radio + j.r && j.invul <= 0) danarJugador(mundo, Math.round(e.dano * 1.1));
+  if (pisaZona(j, x, y, radio) && j.invul <= 0) danarJugador(mundo, Math.round(e.dano * 1.1));
 }
 
 function anillo(mundo, e, n, velocidad, giroInicial = 0, danoRel = 0.6) {
@@ -153,14 +164,14 @@ const HABILIDADES = {
 
   // Mourinho
   pulso(mundo, e, def) {
-    mundo.avisosJefe.push({ x: e.x, y: e.y, radio: def.radioPulso, vida: 1.0, total: 1.0, tipo: 'pulso', seguir: e });
+    mundo.avisosJefe.push({ x: e.x, y: e.y + e.pies, radio: def.radioPulso, vida: 1.0, total: 1.0, tipo: 'pulso', seguir: e });
     programar(e, 1.0, () => golpePulso(mundo, e, def.radioPulso));
   },
   pulsoDoble(mundo, e, def) {
     HABILIDADES.pulso(mundo, e, def);
     programar(e, 1.05, () => {
       const r2 = def.radioPulso * 1.7;
-      mundo.avisosJefe.push({ x: e.x, y: e.y, radio: r2, vida: 0.75, total: 0.75, tipo: 'pulso', seguir: e });
+      mundo.avisosJefe.push({ x: e.x, y: e.y + e.pies, radio: r2, vida: 0.75, total: 0.75, tipo: 'pulso', seguir: e });
       programar(e, 0.75, () => golpePulso(mundo, e, r2, 0.8));
     });
   },
@@ -258,7 +269,7 @@ const HABILIDADES = {
       const a = mundo.rng.rango(0, Math.PI * 2);
       const d = i === 0 ? 0 : mundo.rng.rango(40, alcance);
       const x = j.x + Math.cos(a) * d;
-      const y = j.y + Math.sin(a) * d;
+      const y = j.y + j.pies + Math.sin(a) * d; // alrededor de tus pies: la primera cae justo donde pisas
       const t = 0.9 + i * 0.12;
       mundo.avisosJefe.push({ x, y, radio, vida: t, total: t, tipo: 'impacto' });
       programar(e, t, () => golpeEn(mundo, e, x, y, radio));
@@ -409,10 +420,12 @@ function saltar(mundo, e) {
   e.carga = e.duracionSalto;
   e.sx = e.x;
   e.sy = e.y;
-  // Cae donde estás ahora (si te mueves, lo esquivas)
-  e.tx = j.x;
-  e.ty = j.y;
-  mundo.avisosJefe.push({ x: e.tx, y: e.ty, radio: 130, vida: e.duracionSalto, total: e.duracionSalto, tipo: 'impacto' });
+  // Cae donde estás ahora (si te mueves, lo esquivas): sus pies, sobre los tuyos, en el centro del aviso
+  e.gx = j.x;
+  e.gy = j.y + j.pies;
+  e.tx = e.gx;
+  e.ty = e.gy - (e.pies ?? 0);
+  mundo.avisosJefe.push({ x: e.gx, y: e.gy, radio: 130, vida: e.duracionSalto, total: e.duracionSalto, tipo: 'impacto' });
 }
 
 /** Devuelve true mientras el jefe se mueve por su cuenta (y por tanto no persigue al jugador). */
@@ -453,7 +466,7 @@ function moverPropio(mundo, e, dt) {
     if (e.carga <= 0) {
       e.estado = 'normal';
       e.altura = 0;
-      golpeEn(mundo, e, e.tx, e.ty, 130);
+      golpeEn(mundo, e, e.gx ?? e.tx, e.gy ?? e.ty, 130);
       if (e.anilloAlCaer) anillo(mundo, e, 8, 200, mundo.rng.rango(0, 6.28), 0.5);
       if (e.pendientes > 0) {
         e.pendientes -= 1;

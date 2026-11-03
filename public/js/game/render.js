@@ -14,7 +14,7 @@ import { dibujarUltrasSuelo, dibujarUltrasAire, dibujarUltrasPantalla } from './
 import {
   dibujarBalon, dibujarProyectil, dibujarDisparoEnemigo, dibujarTajo, dibujarOnda, dibujarImpacto, dibujarImpactoAire, dibujarRayo,
   dibujarTarjeta, dibujarBanderin, dibujarFuego, dibujarEscudo, dibujarParticulas, dibujarTextos,
-  dibujarHabilidadesSuelo, dibujarHabilidadesAire, canteranosParaOrdenar,
+  dibujarHabilidadesSuelo, dibujarHabilidadesAire, canteranosParaOrdenar, seguirRastro,
 } from './render-habilidades.js';
 
 // ---------------------------------------------------------------------------------------------
@@ -25,10 +25,12 @@ const INC = CAMARA.inclinacion;
 let profCamY = 0; // y del mundo en el centro de la pantalla
 let profMitad = 400; // mitad del alto visible, en unidades del mundo
 
+/** Escala de profundidad en la y del mundo: lo de abajo en pantalla, algo más grande. */
+const factorProf = (y) => 1 + CAMARA.profundidad * Math.max(-1, Math.min(1, (y - profCamY) / profMitad));
+
 /** Dibuja `fn` de pie sobre el punto (x, y) del suelo, con la escala de profundidad. */
-function recto(ctx, x, y, fn, ancla = 0) {
-  const d = Math.max(-1, Math.min(1, (y - profCamY) / profMitad));
-  const f = 1 + CAMARA.profundidad * d;
+function recto(ctx, x, y, fn) {
+  const f = factorProf(y);
   ctx.save();
   ctx.translate(x, y);
   ctx.scale(f, f / INC);
@@ -82,19 +84,22 @@ function sombra(ctx, x, y, rx, ry) {
   ctx.fill();
 }
 
-function dibujarGema(ctx, g, t) {
+/** Gema de experiencia «de pie» sin save/restore: `f` es la escala de profundidad (como `recto`). */
+function dibujarGema(ctx, g, t, f) {
   const pulso = 1 + Math.sin(t * 6 + g.x) * 0.08;
   const u = (g.valor >= 8 ? 3.2 : g.valor >= 5 ? 2.6 : 2.1) * pulso;
-  const color = g.valor >= 8 ? '#ffd166' : '#5cc8ff';
+  const ux = u * f; // en horizontal y en vertical (la vertical se estira lo que aplasta la cámara)
+  const uy = (u * f) / INC;
+  const { x, y } = g;
   ctx.fillStyle = '#10254a';
-  ctx.fillRect(g.x - u * 1.7, g.y - u * 0.7, u * 3.4, u * 1.4);
-  ctx.fillRect(g.x - u * 0.7, g.y - u * 1.7, u * 1.4, u * 3.4);
-  ctx.fillStyle = color;
-  ctx.fillRect(g.x - u * 1.2, g.y - u * 0.5, u * 2.4, u);
-  ctx.fillRect(g.x - u * 0.5, g.y - u * 1.2, u, u * 2.4);
-  ctx.fillRect(g.x - u * 0.8, g.y - u * 0.8, u * 1.6, u * 1.6);
+  ctx.fillRect(x - ux * 1.7, y - uy * 0.7, ux * 3.4, uy * 1.4);
+  ctx.fillRect(x - ux * 0.7, y - uy * 1.7, ux * 1.4, uy * 3.4);
+  ctx.fillStyle = g.valor >= 8 ? '#ffd166' : '#5cc8ff';
+  ctx.fillRect(x - ux * 1.2, y - uy * 0.5, ux * 2.4, uy);
+  ctx.fillRect(x - ux * 0.5, y - uy * 1.2, ux, uy * 2.4);
+  ctx.fillRect(x - ux * 0.8, y - uy * 0.8, ux * 1.6, uy * 1.6);
   ctx.fillStyle = '#ffffff';
-  ctx.fillRect(g.x - u * 0.5, g.y - u * 0.7, u * 0.6, u * 0.6);
+  ctx.fillRect(x - ux * 0.5, y - uy * 0.7, ux * 0.6, uy * 0.6);
 }
 
 function dibujarCura(ctx, c, t) {
@@ -352,15 +357,23 @@ function dibujarAmbiente(ctx, j, ancho, alto, t) {
 // En la final del Mundial todos visten la camiseta de su selección
 let enMundial = false;
 let paisJugador = null;
+// Muñeco de cada rival guardado en el propio dibujo (sin crear su clave ni su aspecto en cada fotograma)
+const spritesRivales = new WeakMap();
 function spriteRival(e) {
+  const guardado = spritesRivales.get(e);
+  if (guardado && guardado.mundial === enMundial && guardado.pais === paisJugador) return guardado.sprite;
+  let sprite;
   if (e.jefe) {
     const pais = enMundial ? SELECCION_DE_JEFE[e.jefe] : null;
-    return obtenerSprite(`j:${e.jefe}:${pais ?? ''}`, pais ? conSeleccion(aspectoDe('jefe', e.jefe), pais) : aspectoDe('jefe', e.jefe));
+    sprite = obtenerSprite(`j:${e.jefe}:${pais ?? ''}`, pais ? conSeleccion(aspectoDe('jefe', e.jefe), pais) : aspectoDe('jefe', e.jefe));
+  } else {
+    let pais = enMundial ? SELECCION_DE_EQUIPO[e.tipo] : null;
+    if (pais && pais === paisJugador) pais = 'Dinamarca';
+    const aspecto = aspectoDe('rival', e.tipo, e.piel, e.pelo);
+    sprite = obtenerSprite(`r:${e.tipo}:${e.piel}:${e.pelo}:${pais ?? ''}`, pais ? conSeleccion(aspecto, pais) : aspecto);
   }
-  let pais = enMundial ? SELECCION_DE_EQUIPO[e.tipo] : null;
-  if (pais && pais === paisJugador) pais = 'Dinamarca';
-  const aspecto = aspectoDe('rival', e.tipo, e.piel, e.pelo);
-  return obtenerSprite(`r:${e.tipo}:${e.piel}:${e.pelo}:${pais ?? ''}`, pais ? conSeleccion(aspecto, pais) : aspecto);
+  spritesRivales.set(e, { mundial: enMundial, pais: paisJugador, sprite });
+  return sprite;
 }
 
 function dibujarEnemigo(ctx, e, t) {
@@ -406,9 +419,10 @@ function dibujarEnemigo(ctx, e, t) {
     ctx.strokeStyle = '#ff3b3b';
     ctx.lineWidth = 6;
     ctx.setLineDash([12, 10]);
-    ctx.beginPath();
-    ctx.moveTo(e.x, e.y);
-    ctx.lineTo(e.x + e.dirX * (e.largoAviso || 340), e.y + e.dirY * (e.largoAviso || 340));
+    ctx.beginPath(); // por el suelo, desde sus pies (por donde pasa el golpe: el contacto es con los pies)
+    const py = e.y + (e.pies ?? 0);
+    ctx.moveTo(e.x, py);
+    ctx.lineTo(e.x + e.dirX * (e.largoAviso || 340), py + e.dirY * (e.largoAviso || 340));
     ctx.stroke();
     ctx.restore();
   }
@@ -529,6 +543,25 @@ function dibujarLluvia(ctx, mundo, cam, mx, my, t) {
   }
 }
 
+// Lista de lo que se ordena por profundidad (reutilizada entre fotogramas)
+const OBSTACULO = 1;
+const ADORNO = 2;
+const RIVAL = 3;
+const JUGADOR = 4;
+const lista = [];
+const entradas = [];
+let usadas = 0;
+function ordenar(y, tipo, o) {
+  let d = entradas[usadas];
+  if (!d) { d = { y: 0, tipo: 0, o: null, f: null }; entradas.push(d); }
+  usadas += 1;
+  d.y = y;
+  d.tipo = tipo;
+  d.o = o;
+  lista.push(d);
+}
+const porSuelo = (a, b) => a.y - b.y;
+
 /**
  * Dibuja un fotograma completo.
  * @param {CanvasRenderingContext2D} ctx
@@ -571,6 +604,8 @@ export function dibujar(ctx, mundo, vista) {
   const mx = ancho / escala / 2 + 80;
   const my = alto / (escala * INC) / 2 + 80;
   const visible = (o) => Math.abs(o.x - cam.x) < mx && Math.abs(o.y - cam.y) < my;
+  /** ¿Algo de radio `m` alrededor de (x, y) puede verse? (`visible` ya deja 80 de margen) */
+  const enVista = (x, y, m) => Math.abs(x - cam.x) < mx + m && Math.abs(y - cam.y) < my + m;
 
   const area = terrenoVisible(mundo.terreno, cam.x - mx, cam.y - my, cam.x + mx, cam.y + my, 40);
   const alrededor = mundo.yaPintado ? terrenoVisible(mundo.terreno, cam.x - mx, cam.y - my, cam.x + mx, cam.y + my, 520).celdas : [];
@@ -580,34 +615,36 @@ export function dibujar(ctx, mundo, vista) {
     if (o.x + o.w / 2 < cam.x - mx - 60 || o.x - o.w / 2 > cam.x + mx + 60 || o.y + o.h / 2 < cam.y - my || o.y - o.h / 2 - o.alto > cam.y + my) continue;
     obstaculos.push(o);
   }
-  obstaculos.forEach((o) => esDeSuelo(o) && dibujarObstaculoMundo(ctx, o, amb, mundo, t));
+  for (const o of obstaculos) if (esDeSuelo(o)) dibujarObstaculoMundo(ctx, o, amb, mundo, t);
   const altos = [];
-  area.decor.forEach((d) => {
+  for (const d of area.decor) {
     if (d.tipo === 'bandera') altos.push(d);
     else if (d.tipo === 'mata' || d.tipo === 'piedras') dibujarAdorno(ctx, d, amb, t);
     else dibujarDecor(ctx, d, t);
-  });
+  }
 
-  mundo.avisosJefe.forEach((a) => dibujarAvisoJefe(ctx, a));
-  mundo.premios.forEach((p) => visible(p) && dibujarPremio(ctx, p, t));
-  mundo.gemas.forEach((g) => visible(g) && recto(ctx, g.x, g.y, () => dibujarGema(ctx, g, t)));
-  mundo.curas.forEach((c) => visible(c) && recto(ctx, c.x, c.y, () => dibujarCura(ctx, c, t)));
-  mundo.impactos.forEach((im) => dibujarImpacto(ctx, im));
-  mundo.fuegos.forEach((f) => visible(f) && dibujarFuego(ctx, f, t, mundo.efectosReducidos));
-  mundo.ondas.forEach((o) => dibujarOnda(ctx, o, t));
+  for (const a of mundo.avisosJefe) dibujarAvisoJefe(ctx, a);
+  for (const p of mundo.premios) if (visible(p)) dibujarPremio(ctx, p, t);
+  for (const g of mundo.gemas) if (visible(g)) dibujarGema(ctx, g, t, factorProf(g.y));
+  for (const c of mundo.curas) if (visible(c)) recto(ctx, c.x, c.y, () => dibujarCura(ctx, c, t));
+  for (const im of mundo.impactos) dibujarImpacto(ctx, im);
+  for (const f of mundo.fuegos) if (visible(f)) dibujarFuego(ctx, f, t, mundo.efectosReducidos);
+  for (const o of mundo.ondas) if (enVista(o.x, o.y, o.radio)) dibujarOnda(ctx, o, t);
   dibujarHabilidadesSuelo(ctx, mundo, t);
   dibujarUltrasSuelo(ctx, mundo, t);
 
-  // Rivales, jugador y obstáculos se ordenan por su «suelo»: lo que está más abajo en pantalla se dibuja delante
-  const lista = [];
-  for (const o of obstaculos) if (!esDeSuelo(o)) lista.push({ y: o.y + o.h / 2, f: () => dibujarObstaculoMundo(ctx, o, amb, mundo, t) });
-  for (const d of altos) lista.push({ y: d.y, f: () => dibujarAdorno(ctx, d, amb, t) });
+  // Rivales, jugador y obstáculos se ordenan por su «suelo»: lo que está más abajo en pantalla se dibuja delante.
+  // Las entradas de la lista se reutilizan de un fotograma a otro (sin crear cientos de objetos y funciones).
+  lista.length = 0;
+  usadas = 0;
+  for (const o of obstaculos) if (!esDeSuelo(o)) ordenar(o.y + o.h / 2, OBSTACULO, o);
+  for (const d of altos) ordenar(d.y, ADORNO, d);
   for (const e of mundo.enemigos) {
     if (!visible(e)) continue;
     const dx = j.x - e.x;
     const l = Math.hypot(dx, j.y - e.y) || 1;
     e.mx = dx / l;
-    lista.push({ y: e.y + e.r, f: () => dibujarEnemigo(ctx, e, t) });
+    ordenar(e.y + e.r, RIVAL, e);
   }
   if (mundo.ult.magia.dur > 0) { // el tiempo parado deja imágenes de ti mismo
     mundo.ult.magia.rastro.forEach((p, i, todo) => lista.push({
@@ -623,9 +660,17 @@ export function dibujar(ctx, mundo, vista) {
     }));
   }
   canteranosParaOrdenar(ctx, mundo, lista, t, recto, sombra); // presión alta
-  if (mundo.estado !== 'fin') lista.push({ y: j.y + j.r, f: () => dibujarJugador(ctx, j, t) });
-  lista.sort((a, b) => a.y - b.y);
-  for (const d of lista) d.f();
+  if (mundo.estado !== 'fin') ordenar(j.y + j.r, JUGADOR, j);
+  lista.sort(porSuelo);
+  for (let i = 0; i < lista.length; i += 1) {
+    const d = lista[i];
+    if (d.tipo === RIVAL) dibujarEnemigo(ctx, d.o, t);
+    else if (d.tipo === OBSTACULO) dibujarObstaculoMundo(ctx, d.o, amb, mundo, t);
+    else if (d.tipo === ADORNO) dibujarAdorno(ctx, d.o, amb, t);
+    else if (d.tipo === JUGADOR) dibujarJugador(ctx, d.o, t);
+    else d.f();
+  }
+  lista.length = 0;
   if (!mundo.efectosReducidos) dibujarLluvia(ctx, mundo, cam, mx, my, t);
   ctx.restore();
 
@@ -633,18 +678,25 @@ export function dibujar(ctx, mundo, vista) {
   dibujarLuz(ctx, mundo, amb, obstaculos, ancho, alto, escala, aPantalla, t);
 
   camara();
-  // Habilidades y efectos (ver render-habilidades.js)
+  // Habilidades y efectos (ver render-habilidades.js). Lo que cae fuera de la pantalla no se pinta
+  // (los balones sí apuntan su rastro, para que la estela no salte al volver a verse).
   const reducidos = mundo.efectosReducidos;
-  mundo.tajos.forEach((tj) => dibujarTajo(ctx, tj));
-  j.banderines.forEach((b) => dibujarBanderin(ctx, b, t, j, recto));
-  mundo.proyectiles.forEach((p) => dibujarProyectil(ctx, p, t, reducidos, recto, sombra));
-  mundo.impactos.forEach((im) => dibujarImpactoAire(ctx, im, t, recto));
+  for (const tj of mundo.tajos) if (enVista(tj.x, tj.y, tj.largo + 20)) dibujarTajo(ctx, tj);
+  for (const b of j.banderines) dibujarBanderin(ctx, b, t, j, recto);
+  for (const p of mundo.proyectiles) {
+    if (enVista(p.x, p.y, 140)) dibujarProyectil(ctx, p, t, reducidos, recto, sombra);
+    else seguirRastro(p, reducidos);
+  }
+  for (const im of mundo.impactos) dibujarImpactoAire(ctx, im, t, recto);
   dibujarUltrasAire(ctx, mundo, t);
-  mundo.disparosEnemigos.forEach((d) => dibujarDisparoEnemigo(ctx, d, recto, sombra));
-  mundo.rayos.forEach((r) => dibujarRayo(ctx, r, t));
-  mundo.tarjetas.forEach((tr) => recto(ctx, tr.x, tr.y, () => dibujarTarjeta(ctx, tr)));
+  for (const d of mundo.disparosEnemigos) {
+    if (enVista(d.x, d.y, 120)) dibujarDisparoEnemigo(ctx, d, recto, sombra);
+    else seguirRastro(d, reducidos, true);
+  }
+  for (const r of mundo.rayos) if (enVista(r.x, r.y, r.radio + 440)) dibujarRayo(ctx, r, t);
+  for (const tr of mundo.tarjetas) if (enVista(tr.x, tr.y, 60)) recto(ctx, tr.x, tr.y, () => dibujarTarjeta(ctx, tr));
   dibujarHabilidadesAire(ctx, mundo, t, reducidos, recto);
-  dibujarParticulas(ctx, mundo.particulas);
+  dibujarParticulas(ctx, mundo.particulas, cam.x - mx, cam.y - my, cam.x + mx, cam.y + my);
   dibujarTextos(ctx, mundo.textos, recto, reducidos);
   ctx.restore();
 

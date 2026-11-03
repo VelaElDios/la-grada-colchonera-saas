@@ -6,6 +6,9 @@ export const MUNDO = {
   duracionOleada: 30, // segundos por oleada
   distanciaAparicion: 470, // los enemigos aparecen fuera de la pantalla, a esta distancia del jugador
   distanciaDescarte: 900, // si un enemigo se queda atrás, se recoloca delante
+  distanciaDescarteJefe: 1600, // los jefes también, pero más lejos (fuera de cualquier pantalla): si no, se quedaban perdidos
+  atasco: 5, // segundos sin avanzar (lejos de ti) para dar por atascado a un rival o a un jefe y recolocarlo
+  distanciaAtasco: 450, // ...siempre que esté a más de esta distancia (no se recoloca a quien tienes delante)
   maxEnemigos: 320,
   maxGemas: 450,
   paso: 1 / 60, // tamaño del paso de simulación
@@ -43,7 +46,18 @@ export const MOVIMIENTO = {
  * Con el terreno se choca con los pies: en la vista 3/4 el muñeco se dibuja de pie sobre su sombra, así que la
  * colisión es un círculo `alto`·r por debajo del centro y de radio `radio`·r (encaja con lo que se ve).
  */
-export const PIES = { alto: 1.0, radio: 0.65 };
+export const PIES = { alto: 1.15, radio: 0.8 };
+
+/**
+ * Dónde se le puede dar a un muñeco con un balón (o con algo que vuela, como los banderines). Los muñecos chibi
+ * de 32×32 se dibujan con `alto` = 3,1·r de pie sobre sus pies (render.js), así que en pantalla el muñeco queda
+ * casi entero POR ENCIMA de (x, y): la cabeza, enorme, sobresalía del círculo de radio r y los balones la
+ * atravesaban sin hacer nada. Son dos círculos (en unidades de r, `y` hacia abajo): la cabeza y el cuerpo.
+ */
+export const CUERPO = {
+  cabeza: { y: -1.2, radio: 1.1 },
+  tronco: { y: 0.75, radio: 0.95 },
+};
 
 export const TERRENO = {
   celda: 640, // una parcela por celda
@@ -197,6 +211,30 @@ export const ELITES = {
   },
 };
 export const minutosDeOleada = (oleada) => (oleada - 1) / 2;
+
+// Menos rivales que antes, pero cada uno más duro (y con élites): la tensión viene de la calidad, no de la cantidad.
+// (Aquí y no en oleadas.js porque el servidor también las usa para validar las bajas de una partida.)
+export const intervaloAparicion = (oleada) => Math.max(0.25, 1.7 - 0.072 * (oleada - 1));
+export const gruposPorAparicion = (oleada) => 1 + Math.floor((oleada - 1) / 4);
+
+/**
+ * Cuántos rivales pueden haber salido como mucho en `tiempo` segundos de partida: la aparición continua,
+ * los cercos, las manadas y los jefes (con sus escoltas e invocaciones), con margen. El servidor rechaza
+ * una partida que diga haber eliminado más; antes usaba 20 por segundo, que se quedaba corto pasado el
+ * minuto 20 (ahí salen hasta 50 por segundo) y hacía que no se guardaran las partidas largas.
+ */
+export function bajasPosibles(tiempo) {
+  const dur = MUNDO.duracionOleada;
+  let total = 0;
+  for (let o = 1; (o - 1) * dur < tiempo; o += 1) {
+    const segundos = Math.min(dur, tiempo - (o - 1) * dur);
+    total += Math.ceil(segundos / intervaloAparicion(o) + 1) * gruposPorAparicion(o); // aparición continua
+    if (o >= 2 && o % 3 === 1) total += Math.min(110, 12 + 3 * o); // cerco
+    if (o >= 2 && o % 4 === 2) total += 10 + o; // manada
+    if (o >= 4 && o % 4 === 0) total += 2 * 40; // jefes, escolta e invocaciones
+  }
+  return Math.ceil(total * 1.5) + 200;
+}
 
 // ---------------------------------------------------------------------------------------------
 // Personajes jugables. Las estadísticas dependen SOLO de la posición (todos los porteros son iguales,

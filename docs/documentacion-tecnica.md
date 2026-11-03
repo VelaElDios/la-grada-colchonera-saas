@@ -136,7 +136,7 @@ Cada requisito sale de uno o varios PBIs del Sprint 2 (sus historias de usuario 
 | RNF-01 | **Seguridad** de credenciales y sesiones | Hash bcrypt, cookie `httpOnly` + `secure` + `sameSite`, regeneración de la sesión, permisos en el servidor, consultas parametrizadas (sección 8) |
 | RNF-02 | **Secretos fuera del código** | Variables de entorno; Secret Manager en producción; la app no arranca si falta un secreto obligatorio |
 | RNF-03 | **Separación en capas** | API → lógica → datos/integraciones, con inyección de dependencias (sección 5) |
-| RNF-04 | **Pruebas automáticas** y CI obligatorio | 305 pruebas con `node:test`; las ramas protegidas exigen el CI en verde |
+| RNF-04 | **Pruebas automáticas** y CI obligatorio | 322 pruebas con `node:test`; las ramas protegidas exigen el CI en verde |
 | RNF-05 | **Despliegue continuo** en una URL pública | Cloud Run (principal) y Render (alternativo), sin intervención manual |
 | RNF-06 | **Disponibilidad y coste** | Escala a cero (capas gratuitas y créditos de educación); si una versión no arranca, sigue sirviendo la anterior |
 | RNF-07 | **Accesibilidad** | HTML semántico, foco gestionado al navegar, `aria-live` en los avisos, errores de formulario enlazados con `aria-describedby`, manejo con teclado, `prefers-reduced-motion` |
@@ -1069,7 +1069,7 @@ Cada fase es una etiqueta del Sprint 2 en DoneTonic (sección 4.4).
 | `juego-habilidades-nuevas.test.js` | 8 | Fase 7: carambola, presión alta, la ola, fuera de juego, ruleta, pasivas y combinaciones nuevas |
 | `juego-mapa.test.js` | 5 | Fase 7: sombras coherentes, edificios en su rectángulo de colisión, público animado, texturas repartidas entre fotogramas |
 | `juego-menu.test.js` | 7 | Fase 7: menú animado, tarjetas y consejos del míster, movimiento reducido, pausa con árbol de habilidades y salida con confirmación |
-| **Total** | **305** | 140 del Sprint 1 (cuentas, API, datos, seguridad, prueba técnica), 136 del juego hasta la Fase 6 y 29 de la Fase 7 |
+| **Total** | **322** | 140 del Sprint 1 (cuentas, API, datos, seguridad, prueba técnica), 136 del juego hasta la Fase 6 y 46 de la Fase 7 (incluidos los arreglos de guardado, hitboxes y rendimiento) |
 
 ### 10.3 Comprobaciones manuales y visuales
 
@@ -1141,7 +1141,7 @@ flowchart LR
 | PBIs / tareas del Sprint 2 | 29 / 50 |
 | Pull requests | Más de 50 (uno por tarea, uno por cierre de hito y uno por fase del juego) |
 | Releases | `hito-1`, `hito-2`, `hito-3`, `hito-4`, `sprint-1` |
-| Pruebas automáticas | 305 (+ el recorrido con PostgreSQL real en el CI) |
+| Pruebas automáticas | 322 (+ el recorrido con PostgreSQL real en el CI) |
 | Endpoints de la API | 23 |
 | Migraciones | 5 |
 | Líneas de código del backend (`src/`, con SQL) | ~2.300 |

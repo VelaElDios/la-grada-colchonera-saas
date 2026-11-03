@@ -1,6 +1,6 @@
 // Daño, muertes, recompensas y efectos visuales sencillos (números flotantes y partículas).
 import {
-  MUNDO, EQUIPOS, JEFES, MOVIMIENTO, CURAS, ELITES, AYUDA_INICIAL, resistenciaCurtidos,
+  MUNDO, EQUIPOS, JEFES, MOVIMIENTO, CURAS, ELITES, AYUDA_INICIAL, CUERPO, resistenciaCurtidos,
 } from './config.js';
 import { explosionDeFuego } from './ultras.js';
 import {
@@ -16,13 +16,42 @@ export function crearParticulas(mundo, x, y, color, cantidad = 6, velocidad = 12
   emitir(mundo, x, y, color, cantidad, velocidad);
 }
 
+/**
+ * ¿Toca el círculo (x, y, r) lo que se ve del rival `e`? Para balones y demás cosas que vuelan: se mira la
+ * cabeza y el cuerpo del muñeco (ver CUERPO en config.js), no solo un círculo en su centro.
+ */
+export function tocaCuerpo(e, x, y, r = 0) {
+  const { cabeza, tronco } = CUERPO;
+  const dx2 = (x - e.x) ** 2;
+  if (dx2 + (y - e.y - cabeza.y * e.r) ** 2 <= (cabeza.radio * e.r + r) ** 2) return true;
+  if (dx2 + (y - e.y - tronco.y * e.r) ** 2 <= (tronco.radio * e.r + r) ** 2) return true;
+  return dx2 + (y - e.y) ** 2 <= (e.r + r) ** 2; // el cuello (entre los dos), como antes
+}
+
 /** Suelta una gema de experiencia; si hay demasiadas, la suma a una existente. */
 export function soltarGema(mundo, x, y, valor) {
+  const gx = x + mundo.rng.rango(-6, 6);
+  const gy = y + mundo.rng.rango(-6, 6);
   if (mundo.gemas.length >= MUNDO.maxGemas) {
-    mundo.rng.elegir(mundo.gemas).valor += valor;
+    // Lleno: la gema más lejana del jugador (la que se ha quedado atrás) se trae aquí con su valor. Antes el valor
+    // iba a una gema al azar, casi siempre lejos y fuera de la pantalla, y parecía que los rivales dejaban de soltar
+    // experiencia en cuanto te alejabas de donde habías luchado.
+    const j = mundo.jugador;
+    let lejana = mundo.gemas[0];
+    let max = -1;
+    for (let i = 0; i < mundo.gemas.length; i += 1) {
+      const g = mundo.gemas[i];
+      if (g.atraida || g.recogida) continue;
+      const d2 = (g.x - j.x) ** 2 + (g.y - j.y) ** 2;
+      if (d2 > max) { max = d2; lejana = g; }
+    }
+    lejana.valor += valor;
+    lejana.x = gx;
+    lejana.y = gy;
+    lejana.atraida = false;
     return;
   }
-  mundo.gemas.push({ x: x + mundo.rng.rango(-6, 6), y: y + mundo.rng.rango(-6, 6), valor, atraida: false });
+  mundo.gemas.push({ x: gx, y: gy, valor, atraida: false });
 }
 
 export function curar(mundo, cantidad) {

@@ -18,6 +18,8 @@ export {
 // ---------------------------------------------------------------------------------------------
 
 let capaLuz = null;
+/** La capa de oscuridad de la noche se pinta a esta fracción de la resolución de la pantalla. */
+export const REDUCCION_LUZ = 4;
 const halos = new Map();
 
 /** Halo redondo (degradado del color a transparente) pintado una sola vez y reutilizado con drawImage. */
@@ -50,7 +52,7 @@ function lucesDe(mundo, obstaculos, t) {
     else if (o.tipo === 'kiosco' || o.tipo === 'tienda') luces.push({ x: o.x, y: o.y + o.h / 2 + 30, r: 140, k: 0.65, color: 'calida' });
     else if (o.tipo === 'grada') { // bengalas en la grada
       for (let i = 0; i < 3; i += 1) luces.push({ x: o.x + (hash(i, o.semilla) - 0.5) * o.w * 0.8, y: o.y + (hash(o.semilla, i) - 0.5) * o.h * 0.8, r: 70 + 20 * Math.sin(t * 7 + i), k: 0.7, color: 'bengala' });
-    } else if (o.tipo === 'monumento') luces.push({ x: o.x, y: o.y, r: 200, k: 0.78, color: 'oro' });
+    } else if (o.tipo === 'monumento') luces.push({ x: o.x, y: o.y - o.alto / 2, r: 200, k: 0.78, color: 'oro' }); // centro del dibujo
   }
   for (const p of mundo.proyectiles) if (luces.length < 60) luces.push({ x: p.x, y: p.y, r: 60, k: 0.5 });
   return luces;
@@ -100,17 +102,23 @@ export function dibujarLuz(ctx, mundo, amb, obstaculos, ancho, alto, escala, aPa
     ctx.restore();
   }
   if (pal.noche > 0) {
-    if (!capaLuz || capaLuz.width !== Math.ceil(ancho) || capaLuz.height !== Math.ceil(alto)) {
+    // La capa de oscuridad solo tiene degradados suaves: se pinta a 1/REDUCCION_LUZ de resolución y se estira con
+    // suavizado al ponerla encima (16 veces menos píxeles que rellenar con cada agujero de luz).
+    const w = Math.max(1, Math.ceil(ancho / REDUCCION_LUZ));
+    const h = Math.max(1, Math.ceil(alto / REDUCCION_LUZ));
+    if (!capaLuz || capaLuz.width !== w || capaLuz.height !== h) {
       capaLuz = document.createElement('canvas');
-      capaLuz.width = Math.ceil(ancho);
-      capaLuz.height = Math.ceil(alto);
+      capaLuz.width = w;
+      capaLuz.height = h;
     }
     const c = capaLuz.getContext('2d');
+    c.setTransform(1, 0, 0, 1, 0, 0);
     c.globalCompositeOperation = 'source-over';
     c.globalAlpha = 1;
-    c.clearRect(0, 0, capaLuz.width, capaLuz.height);
+    c.clearRect(0, 0, w, h);
     c.fillStyle = amb.clave === 'mundial' ? `rgba(30,12,52,${pal.noche})` : `rgba(6,14,48,${pal.noche})`;
-    c.fillRect(0, 0, capaLuz.width, capaLuz.height);
+    c.fillRect(0, 0, w, h);
+    c.setTransform(1 / REDUCCION_LUZ, 0, 0, 1 / REDUCCION_LUZ, 0, 0);
     c.globalCompositeOperation = 'destination-out';
     const agujero = halo('rgba(0,0,0,1)');
     const luces = lucesDe(mundo, obstaculos, t);
@@ -121,7 +129,10 @@ export function dibujarLuz(ctx, mundo, amb, obstaculos, ancho, alto, escala, aPa
       c.globalAlpha = l.k;
       c.drawImage(agujero, sx - r, sy - r * 0.8, r * 2, r * 1.6);
     }
-    ctx.drawImage(capaLuz, 0, 0, ancho, alto);
+    const suave = ctx.imageSmoothingEnabled;
+    ctx.imageSmoothingEnabled = true;
+    ctx.drawImage(capaLuz, 0, 0, w * REDUCCION_LUZ, h * REDUCCION_LUZ);
+    ctx.imageSmoothingEnabled = suave;
     // Un toque de color en las luces (azul en Champions, dorado en el Mundial) y el halo de los focos
     const colores = COLOR_LUZ[amb.clave] ?? COLOR_LUZ.champions;
     ctx.save();

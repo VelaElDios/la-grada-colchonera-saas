@@ -1142,3 +1142,7 @@ kbd { display: inline-block; min-width: 1.6em; padding: 1px 6px; margin-right: 2
 }
 .rama .req--no { text-decoration: none; opacity: 0.6; }
 .nodo .pips { display: flex; grid-auto-flow: column; }
+
+/* Una partida que no se ha podido guardar: se dice a la vista (antes solo salía en la consola) */
+.aviso-guardado { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2); margin: 0; padding: var(--s-2) var(--s-3); border-radius: var(--r-sm); background: rgb(251 191 36 / 0.16); color: var(--ambar); font-size: var(--t-xs); }
+.aviso-guardado .btn { margin-left: auto; }

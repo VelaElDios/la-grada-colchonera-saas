@@ -194,9 +194,16 @@ export function htmlRankingGrada(datos, avatar = () => null) {
 export function htmlRecompensas(r, nombreJugador) {
   if (!r) return '';
   const lineas = [];
+  // Primero, lo que se ha guardado: antes, sin puntos ni fichas nuevas, no se veía que las bajas hubieran contado
+  const { bajas, personaje } = r.recompensas;
+  if (Number.isInteger(bajas)) {
+    const siguiente = r.perfil?.jugadores?.[personaje]?.siguientePunto;
+    const falta = siguiente ? ` (faltan ${siguiente.faltan} para su próximo punto)` : '';
+    lineas.push(`<li>${icono('calavera', 18)} <span>Guardado: <b>${bajas}</b> ${bajas === 1 ? 'rival eliminado' : 'rivales eliminados'} y <b>${r.recompensas.jefes}</b> ${r.recompensas.jefes === 1 ? 'jefe' : 'jefes'} para ${esc(nombreJugador)}${falta}</span></li>`);
+  }
   if (r.recompensas.puntosNuevos > 0) lineas.push(`<li>${icono('mas', 18)} <b>+${r.recompensas.puntosNuevos}</b> ${r.recompensas.puntosNuevos === 1 ? 'punto' : 'puntos'} de entrenamiento para ${esc(nombreJugador)}</li>`);
   if (r.recompensas.fichasNuevas > 0) lineas.push(`<li>${icono('camiseta', 18)} <b>+${r.recompensas.fichasNuevas}</b> ${r.recompensas.fichasNuevas === 1 ? 'ficha de contrato' : 'fichas de contrato'}: ¡ve a Contratar!</li>`);
   if (r.record) lineas.push(`<li>${icono('trofeo', 18)} <b>¡Nuevo récord personal en el ranking de la grada!</b></li>`);
-  if (!lineas.length) lineas.push(`<li>${icono('calavera', 18)} ${r.recompensas.jefes} jefes: ${JEFES_POR_PUNTO} con el mismo jugador dan un punto y ${JEFES_POR_FICHA} dan una ficha.</li>`);
+  if (lineas.length <= 1) lineas.push(`<li>${icono('trofeo', 18)} Cada ${JEFES_POR_PUNTO} jefes con el mismo jugador dan un punto y cada ${JEFES_POR_FICHA} dan una ficha.</li>`);
   return `<h4 class="panel__subtitulo">Tu club</h4><ul class="recompensas">${lineas.join('')}</ul>`;
 }

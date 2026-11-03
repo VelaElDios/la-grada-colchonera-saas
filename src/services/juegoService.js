@@ -13,6 +13,11 @@ const RUTA_JUEGO = path.join(__dirname, '..', '..', 'public', 'js', 'game');
 const MAX_REINTENTOS = 4;
 const TIEMPO_MAXIMO = 4 * 3600; // s: ninguna partida razonable dura más
 const MARGEN_RELOJ = 15; // s de margen entre el reloj del juego y el del servidor
+// Partidas empezadas y aún sin resultado que se guardan a la vez. Antes solo había una: si empezabas otra (otra
+// pestaña, o «jugar otra vez» con la red lenta y el resultado de la anterior todavía en camino), la anterior dejaba
+// de estar en curso y su resultado se rechazaba (404): ni bajas, ni jefes, ni ranking.
+const MAX_EN_CURSO = 3;
+const MAX_JUGADAS = 6; // intervalos de las últimas partidas terminadas, para no cobrar dos partidas a la vez
 
 // El juego es un módulo ES del frontend: el servidor lo carga una vez, bajo demanda
 let reglasPromesa;
@@ -25,6 +30,15 @@ function cargarReglas() {
     ]).then(([club, config, logros]) => ({ club, config, logros }));
   }
   return reglasPromesa;
+}
+
+/** Partidas en curso del perfil (las antiguas guardaban una sola en `partidaActual`): pasa a la lista nueva. */
+function enCurso(d) {
+  const lista = Array.isArray(d.partidasEnCurso) ? d.partidasEnCurso : [];
+  if (d.partidaActual) lista.push(d.partidaActual);
+  delete d.partidaActual;
+  d.partidasEnCurso = lista;
+  return lista;
 }
 
 const azarSeguro = () => randomInt(0, 1_000_000) / 1_000_000;
@@ -114,7 +128,10 @@ function createJuegoService({
       const { datos, resultado } = await conPerfil(user, (d) => {
         if (typeof personaje !== 'string' || !d.jugadores[personaje]) throw new ValidationError('Ese jugador no está en tu plantilla');
         const partidaId = randomUUID();
-        d.partidaActual = { id: partidaId, personaje, entrenador, inicio: ahora() };
+        // Las que llevan más de TIEMPO_MAXIMO abiertas ya no van a llegar; de las demás se quedan las más recientes
+        const vivas = enCurso(d).filter((p) => ahora() - p.inicio < TIEMPO_MAXIMO * 1000);
+        vivas.push({ id: partidaId, personaje, entrenador, inicio: ahora() });
+        d.partidasEnCurso = vivas.slice(-MAX_EN_CURSO);
         return { partidaId, stats: d.jugadores[personaje].stats };
       });
       return { partidaId: resultado.partidaId, stats: resultado.stats, perfil: await reglas(datos) };
@@ -130,13 +147,23 @@ function createJuegoService({
       let record = false;
       let partida;
       const { datos, resultado } = await conPerfil(user, (d, { club, config, logros }) => {
-        const actual = d.partidaActual;
-        if (!actual || actual.id !== partidaId) throw new NotFoundError('No hay una partida en curso con ese identificador');
+        const lista = enCurso(d);
+        const actual = lista.find((p) => p.id === partidaId);
+        if (!actual) throw new NotFoundError('No hay una partida en curso con ese identificador');
         const transcurrido = (ahora() - actual.inicio) / 1000;
         if (tiempo > TIEMPO_MAXIMO || tiempo > transcurrido + MARGEN_RELOJ) throw new ValidationError('El tiempo no coincide con la partida');
-        if (jefes > 3 + tiempo / 50 || nivel > 8 + tiempo / 3 || bajas > 20 * tiempo + 50) {
+        if (jefes > 3 + tiempo / 50 || nivel > 8 + tiempo / 3 || bajas > config.bajasPosibles(tiempo)) {
           throw new ValidationError('El resultado no es creíble');
         }
+        // Con varias en curso, dos partidas no pueden haberse jugado a la vez: lo jugado en cada una cabe, como
+        // mucho, entre su inicio y su inicio + tiempo, y una partida de verdad empieza cuando acaba la anterior.
+        const desde = actual.inicio;
+        const hasta = actual.inicio + tiempo * 1000;
+        const jugadas = Array.isArray(d.jugadas) ? d.jugadas : [];
+        if (jugadas.some(([a, b]) => Math.min(b, hasta) - Math.max(a, desde) > MARGEN_RELOJ * 1000)) {
+          throw new ValidationError('Esa partida coincide en el tiempo con otra que ya has terminado');
+        }
+        d.jugadas = [...jugadas, [desde, hasta]].slice(-MAX_JUGADAS);
         const ficha = d.jugadores[actual.personaje];
         const puntosAntes = club.puntosLibres(ficha);
         const fichasAntes = club.fichasDisponibles(d);
@@ -145,7 +172,7 @@ function createJuegoService({
         ficha.partidas = (ficha.partidas || 0) + 1;
         d.jefesTotal += jefes;
         d.partidas += 1;
-        delete d.partidaActual;
+        d.partidasEnCurso = lista.filter((p) => p !== actual);
         partida = actual;
         // Logros: los de la partida que se pueden creer con lo que sabe el servidor, y los del club
         const r = { tiempo, nivel, jefes, bajas, personaje: actual.personaje, entrenador: actual.entrenador };
@@ -153,6 +180,8 @@ function createJuegoService({
         return {
           logrosNuevos,
           jefes,
+          bajas, // lo que se ha sumado al jugador: el final de la partida lo enseña para que se vea que ha contado
+          personaje: actual.personaje,
           puntosNuevos: club.puntosLibres(ficha) - puntosAntes,
           fichasNuevas: club.fichasDisponibles(d) - fichasAntes,
         };

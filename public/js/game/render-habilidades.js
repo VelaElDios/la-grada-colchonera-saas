@@ -91,6 +91,11 @@ function apuntarRastro(p, largo) {
   return r;
 }
 
+/** Apunta el rastro de un balón que no se pinta (fuera de la pantalla), con el mismo largo que al pintarlo. */
+export function seguirRastro(p, reducidos, enemigo = false) {
+  apuntarRastro(p, enemigo ? 5 : reducidos ? 3 : 4 + (p.nivel ?? 1) * 2 + (p.grande ? 4 : 0));
+}
+
 /** Estela en tres tramos (de más ancha y opaca a más fina y transparente). */
 function estela(ctx, p, puntos, color, claro, ancho) {
   const n = puntos.length / 2;
@@ -534,11 +539,12 @@ export function dibujarEscudo(ctx, j, t) {
 
 // --- Partículas y números de daño ----------------------------------------------------------------
 
-export function dibujarParticulas(ctx, lista) {
+/** Partículas que caen dentro del rectángulo [x0, x1] × [y0, y1] del mundo (sin él, todas). */
+export function dibujarParticulas(ctx, lista, x0 = -Infinity, y0 = -Infinity, x1 = Infinity, y1 = Infinity) {
   // Primero los cuadraditos (restos), luego chispas y destellos sumando luz
   for (let i = 0; i < lista.length; i += 1) {
     const p = lista[i];
-    if (p.forma !== 'cuadro' || p.vida <= 0) continue;
+    if (p.forma !== 'cuadro' || p.vida <= 0 || p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
     const k = p.vida / p.total;
     const r = p.r * (0.45 + 0.55 * k);
     ctx.globalAlpha = Math.min(1, k * 1.6);
@@ -550,7 +556,7 @@ export function dibujarParticulas(ctx, lista) {
   ctx.lineCap = 'round';
   for (let i = 0; i < lista.length; i += 1) {
     const p = lista[i];
-    if (p.vida <= 0 || p.forma === 'cuadro') continue;
+    if (p.vida <= 0 || p.forma === 'cuadro' || p.x < x0 || p.x > x1 || p.y < y0 || p.y > y1) continue;
     const k = p.vida / p.total;
     ctx.globalAlpha = Math.min(1, k * 1.5);
     if (p.forma === 'chispa') {
@@ -588,6 +594,7 @@ const FUENTE = '"Plus Jakarta Sans", system-ui, sans-serif';
  * «¡Fuera de juego!») van en blanco con su color de borde.
  */
 export function dibujarTextos(ctx, textos, recto, reducidos) {
+  if (!textos.length) return;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
   ctx.lineJoin = 'round';
@@ -600,34 +607,27 @@ export function dibujarTextos(ctx, textos, recto, reducidos) {
     const deriva = (tx.dx ?? 0) * (1 - (1 - edad) ** 2);
     const x = tx.x + deriva;
     ctx.globalAlpha = Math.min(1, k * 2.4);
+    const tam = tx.dano
+      ? Math.round(tx.critico ? 22 + Math.min(6, Math.log10(tx.valor + 1) * 2) : 14 + Math.min(7, Math.log10(tx.valor + 1) * 2.4))
+      : 15;
+    const borde = tx.dano && tx.critico ? 5 : 4;
+    const colorBorde = tx.dano && tx.critico ? '#5a0a12' : 'rgba(12,8,28,.92)';
     recto(ctx, x, tx.y, () => {
-      ctx.save();
       ctx.translate(x, tx.y);
       ctx.scale(salto, salto);
-      if (tx.dano) {
-        const tam = Math.round(tx.critico ? 22 + Math.min(6, Math.log10(tx.valor + 1) * 2) : 14 + Math.min(7, Math.log10(tx.valor + 1) * 2.4));
-        if (tx.critico) {
-          ctx.rotate(Math.sin(edad * 30) * 0.06 * (1 - edad));
-          ctx.fillStyle = '#ff7a1a';
-          ctx.globalAlpha *= 0.85;
-          estrellita(ctx, 0, 0, tam * 0.95, edad * 3);
-          ctx.globalAlpha = Math.min(1, k * 2.4);
-        }
-        ctx.font = `800 ${tam}px ${FUENTE}`;
-        ctx.lineWidth = tx.critico ? 5 : 4;
-        ctx.strokeStyle = tx.critico ? '#5a0a12' : 'rgba(12,8,28,.92)';
-        ctx.strokeText(tx.texto, 0, 0);
-        ctx.fillStyle = tx.color;
-        ctx.fillText(tx.texto, 0, 0);
-      } else {
-        ctx.font = `800 15px ${FUENTE}`;
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = 'rgba(12,8,28,.92)';
-        ctx.strokeText(tx.texto, 0, 0);
-        ctx.fillStyle = tx.color;
-        ctx.fillText(tx.texto, 0, 0);
+      if (tx.dano && tx.critico) {
+        ctx.rotate(Math.sin(edad * 30) * 0.06 * (1 - edad));
+        ctx.fillStyle = '#ff7a1a';
+        ctx.globalAlpha *= 0.85;
+        estrellita(ctx, 0, 0, tam * 0.95, edad * 3);
+        ctx.globalAlpha = Math.min(1, k * 2.4);
       }
-      ctx.restore();
+      ctx.font = `800 ${tam}px ${FUENTE}`;
+      ctx.lineWidth = borde;
+      ctx.strokeStyle = colorBorde;
+      ctx.strokeText(tx.texto, 0, 0);
+      ctx.fillStyle = tx.color;
+      ctx.fillText(tx.texto, 0, 0);
     });
   }
   ctx.globalAlpha = 1;

@@ -267,6 +267,7 @@ test('las habilidades nuevas de los jefes existen: espiral, muro, salto de Crist
     const { m, mundo } = await mundoLimpio(30 + indice * 4 + fase);
     const jefe = crearJefe(indice, 300, 0, 5);
     mundo.enemigos.push(jefe);
+    jefe.vidaMax *= 20; // aguanta lo que dura la prueba: aquí se miran sus habilidades, no cuánto tarda en caer
     jefe.vida = jefe.vidaMax * [1, 0.5, 0.2][fase - 1];
     const visto = {};
     for (let i = 0; i < segundos * 60; i++) {
