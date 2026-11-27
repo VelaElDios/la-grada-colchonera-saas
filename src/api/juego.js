@@ -19,9 +19,14 @@ function createJuegoRouter({ juegoService }) {
     res.json(await juegoService.finalizarPartida(req.user, req.params.id, req.body));
   });
 
-  // Gasta una ficha de contrato
+  // Gasta una ficha de contrato: { pack } opcional (atleti por defecto, o alba para el DLC)
   router.post('/contratar', async (req, res) => {
-    res.json(await juegoService.contratar(req.user));
+    res.json(await juegoService.contratar(req.user, req.body ?? {}));
+  });
+
+  // Activa un DLC (alba): el club recibe su equipo inicial
+  router.post('/packs/:pack/activar', async (req, res) => {
+    res.json(await juegoService.activarPack(req.user, req.params.pack));
   });
 
   // Gasta un punto de entrenamiento: { personaje, estadistica }

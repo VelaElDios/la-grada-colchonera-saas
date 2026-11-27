@@ -1,11 +1,13 @@
 // Logros (con un dato curioso de la historia del Atleti cada uno) y las equipaciones que desbloquean.
 // Es lógica PURA (sin DOM ni red): la usa el cliente para detectarlos durante la partida y el servidor para
 // guardarlos en la cuenta (comprueba lo que puede con su propio reloj y los datos de la partida).
+// Los del DLC del Albacete Balompié (y sus equipaciones) están en pack-alba.js y se suman aquí.
 //
 // Hay dos tipos:
 //  · de partida: se consiguen jugando (`comprobar(r)` con el resumen de la partida; `servidor(r)` es la parte
 //    que el servidor puede verificar: tiempo, jefes, bajas, jugador y entrenador);
 //  · de club: dependen de tu plantilla (`club(perfil)`), los calcula el servidor al fichar o al jugar.
+import { EQUIPACIONES_ALBA, LOGROS_ALBA } from './pack-alba.js';
 
 /** Equipaciones (camiseta, pantalón y medias). La primera es la de cada jugador; el resto se desbloquean con logros. */
 export const EQUIPACIONES = {
@@ -46,7 +48,13 @@ export const EQUIPACIONES = {
     nombre: 'El Pupas', descripcion: 'Gris tristeza con aros rojos. Para reírse de uno mismo.',
     kit: { camiseta: { c: '#8a8f99', c2: '#c8102e', p: 'aros' }, pantalon: '#5a5f6b', medias: '#8a8f99' },
   },
+  ...EQUIPACIONES_ALBA, // las del DLC del Alba (solo para sus jugadores)
 };
+// La primera vale para todos (es la de cada jugador); las demás son de un pack.
+Object.entries(EQUIPACIONES).forEach(([k, e]) => { if (k !== 'primera') e.pack ??= 'atleti'; });
+
+/** ¿Puede ponerse un jugador de `pack` esta equipación? */
+export const equipacionDePack = (clave, pack) => clave === 'primera' || (EQUIPACIONES[clave]?.pack ?? 'atleti') === pack;
 
 const con = (...claves) => (r) => claves.includes(r.personaje);
 const ambiente = (k) => (r) => (r.ambiente ?? 0) >= k;
@@ -204,10 +212,11 @@ export const LOGROS = {
     club: (p) => Object.keys(p.jugadores).length >= 20, camiseta: 'centenario',
   },
   leyendas: {
-    nombre: 'Paseo de Leyendas', icono: 'trofeo', como: 'Ficha a las 8 leyendas.', tipo: 'club',
+    nombre: 'Paseo de Leyendas', icono: 'trofeo', como: 'Ficha a las 8 leyendas del Atleti.', tipo: 'club',
     dato: 'Alrededor del Metropolitano, el Paseo de Leyendas recuerda a los jugadores con más de cien partidos en el club.',
-    club: (p, personajes) => Object.keys(personajes).filter((k) => personajes[k].rareza === 'leyenda').every((k) => p.jugadores[k]),
+    club: (p, personajes) => Object.keys(personajes).filter((k) => personajes[k].rareza === 'leyenda' && (personajes[k].pack ?? 'atleti') === 'atleti').every((k) => p.jugadores[k]),
   },
+  ...LOGROS_ALBA, // DLC del Albacete Balompié
 };
 
 /** Logros de partida que cumple un resumen `r` (lo que ha pasado en la partida). */

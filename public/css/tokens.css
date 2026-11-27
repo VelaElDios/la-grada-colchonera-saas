@@ -35,6 +35,19 @@
   --borde-fuerte: rgb(255 255 255 / 0.24);
   --foco: #7aa2ff;
 
+  /* Colores de marca que los estilos usaban escritos a mano: ahora son variables con el MISMO valor, para que
+     un tema de mod (Ajustes → Mods, ver css/mod-albacete.css) pueda cambiarlos sin tocar cada regla. */
+  --rojo-rgb: 212 21 47;        /* = --rojo, para usarlo con transparencia: rgb(var(--rojo-rgb) / 0.5) */
+  --rojo-club-rgb: 200 16 46;   /* rojo de la camiseta (#c8102e) */
+  --acento: #ff4d63;            /* rojo claro de los acentos del juego */
+  --acento-rgb: 255 77 99;
+  --marino: #1b2a5c;            /* azul del pantalón */
+  --marino-vivo: #1f2c78;
+  --noche-rgb: 7 11 34;         /* = --azul-900 */
+  --velo-rgb: 4 7 20;           /* fondo de las capas que oscurecen (pantallas, diálogos) */
+  --superficie-rgb: 17 26 68;   /* = --azul-700 */
+  --fondo-rgb: 11 18 48;        /* = --azul-800 */
+
   /* Tipografía */
   --fuente: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --t-xs: 0.8125rem;

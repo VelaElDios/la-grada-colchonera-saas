@@ -1,7 +1,9 @@
 // Reglas del CLUB (la progresión que se guarda en la cuenta): plantilla, fichas de contrato y entrenamiento.
 // Es lógica PURA (sin DOM ni red): la usa el servidor para validar y repartir y el cliente para mostrar.
 // El servidor es quien manda: aquí solo se definen las reglas y las cuentas.
-import { PERSONAJES, RAREZAS } from './config.js';
+import {
+  PERSONAJES, RAREZAS, PACKS, PACK_BASE, packDe, jugadoresDePack,
+} from './config.js';
 
 export const ESTADISTICAS = ['vida', 'defensa', 'disparo', 'suerte'];
 export const ESTADISTICA_NOMBRES = {
@@ -54,10 +56,13 @@ export const pesoContrato = (clave) => RAREZAS[rarezaDe(clave)].peso;
 /** Ficha vacía de un jugador recién fichado. */
 export const fichaNueva = () => ({ jefes: 0, bajas: 0, partidas: 0, stats: estadisticasVacias() });
 
-/** Equipo inicial: un portero, un defensa, un medio y un delantero de entre los "malos". `azar()` devuelve [0,1). */
-export function plantillaInicial(azar) {
+/**
+ * Equipo inicial de un pack: un portero, un defensa, un medio y un delantero de entre los "malos".
+ * `azar()` devuelve [0,1). Sin pack, el del Atleti (con el que empieza toda cuenta).
+ */
+export function plantillaInicial(azar, pack = PACK_BASE) {
   return ['portero', 'defensa', 'medio', 'delantero'].map((posicion) => {
-    const candidatos = Object.keys(PERSONAJES).filter((k) => PERSONAJES[k].posicion === posicion && esInicial(k));
+    const candidatos = jugadoresDePack(pack).filter((k) => PERSONAJES[k].posicion === posicion && esInicial(k));
     return candidatos[Math.min(candidatos.length - 1, Math.floor(azar() * candidatos.length))];
   });
 }
@@ -76,12 +81,39 @@ export const puntosGastados = (ficha) => ESTADISTICAS.reduce((s, k) => s + (fich
 export const puntosGanados = (ficha) => Math.floor(ficha.jefes / JEFES_POR_PUNTO) + puntosPorBajas(ficha.bajas || 0);
 export const puntosLibres = (ficha) => Math.max(0, puntosGanados(ficha) - puntosGastados(ficha));
 
-/** Jugadores que aún no se tienen (los candidatos de un contrato). */
-export const sinFichar = (perfil) => Object.keys(PERSONAJES).filter((k) => !perfil.jugadores[k]);
+// --- Packs (DLC) ------------------------------------------------------------------------------
 
-/** Elige un jugador que no se tenga, con más probabilidad cuanto menos raro sea. Devuelve null si ya están todos. */
-export function sortearContrato(perfil, azar) {
-  const candidatos = sinFichar(perfil);
+/** ¿Existe ese pack? */
+export const packValido = (pack) => typeof pack === 'string' && Object.hasOwn(PACKS, pack);
+
+/** ¿Tiene el perfil el pack activado? El del Atleti siempre; un DLC, en cuanto tiene a alguno de sus jugadores. */
+export const tienePack = (perfil, pack) => pack === PACK_BASE || Object.keys(perfil.jugadores).some((k) => packDe(k) === pack);
+
+/**
+ * Activa un DLC: añade al perfil su equipo inicial (4 comunes, uno por posición). Devuelve las claves
+ * añadidas, o [] si ya estaba activado (no se puede activar dos veces para conseguir más jugadores).
+ */
+export function activarPack(perfil, pack, azar) {
+  if (!packValido(pack) || tienePack(perfil, pack)) return [];
+  const nuevos = plantillaInicial(azar, pack);
+  nuevos.forEach((k) => { perfil.jugadores[k] = fichaNueva(); });
+  return nuevos;
+}
+
+/** Jugadores de un pack que aún no se tienen (los candidatos de un contrato en ese pack). */
+export const sinFichar = (perfil, pack = PACK_BASE) => jugadoresDePack(pack).filter((k) => !perfil.jugadores[k]);
+
+/** Cuántos jugadores tiene el perfil de cada pack, y cuántos hay: { atleti: { tengo, total, activo }, alba: {...} }. */
+export function resumenPacks(perfil) {
+  return Object.fromEntries(Object.keys(PACKS).map((pack) => {
+    const claves = jugadoresDePack(pack);
+    return [pack, { tengo: claves.filter((k) => perfil.jugadores[k]).length, total: claves.length, activo: tienePack(perfil, pack) }];
+  }));
+}
+
+/** Elige un jugador del pack que no se tenga, con más probabilidad cuanto menos raro sea. Devuelve null si ya están todos. */
+export function sortearContrato(perfil, azar, pack = PACK_BASE) {
+  const candidatos = sinFichar(perfil, pack);
   if (!candidatos.length) return null;
   const total = candidatos.reduce((s, k) => s + pesoContrato(k), 0);
   let punto = azar() * total;
@@ -93,8 +125,8 @@ export function sortearContrato(perfil, azar) {
 }
 
 /** Probabilidad (0-1) de cada candidato en el próximo contrato, para enseñarla en pantalla. */
-export function probabilidadesContrato(perfil) {
-  const candidatos = sinFichar(perfil);
+export function probabilidadesContrato(perfil, pack = PACK_BASE) {
+  const candidatos = sinFichar(perfil, pack);
   const total = candidatos.reduce((s, k) => s + pesoContrato(k), 0);
   return candidatos.map((k) => ({ clave: k, probabilidad: pesoContrato(k) / total }));
 }

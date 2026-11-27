@@ -2,6 +2,7 @@
 // aparecen escalonadas, la entrada al partido («¡Saltan al campo!») y los consejos del míster.
 // Solo se toca el DOM dentro de las funciones (nunca al importar), así el módulo se puede cargar en node:test.
 // Todo lo que se mueve respeta `reducido` (prefers-reduced-motion): sin desplazamientos, como mucho fundidos.
+import { LEMAS_ALBA } from './pack-alba.js';
 
 const TAU = Math.PI * 2;
 const SUAVE = 'cubic-bezier(0.2, 0.8, 0.2, 1)';
@@ -31,6 +32,7 @@ export const CONSEJOS = [
 export const LEMAS = {
   cholo: 'Partido a partido. Y si se cree y se trabaja, se puede.',
   aragones: 'Ganar, y ganar, y ganar, y volver a ganar.',
+  ...LEMAS_ALBA, // los míster del DLC del Alba
 };
 
 /** Consejo número `n` para un entrenador: cada cinco, su lema. */
@@ -70,18 +72,28 @@ const COLORES = [
   ['#f5f7ff', '#b9c0dc'], ['#ff4d63', '#b3283a'], ['#2c3f9e', '#1a2563'],
 ];
 
+/** Colores del confeti según el tema: rojiblanco (el juego original) o, con el mod del Alba, blanco, negro y oro. */
+export const PALETAS_PAPELITOS = {
+  atleti: COLORES,
+  albacete: [
+    ['#f5f5f2', '#bdbab2'], ['#f5f5f2', '#bdbab2'], ['#1c1c1f', '#050506'],
+    ['#1c1c1f', '#050506'], ['#d4af37', '#8f7420'], ['#8a1c2b', '#5a111b'],
+  ],
+};
+
 /**
  * Papelitos que caen despacio, giran y se dan la vuelta. Coste mínimo: unos 20–60 rectángulos.
- * @param {{ azar?: () => number }} [opciones]
+ * @param {{ azar?: () => number, paleta?: () => string[][] }} [opciones] `paleta`: colores [cara, revés] (se mira en cada papelito)
  */
-export function crearPapelitos({ azar = Math.random } = {}) {
+export function crearPapelitos({ azar = Math.random, paleta = () => COLORES } = {}) {
   let lista = [];
   let ancho = 0;
   let alto = 0;
   let reloj = 0;
 
   const nuevo = (x, y, extra = {}) => {
-    const [color, reves] = COLORES[Math.floor(azar() * COLORES.length)];
+    const colores = paleta();
+    const [color, reves] = colores[Math.floor(azar() * colores.length)];
     return {
       x, y, vx: 0, vy: 0, caida: 26 + azar() * 40, w: 5 + azar() * 4, h: 8 + azar() * 7,
       giro: azar() * TAU, vgiro: (azar() - 0.5) * 3, vuelta: azar() * TAU, vvuelta: 3 + azar() * 6,

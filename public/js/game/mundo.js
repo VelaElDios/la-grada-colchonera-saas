@@ -25,7 +25,7 @@ const SIN_ENTRADA = { x: 0, y: 0 };
  * @param {number} [opciones.semilla] Semilla del generador aleatorio
  * @param {boolean} [opciones.efectosReducidos] Sin partículas ni sacudidas (accesibilidad)
  * @param {string} [opciones.personaje] Clave de PERSONAJES (ver config.js)
- * @param {string} [opciones.entrenador] Clave de ENTRENADORES (cholo, aragones)
+ * @param {string} [opciones.entrenador] Clave de ENTRENADORES (cholo, aragones, floro, ferrando)
  * @param {boolean} [opciones.pasilloMenu] Deja libre de obstáculos la franja por la que pasea el muñeco del menú
  */
 export function crearMundo({
@@ -102,9 +102,9 @@ export function crearMundo({
       escudo: 0, // segundos que le quedan a la barrera
       escudoRadio: 60,
       contra: null, // contragolpe en curso { t, vel, dano }
-      animo: 0, // segundos que le quedan al bonus de daño del Cholo
-      furia: 0, // segundos que le quedan a la Furia Roja de Luis
-      bonoAnimo: ENTRENADORES.cholo.ulti.bonoDano,
+      animo: 0, // segundos que le quedan al bonus de daño de una ulti de onda (Cholo, Floro)
+      furia: 0, // segundos que le quedan a una ulti de furia (Furia Roja de Luis, Noche en el Belmonte de Ferrando)
+      bonoAnimo: ENTRENADORES[claveEntrenador].ulti.bonoDano ?? ENTRENADORES.cholo.ulti.bonoDano,
       entrenamiento: entrenamiento ? { ...entrenamiento } : null, // estadísticas del club { vida, defensa, disparo, suerte }
       poder: { oro: 0, oroPerfora: 0, fuego: 0, guantes: 0, guantesCada: 16, prorroga: 0 },
       guantes: { cargas: 0, max: 0, t: 0 }, // Paradón: golpes que puede parar
@@ -174,7 +174,7 @@ function moverJugador(mundo, dt, entrada) {
     j.dirY = dy;
   }
   j.zona = zonaEn(mundo.terreno, j.x, j.y);
-  const bonoFuria = j.furia > 0 ? ENTRENADORES.aragones.ulti.bonoVel : 1;
+  const bonoFuria = j.furia > 0 ? (ENTRENADORES[j.entrenador].ulti.bonoVel ?? ENTRENADORES.aragones.ulti.bonoVel) : 1;
   const bonoContra = j.contra && j.contra.t > 0 ? 1 + j.contra.vel : 1;
   const barro = j.zona === 'barro' ? TERRENO.barro : 1;
   const v = j.velBase * j.mult.vel * bonoFuria * bonoContra * barro * fuerza;
@@ -517,7 +517,7 @@ function cobrarPremio(mundo, p) {
 
 function recogerObjetos(mundo, dt) {
   const j = mundo.jugador;
-  const radioIman = j.radioIman * (j.furia > 0 ? ENTRENADORES.aragones.ulti.iman : 1);
+  const radioIman = j.radioIman * (j.furia > 0 ? (ENTRENADORES[j.entrenador].ulti.iman ?? ENTRENADORES.aragones.ulti.iman) : 1);
   const iman2 = radioIman ** 2;
   const gemas = mundo.gemas;
   for (let i = 0; i < gemas.length; i += 1) {

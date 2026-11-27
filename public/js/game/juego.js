@@ -2,6 +2,7 @@
 // la simulación (mundo.js), el dibujo (render.js), el sonido y la interfaz superpuesta (hud.js).
 import {
   MUNDO, CAMARA, PERSONAJES, POSICIONES, ENTRENADORES, ARMAS, PASIVAS, SINERGIAS, ULTRAS, AMBIENTES,
+  PACKS, PACK_BASE, packDe, packDeEntrenador, jugadoresDePack,
 } from './config.js';
 import { crearMundo, avanzar, elegirMejora, resumen, usarUlti } from './mundo.js';
 import { retratoUrl, aspectoDe, avatarUrl } from './sprites.js';
@@ -19,16 +20,21 @@ import {
   puntosLibres, esInicial, rareza, ESTADISTICAS, ESTADISTICA_NOMBRES, JEFES_POR_FICHA,
 } from './club.js';
 import {
-  CONSEJOS, consejo, letras, bufanda, crearPapelitos, abrirPantalla, cerrarPantalla, pararAnimaciones, escalonar, cambiarTexto, contar,
+  CONSEJOS, consejo, letras, bufanda, crearPapelitos, PALETAS_PAPELITOS, abrirPantalla, cerrarPantalla, pararAnimaciones, escalonar, cambiarTexto, contar,
   salidaAlCampo,
 } from './menu-fx.js';
 import { animarFirma } from './firma.js';
 import { enviarConReintentos, motivoSinGuardar } from './envio.js';
 import { htmlEstadisticas, htmlLogros } from './fin-ui.js';
-import { LOGROS, EQUIPACIONES, logrosDePartida, logroDeEquipacion } from './logros.js';
+import {
+  LOGROS, EQUIPACIONES, logrosDePartida, logroDeEquipacion, equipacionDePack,
+} from './logros.js';
 import {
   esc, htmlRareza, htmlEntrenamiento, htmlContratar, htmlFichado, htmlRankingGrada, htmlRecompensas, porPosicion,
 } from './club-ui.js';
+import {
+  MODS, modActivo, ponerMod, packDelMod, aplicarTema,
+} from '../mods.js';
 
 const PLANTILLA = `
   <canvas class="juego__lienzo" role="img" aria-label="Zona de juego: tu colchonero rodeado de rivales"></canvas>
@@ -138,7 +144,7 @@ const PLANTILLA = `
         ${icono('trofeo', 26)}<span><strong>Ranking</strong><small>Los mejores de la grada</small></span>
       </button>
       <button type="button" class="menu-item menu-item--baldosa" data-accion="ajustes" style="--c:#aab4d6; --i:8">
-        ${icono('ajustes', 26)}<span><strong>Ajustes</strong><small>Sonido, gráficos y controles</small></span>
+        ${icono('ajustes', 26)}<span><strong>Ajustes</strong><small>Sonido, gráficos, controles y mods</small></span>
       </button>
     </nav>
     <button type="button" class="btn btn--secundario hub__ayuda" data-accion="ayuda">${icono('ayuda', 18)} Cómo se juega</button>
@@ -272,7 +278,12 @@ const PLANTILLA = `
   <section class="pantalla" data-pantalla="ajustes" role="dialog" aria-modal="true" aria-labelledby="juego-t-aj" hidden>
     <div class="pantalla__caja pantalla__caja--ajustes">
       <p class="pantalla__sobretitulo">Ajustes</p>
-      <h2 id="juego-t-aj" class="pantalla__titulo">Sonido, gráficos y controles</h2>
+      <h2 id="juego-t-aj" class="pantalla__titulo">Sonido, gráficos, controles y mods</h2>
+      <div class="ajustes__pestanas" role="tablist" aria-label="Secciones de los ajustes">
+        <button type="button" role="tab" class="ajustes__pestana" id="aj-tab-general" data-pestana-ajustes="general" aria-selected="true" aria-controls="aj-panel-general">General</button>
+        <button type="button" role="tab" class="ajustes__pestana" id="aj-tab-mods" data-pestana-ajustes="mods" aria-selected="false" aria-controls="aj-panel-mods">Mods</button>
+      </div>
+      <div class="ajustes__panel" role="tabpanel" id="aj-panel-general" aria-labelledby="aj-tab-general" data-panel-ajustes="general">
       <fieldset class="ajustes__grupo">
         <legend>Sonido</legend>
         <label class="ajuste"><span>Efectos</span><input type="range" min="0" max="100" step="5" data-ajuste="volumen"><output data-campo="volumen-valor"></output></label>
@@ -296,6 +307,11 @@ const PLANTILLA = `
         </ul>
         <label class="ajuste ajuste--check"><input type="checkbox" data-ajuste="joystick"><span>Joystick táctil en el móvil</span></label>
       </fieldset>
+      </div>
+      <div class="ajustes__panel" role="tabpanel" id="aj-panel-mods" aria-labelledby="aj-tab-mods" data-panel-ajustes="mods" hidden>
+        <p class="pantalla__texto">Un mod cambia la identidad del juego: plantilla, equipaciones, entrenadores y el aspecto de todos los menús. Solo puede haber uno activo y se guarda en este navegador; desactivado, el juego es el original del Atlético de Madrid.</p>
+        <ul class="mods" data-campo="mods" aria-label="Mods disponibles"></ul>
+      </div>
       <div class="pantalla__acciones"><button type="button" class="btn btn--primario" data-accion="cerrarAjustes" data-enfoque>${icono('volver', 18)} Listo</button></div>
     </div>
   </section>
@@ -423,11 +439,49 @@ export function montarJuego(contenedor, {
     if (PERSONAJES[guardada?.personaje]) eleccion.personaje = guardada.personaje;
     if (ENTRENADORES[guardada?.entrenador]) eleccion.entrenador = guardada.entrenador;
     if (EQUIPACIONES[guardada?.equipacion]) eleccion.equipacion = guardada.equipacion;
+    if (guardada?.porPack && typeof guardada.porPack === 'object') eleccion.porPack = guardada.porPack;
+    if (guardada?.equipaciones && typeof guardada.equipaciones === 'object') {
+      eleccion.equipaciones = Object.fromEntries(Object.entries(guardada.equipaciones).filter(([pack, k]) => PACKS[pack] && EQUIPACIONES[k]));
+    }
   } catch { /* sin almacenamiento: se usa la elección por defecto */ }
 
   // --- El club (se guarda en el servidor, ligado a tu cuenta) -------------------------------------
   let club = null; // { jugadores, fichas, jefesTotal, ... } tal como lo devuelve el servidor
   let estadoClub = servidor ? 'cargando' : 'libre'; // cargando | listo | error | libre (sin servidor: todo desbloqueado, no se guarda nada)
+
+  // --- Mods (Ajustes → Mods): el mod activo decide con qué equipo se juega y el tema visual ------------
+  let modId = modActivo(); // null = el juego original del Atlético de Madrid
+  let packJuego = packDelMod(modId); // 'atleti' o el pack del mod ('alba')
+  let pestanaAjustes = 'general';
+  aplicarTema(modId);
+
+  /**
+   * Tu jugador y tu míster son siempre del equipo del mod (y uno que tengas). Al cambiar de mod se recuerda con
+   * quién jugabas en cada equipo (`eleccion.porPack`).
+   */
+  function ajustarEleccionAlPack() {
+    const tiene = (k) => estadoClub !== 'listo' || Boolean(club?.jugadores[k]);
+    const guardado = eleccion.porPack?.[packJuego] ?? {};
+    let { personaje, entrenador } = eleccion;
+    if (packDe(personaje) !== packJuego || !tiene(personaje)) {
+      const suyos = jugadoresDePack(packJuego);
+      const propiosDelPack = suyos.filter(tiene).sort(porPosicion);
+      personaje = PERSONAJES[guardado.personaje] && packDe(guardado.personaje) === packJuego && tiene(guardado.personaje)
+        ? guardado.personaje : (propiosDelPack[0] ?? suyos.find((k) => PERSONAJES[k].rareza === 'comun') ?? suyos[0]);
+    }
+    if (packDeEntrenador(entrenador) !== packJuego) {
+      entrenador = ENTRENADORES[guardado.entrenador] && packDeEntrenador(guardado.entrenador) === packJuego
+        ? guardado.entrenador : Object.keys(ENTRENADORES).find((k) => packDeEntrenador(k) === packJuego);
+    }
+    eleccion = { ...eleccion, personaje, entrenador };
+  }
+
+  /** Guarda la elección (y la recuerda para el equipo con el que se está jugando). */
+  function guardarEleccion() {
+    eleccion = { ...eleccion, porPack: { ...eleccion.porPack, [packJuego]: { personaje: eleccion.personaje, entrenador: eleccion.entrenador } } };
+    try { localStorage.setItem(CLAVE_ELECCION, JSON.stringify(eleccion)); } catch { /* da igual */ }
+  }
+  ajustarEleccionAlPack();
   let previa = null; // jugador cuya ficha se está viendo en el vestuario (aunque no se tenga)
   let seleccionEntrena = null;
   let pestanaRanking = 'grada';
@@ -444,7 +498,13 @@ export function montarJuego(contenedor, {
 
   /** `paraMenu`: el mundo del menú tiene un pasillo libre de obstáculos por el que pasea el muñeco. */
   /** Equipación elegida, si la tienes desbloqueada (si no, la primera). */
-  const equipacionValida = () => (eleccion.equipacion && (!club || club.equipaciones?.includes(eleccion.equipacion)) ? eleccion.equipacion : 'primera');
+  // (y si es de su club: las del Alba solo para los del Alba, y las del Atleti para los del Atleti)
+  // Cada equipo recuerda la suya: la del Alba se la ponen los del Alba y la del Atleti los del Atleti.
+  const equipacionDe = (pack) => {
+    const k = eleccion.equipaciones?.[pack] ?? eleccion.equipacion;
+    return k && (!club || club.equipaciones?.includes(k)) && equipacionDePack(k, pack) ? k : 'primera';
+  };
+  const equipacionValida = () => equipacionDe(packDe(eleccion.personaje));
   const nuevoMundo = (paraMenu = false) => {
     const entrenamiento = club?.jugadores[eleccion.personaje]?.stats ?? null; // lo entrenado en el club se nota en el campo
     const m = crearMundo({
@@ -461,6 +521,8 @@ export function montarJuego(contenedor, {
   let previo = performance.now();
   let raf = 0;
   let filtroPos = 'todos'; // filtro de posición del vestuario
+  /** El club visto con el mod activo: solo los jugadores del equipo con el que se juega. */
+  const clubDelPack = () => (club ? { ...club, jugadores: Object.fromEntries(Object.entries(club.jugadores).filter(([k]) => packDe(k) === packJuego)) } : club);
 
   const posee = (clave) => estadoClub !== 'listo' || Boolean(club?.jugadores[clave]);
   const propios = () => Object.keys(PERSONAJES).filter(posee).sort(porPosicion);
@@ -468,9 +530,10 @@ export function montarJuego(contenedor, {
   function aplicarClub(nuevo) {
     club = nuevo;
     estadoClub = 'listo';
-    if (!posee(eleccion.personaje)) eleccion = { ...eleccion, personaje: propios()[0] };
+    ajustarEleccionAlPack();
     if (!seleccionEntrena || !club.jugadores[seleccionEntrena]) seleccionEntrena = eleccion.personaje;
     pintarAvisosClub();
+    sincronizarPackDelMod(); // con un mod activo, el club recibe su equipo inicial la primera vez
   }
 
   // --- Tu ficha: mote y avatar ------------------------------------------------------------------
@@ -480,8 +543,9 @@ export function montarJuego(contenedor, {
 
   /** Caras que puedes ponerte: los jugadores que tienes y los entrenadores. */
   function carasDisponibles() {
-    const jugadores = club ? propios() : [eleccion.personaje];
-    return [...jugadores.map((k) => `p:${k}`), ...Object.keys(ENTRENADORES).map((k) => `e:${k}`)];
+    const jugadores = club ? propios().filter((k) => packDe(k) === packJuego) : [eleccion.personaje];
+    const mister = Object.keys(ENTRENADORES).filter((k) => packDeEntrenador(k) === packJuego);
+    return [...jugadores.map((k) => `p:${k}`), ...mister.map((k) => `e:${k}`)];
   }
   const nombreDeCara = (a) => {
     const [tipo, clave] = a.split(':');
@@ -563,7 +627,7 @@ export function montarJuego(contenedor, {
     nota.hidden = estadoClub === 'listo';
     nota.textContent = textos[estadoClub] ?? '';
     nota.dataset.estado = estadoClub;
-    const puntos = club ? Object.values(club.jugadores).reduce((s, f) => s + f.puntosLibres, 0) : 0;
+    const puntos = club ? Object.values(clubDelPack().jugadores).reduce((s, f) => s + f.puntosLibres, 0) : 0;
     const fichas = club?.fichas ?? 0;
     const apunta = (campo, n) => { const b = q(`[data-campo="${campo}"]`); b.hidden = n <= 0; b.textContent = String(n); };
     apunta('aviso-puntos', puntos);
@@ -572,17 +636,23 @@ export function montarJuego(contenedor, {
     pintarAccesos();
   }
 
+  /** Logros que se enseñan: sin mod, solo los del juego original; con el mod, también los suyos. */
+  const logrosVisibles = () => Object.keys(LOGROS).filter((k) => !LOGROS[k].pack || LOGROS[k].pack === packJuego);
+
   /** Tu club de un vistazo: plantilla, logros, equipaciones y la próxima ficha, con acceso directo a cada pantalla. */
   function pintarAccesos() {
     const bloque = q('[data-campo="club-bloque"]');
     if (estadoClub !== 'listo' || !club) { bloque.hidden = true; return; }
     bloque.hidden = false;
-    const total = club.totalJugadores ?? Object.keys(PERSONAJES).length;
-    const fichados = Object.keys(club.jugadores).length;
-    const logros = Object.keys(club.logros ?? {}).length;
-    const totalLogros = Object.keys(LOGROS).length;
-    const equipaciones = (club.equipaciones ?? ['primera']).length;
-    const totalEquip = Object.keys(EQUIPACIONES).length;
+    const delPack = jugadoresDePack(packJuego);
+    const total = delPack.length;
+    const fichados = delPack.filter((k) => club.jugadores[k]).length;
+    const claveLogros = logrosVisibles();
+    const logros = claveLogros.filter((k) => club.logros?.[k]).length;
+    const totalLogros = claveLogros.length;
+    const equipDelPack = Object.keys(EQUIPACIONES).filter((k) => equipacionDePack(k, packJuego));
+    const equipaciones = equipDelPack.filter((k) => (club.equipaciones ?? ['primera']).includes(k)).length;
+    const totalEquip = equipDelPack.length;
     const faltan = club.siguienteFichaEn ?? JEFES_POR_FICHA;
     const fichas = club.fichas ?? 0;
     const accesos = [
@@ -638,7 +708,7 @@ export function montarJuego(contenedor, {
   }
 
   function pintarLogros() {
-    const { cuenta, html } = htmlLogros(club?.logros ?? {});
+    const { cuenta, html } = htmlLogros(club?.logros ?? {}, logrosVisibles());
     q('[data-campo="logros-cuenta"]').textContent = cuenta;
     q('[data-campo="logros"]').innerHTML = html;
     Object.keys(club?.logros ?? {}).forEach((k) => logrosVistos.add(k));
@@ -647,18 +717,29 @@ export function montarJuego(contenedor, {
   }
 
   /** Equipaciones del Vestuario: las desbloqueadas se pueden elegir; las demás dicen qué logro piden. */
+  /** Quién luce las equipaciones de un equipo: tu jugador si es de ese equipo; si no, uno suyo (mejor fichado y de campo). */
+  function modeloDe(pack) {
+    if (packDe(eleccion.personaje) === pack) return eleccion.personaje;
+    const suyos = jugadoresDePack(pack);
+    const deCampo = suyos.filter((k) => PERSONAJES[k].posicion !== 'portero');
+    return deCampo.find((k) => club?.jugadores[k]) ?? deCampo[0] ?? suyos[0];
+  }
+
+  /** Equipaciones del equipo que se está viendo (solo las del Alba en su pestaña y solo las del Atleti en la suya). */
   function pintarEquipaciones() {
     const tengo = new Set(club?.equipaciones ?? ['primera']);
-    const elegida = equipacionValida();
-    const yo = PERSONAJES[eleccion.personaje];
-    q('[data-campo="equip-cuenta"]').textContent = `${tengo.size} de ${Object.keys(EQUIPACIONES).length}`;
-    q('[data-campo="equipaciones"]').innerHTML = Object.entries(EQUIPACIONES).map(([k, e]) => {
+    const elegida = equipacionDe(packJuego);
+    const modelo = modeloDe(packJuego);
+    const yo = PERSONAJES[modelo];
+    const delPack = Object.entries(EQUIPACIONES).filter(([k]) => equipacionDePack(k, packJuego));
+    q('[data-campo="equip-cuenta"]').textContent = `${delPack.filter(([k]) => tengo.has(k)).length} de ${delPack.length}`;
+    q('[data-campo="equipaciones"]').innerHTML = delPack.map(([k, e]) => {
       const libre = tengo.has(k);
       const aspecto = e.kit ? { ...yo.aspecto, camiseta: { ...e.kit.camiseta }, pantalon: e.kit.pantalon, medias: e.kit.medias } : yo.aspecto;
       const logro = logroDeEquipacion(k);
       return `<li><button type="button" class="equipacion${libre ? '' : ' equipacion--bloqueada'}" data-equipacion="${k}" aria-pressed="${elegida === k}" ${libre ? '' : 'aria-disabled="true"'}
-        title="${esc(libre ? e.descripcion : `Se desbloquea con el logro «${LOGROS[logro]?.nombre ?? ''}»: ${LOGROS[logro]?.como ?? ''}`)}">
-        <img src="${retratoUrl(`eq:${eleccion.personaje}:${k}`, aspecto, 4)}" alt="" width="32" height="40">
+        title="${esc(libre ? (k === 'primera' ? PACKS[packJuego].primera ?? e.descripcion : e.descripcion) : `Se desbloquea con el logro «${LOGROS[logro]?.nombre ?? ''}»: ${LOGROS[logro]?.como ?? ''}`)}">
+        <img src="${retratoUrl(`eq:${modelo}:${k}`, aspecto, 4)}" alt="" width="32" height="40">
         <span>${esc(e.nombre)}</span>${libre ? '' : `<small>${icono('candado', 12)} ${esc(LOGROS[logro]?.nombre ?? '')}</small>`}
       </button></li>`;
     }).join('');
@@ -687,6 +768,31 @@ export function montarJuego(contenedor, {
     q('[data-ajuste="numeros"]').checked = ajustes.numeros;
     q('[data-ajuste="zoom"]').value = ajustes.zoom;
     q('[data-ajuste="joystick"]').checked = ajustes.joystick;
+    contenedor.querySelectorAll('[data-pestana-ajustes]').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.pestanaAjustes === pestanaAjustes)));
+    contenedor.querySelectorAll('[data-panel-ajustes]').forEach((p) => { p.hidden = p.dataset.panelAjustes !== pestanaAjustes; });
+    pintarMods();
+  }
+
+  /** Ajustes → Mods: una tarjeta por mod con su escudo, lo que trae y el interruptor (solo uno activo a la vez). */
+  function pintarMods() {
+    const enPartida = fase !== 'hub';
+    q('[data-campo="mods"]').innerHTML = Object.values(MODS).map((m) => {
+      const activo = modId === m.id;
+      return `<li class="mod-tarjeta${activo ? ' mod-tarjeta--activo' : ''}">
+        <span class="mod-escudo mod-escudo--${m.tema}" aria-hidden="true"></span>
+        <div class="mod-tarjeta__texto">
+          <h3 class="mod-tarjeta__nombre">${esc(m.nombre)}</h3>
+          <p class="mod-tarjeta__descripcion">${esc(m.descripcion)}</p>
+          <ul class="mod-tarjeta__incluye">${m.incluye.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>
+          ${enPartida ? '<p class="mod-tarjeta__nota">Termina la partida para cambiar de mod.</p>' : ''}
+        </div>
+        <button type="button" class="interruptor" role="switch" data-mod="${m.id}" aria-checked="${activo}" ${enPartida ? 'disabled' : ''}
+          aria-label="${esc(m.nombre)}: ${activo ? 'activado' : 'desactivado'}">
+          <span class="interruptor__pista" aria-hidden="true"><span class="interruptor__bola"></span></span>
+          <span class="interruptor__texto">${activo ? 'Activado' : 'Desactivado'}</span>
+        </button>
+      </li>`;
+    }).join('');
   }
 
   function alCambiarAjuste(ev) {
@@ -965,12 +1071,13 @@ export function montarJuego(contenedor, {
   function pintarVestuario() {
     const lista = q('[data-campo="personajes"]');
     const scroll = lista.scrollTop;
-    const claves = Object.keys(PERSONAJES);
+    const claves = jugadoresDePack(packJuego); // solo el equipo con el que se juega (el del mod activo o el Atleti)
+    if (previa && packDe(previa) !== packJuego) previa = null;
     q('[data-campo="filtros"]').innerHTML = ['todos', ...ORDEN_POSICIONES].map((f) => {
       const n = f === 'todos' ? claves.length : claves.filter((c) => PERSONAJES[c].posicion === f).length;
       if (!n) return '';
       return `<button type="button" class="filtro" data-filtro="${f}" aria-pressed="${filtroPos === f}">${f === 'todos' ? 'Todos' : POSICIONES[f].nombre} <span>${n}</span></button>`;
-    }).join('') + (estadoClub === 'listo' ? `<span class="vest__cuenta">${Object.keys(club.jugadores).length} de ${claves.length} fichados</span>` : '');
+    }).join('') + (estadoClub === 'listo' ? `<span class="vest__cuenta">${claves.filter((c) => club.jugadores[c]).length} de ${claves.length} fichados</span>` : '');
     const visibles = claves
       .filter((c) => filtroPos === 'todos' || PERSONAJES[c].posicion === filtroPos)
       .sort((x, y) => (Number(posee(y)) - Number(posee(x))) || porPosicion(x, y));
@@ -978,7 +1085,8 @@ export function montarJuego(contenedor, {
       const p = PERSONAJES[clave];
       const tengo = posee(clave);
       const visto = (previa ?? eleccion.personaje) === clave;
-      return `<li><button type="button" class="ficha${tengo ? '' : ' ficha--bloqueada'}" data-personaje="${clave}" aria-pressed="${visto}" ${tengo ? '' : 'aria-label="' + p.nombre + ' (sin fichar)"'}>
+      const escaparate = !tengo && PACKS[p.pack]?.dlc; // jugador del mod aún sin fichar: retrato en color
+      return `<li><button type="button" class="ficha${tengo ? '' : ' ficha--bloqueada'}${escaparate ? ' ficha--dlc' : ''}" data-personaje="${clave}" aria-pressed="${visto}" ${tengo ? '' : 'aria-label="' + p.nombre + ' (sin fichar)"'}>
         <img class="ficha__retrato" alt="" width="40" height="50" src="${retratoUrl(`p:${clave}`, aspectoDe('personaje', clave))}">
         <span class="ficha__texto"><span class="ficha__nombre">${p.nombre}${eleccion.personaje === clave ? ' ✔' : ''}</span><span class="ficha__posicion">${POSICIONES[p.posicion].nombre} · ${p.habilidades.length} hab. · ${tengo ? (p.nacionalidad ?? '') : 'Sin fichar'}</span></span>
         ${tengo ? '' : icono('candado', 18)}
@@ -996,7 +1104,7 @@ export function montarJuego(contenedor, {
       return;
     }
     seleccionEntrena = eleccion.personaje; // solo se entrena al jugador elegido (se cambia en el Vestuario)
-    const { lista, panel } = htmlEntrenamiento(club, seleccionEntrena, (c) => retratoUrl(`p:${c}`, aspectoDe('personaje', c)));
+    const { lista, panel } = htmlEntrenamiento(clubDelPack(), seleccionEntrena, (c) => retratoUrl(`p:${c}`, aspectoDe('personaje', c)));
     const caja = q('[data-campo="entrena-lista"]');
     const scroll = caja.scrollTop;
     caja.innerHTML = lista;
@@ -1010,7 +1118,62 @@ export function montarJuego(contenedor, {
       caja.innerHTML = `<p class="panel__vacio">${estadoClub === 'cargando' ? 'Cargando tu club…' : 'Tu club no está disponible ahora mismo.'}</p>`;
       return;
     }
-    caja.innerHTML = htmlContratar(club, (c) => retratoUrl(`p:${c}`, aspectoDe('personaje', c)));
+    caja.innerHTML = htmlContratar(club, (c) => retratoUrl(`p:${c}`, aspectoDe('personaje', c)), packJuego);
+  }
+
+  /**
+   * Con un mod activo, el club necesita a sus jugadores: la primera vez el servidor regala su equipo inicial
+   * (un común por posición; ver activarPack en juegoService.js). No hay botón: lo decide el interruptor del mod.
+   */
+  let preparandoPack = false;
+  async function sincronizarPackDelMod() {
+    if (preparandoPack || packJuego === PACK_BASE || estadoClub !== 'listo' || club?.packs?.[packJuego]?.activo || !servidor?.activarPack) return;
+    preparandoPack = true;
+    try {
+      const r = await servidor.activarPack(packJuego);
+      const nuevos = [...(r.nuevos ?? [])].sort(porPosicion);
+      aplicarClub(r.perfil);
+      if (nuevos.length) {
+        eleccion = { ...eleccion, personaje: nuevos[0] };
+        previa = null;
+        guardarEleccion();
+        if (fase === 'hub') { mundo = nuevoMundo(true); pintarCartelJugador(); }
+        anunciar(`${PACKS[packJuego].nombre}: llegan a tu club ${nuevos.map((k) => PERSONAJES[k].nombre).join(', ')}`);
+      }
+    } catch (error) {
+      anunciar(error.message || 'No se ha podido preparar la plantilla del mod');
+    } finally {
+      preparandoPack = false;
+      repintarPanel();
+    }
+  }
+
+  /** Repinta la pantalla del menú que esté abierta (tras cambiar de mod o recibir jugadores). */
+  function repintarPanel() {
+    const pintores = {
+      vestuario: pintarVestuario, entrenamiento: pintarEntrenamiento, contratar: pintarContratar, direccion: pintarDireccion,
+      logros: pintarLogros, identidad: pintarIdentidad, ajustes: pintarAjustes,
+    };
+    pintores[pantallaActual]?.();
+    pintarAvisosClub();
+    if (fase === 'hub') pintarCartelJugador();
+  }
+
+  /** Interruptor de Ajustes → Mods: activa (o quita) un mod y todo el juego cambia de equipo y de tema al momento. */
+  function cambiarMod(id) {
+    if (fase !== 'hub') { anunciar('Termina la partida para cambiar de mod'); return; }
+    guardarEleccion(); // recuerda con quién jugabas en este equipo
+    modId = ponerMod(id);
+    aplicarTema(modId);
+    packJuego = packDelMod(modId);
+    filtroPos = 'todos';
+    previa = null;
+    ajustarEleccionAlPack();
+    guardarEleccion();
+    mundo = nuevoMundo(true);
+    repintarPanel();
+    anunciar(modId ? `Mod activado: ${MODS[modId].nombre}` : 'Mod desactivado: vuelve el Atlético de Madrid');
+    sincronizarPackDelMod();
   }
 
   async function entrenar(estadistica) {
@@ -1049,7 +1212,7 @@ export function montarJuego(contenedor, {
     if (boton) boton.disabled = true;
     let fichado = null;
     try {
-      const r = await servidor.contratar();
+      const r = await servidor.contratar(packJuego);
       fichado = r.fichado;
       aplicarClub(r.perfil);
       (r.logrosNuevos ?? []).forEach((k) => setTimeout(() => anunciar(`Logro conseguido: ${LOGROS[k]?.nombre}`), 5200));
@@ -1078,7 +1241,7 @@ export function montarJuego(contenedor, {
   }
 
   function pintarDireccion() {
-    q('[data-campo="entrenadores"]').innerHTML = Object.entries(ENTRENADORES).map(([clave, e]) => `
+    q('[data-campo="entrenadores"]').innerHTML = Object.entries(ENTRENADORES).filter(([clave]) => packDeEntrenador(clave) === packJuego).map(([clave, e]) => `
       <li><button type="button" class="tarjeta tarjeta--entrenador" data-entrenador="${clave}" aria-pressed="${eleccion.entrenador === clave}">
         <img class="tarjeta__retrato" alt="" width="80" height="100" src="${retratoUrl(`c:${clave}`, aspectoDe('entrenador', clave))}">
         <span class="tarjeta__nombre">${e.nombre}</span>
@@ -1169,7 +1332,7 @@ export function montarJuego(contenedor, {
       if (!posee(clave)) { pintarVestuario(); return; }
     }
     eleccion = { ...eleccion, [tipo]: clave };
-    try { localStorage.setItem(CLAVE_ELECCION, JSON.stringify(eleccion)); } catch { /* da igual */ }
+    guardarEleccion();
     contenedor.querySelectorAll(`[data-${tipo}]`).forEach((b) => b.setAttribute('aria-pressed', String(b.dataset[tipo] === clave)));
     mundo = nuevoMundo(true); // el menú enseña al jugador elegido paseando
     pintarCartelJugador();
@@ -1254,7 +1417,7 @@ export function montarJuego(contenedor, {
 
   // --- Efectos del menú: papelitos, estreno del menú y posición del muñeco -----------------------
 
-  const papelitos = crearPapelitos();
+  const papelitos = crearPapelitos({ paleta: () => PALETAS_PAPELITOS[MODS[modId]?.tema] ?? PALETAS_PAPELITOS.atleti });
   /** Los papelitos van con el ajuste de partículas y se quitan si el sistema pide menos movimiento. */
   const efectosMenu = () => ajustes.efectos && !movimientoReducido();
   let estrenado = false; // la primera vez (y al volver de un partido) el menú entra con todo
@@ -1804,8 +1967,8 @@ export function montarJuego(contenedor, {
     const equip = ev.target.closest('[data-equipacion]');
     if (equip) {
       if (equip.getAttribute('aria-disabled') === 'true') { anunciar(equip.title); return; }
-      eleccion = { ...eleccion, equipacion: equip.dataset.equipacion };
-      try { localStorage.setItem(CLAVE_ELECCION, JSON.stringify(eleccion)); } catch { /* da igual */ }
+      eleccion = { ...eleccion, equipaciones: { ...eleccion.equipaciones, [packJuego]: equip.dataset.equipacion } };
+      guardarEleccion();
       mundo = nuevoMundo(true);
       pintarEquipaciones();
       return;
@@ -1832,6 +1995,17 @@ export function montarJuego(contenedor, {
     if (tab) {
       pestanaRanking = tab.dataset.ranking;
       pintarRanking();
+      return;
+    }
+    const pestana = ev.target.closest('[data-pestana-ajustes]');
+    if (pestana) {
+      pestanaAjustes = pestana.dataset.pestanaAjustes;
+      pintarAjustes();
+      return;
+    }
+    const interruptor = ev.target.closest('[data-mod]');
+    if (interruptor) {
+      cambiarMod(interruptor.getAttribute('aria-checked') === 'true' ? null : interruptor.dataset.mod);
       return;
     }
     const filtro = ev.target.closest('[data-filtro]');

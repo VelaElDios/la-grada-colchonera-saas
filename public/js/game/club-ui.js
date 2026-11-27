@@ -1,7 +1,9 @@
 // HTML de las pantallas del CLUB: entrenamiento, contratos, ranking de la grada y recompensas de fin de partida.
 // Solo construye texto HTML a partir de datos (sin DOM ni red), así se puede probar con node:test.
 // `retrato(clave)` devuelve la URL del retrato de un jugador (lo pone juego.js).
-import { PERSONAJES, POSICIONES, RAREZAS } from './config.js';
+import {
+  PERSONAJES, POSICIONES, RAREZAS, PACKS, PACK_BASE, jugadoresDePack,
+} from './config.js';
 import {
   ESTADISTICAS, ESTADISTICA_NOMBRES, NIVEL_ESTADISTICA_MAX, JEFES_POR_PUNTO, JEFES_POR_FICHA, PUNTOS_BAJAS_MAX, costePunto,
   rareza, probabilidadesContrato, efectoEstadisticas, estadisticasVacias,
@@ -98,10 +100,16 @@ export function htmlEntrenamiento(club, seleccionado, retrato) {
 
 const porcentaje = (p) => `${(p * 100).toFixed(1).replace('.', ',')} %`;
 
-export function htmlContratar(club, retrato) {
+export function htmlContratar(club, retrato, pack = PACK_BASE) {
   const progreso = club.jefesTotal % JEFES_POR_FICHA;
   const faltan = JEFES_POR_FICHA - progreso;
-  const probs = probabilidadesContrato({ jugadores: club.jugadores });
+  const nombrePack = PACKS[pack]?.corto ?? PACKS[PACK_BASE].corto;
+  if (club.packs && !club.packs[pack]?.activo) {
+    return `<p class="panel__vacio">Preparando la plantilla de <strong>${esc(PACKS[pack].nombre)}</strong>… (se activa con su mod en Ajustes → Mods).</p>`;
+  }
+  const probs = probabilidadesContrato({ jugadores: club.jugadores }, pack);
+  const tengoPack = jugadoresDePack(pack).filter((k) => club.jugadores[k]).length;
+  const totalPack = jugadoresDePack(pack).length;
   const todos = probs.length === 0;
   const grupos = {};
   Object.keys(RAREZAS).forEach((id) => { grupos[id] = { id, ...RAREZAS[id], p: 0, n: 0 }; });
@@ -143,11 +151,11 @@ export function htmlContratar(club, retrato) {
       <div class="contrato__resultado" data-campo="fichado" aria-live="polite"></div>
       ${todos ? '' : `
       <h4 class="panel__subtitulo">Probabilidades del próximo fichaje</h4>
-      <p class="contrato__explica">La rareza depende de lo que cada jugador fue <b>en el Atleti</b>: las leyendas salen muy poco.</p>
+      <p class="contrato__explica">La rareza depende de lo que cada jugador fue <b>en el ${esc(nombrePack)}</b>: las leyendas salen muy poco.</p>
       <div class="reparto" aria-hidden="true">${tramos}</div>
       <ul class="rareza-tarjetas">${tarjetas}</ul>
       <details class="contrato__detalle"><summary>Ver jugador a jugador (${probs.length} por fichar)</summary><ul class="prob-jugadores">${detalle}</ul></details>`}
-      <p class="entrena__nota">Tienes <strong>${Object.keys(club.jugadores).length}</strong> de <strong>${club.totalJugadores}</strong> jugadores.</p>
+      <p class="entrena__nota">Tienes <strong>${tengoPack}</strong> de <strong>${totalPack}</strong> jugadores.</p>
     </div>`;
 }
 

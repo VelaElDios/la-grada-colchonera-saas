@@ -22,7 +22,8 @@ test('hay 36 jugadores del Atleti con estadísticas de su posición retocadas po
     'torres', 'lookman', 'giuliano', 'julian', 'costa', 'forlan', 'falcao',
     'grbic', 'courtois', 'trippier', 'savic', 'miranda', 'lodi', 'baena', 'partey', 'saul', 'pantic', 'tiago', 'gabi', 'futre', 'simeone', 'adelardo',
     'aragones', 'kun'];
-  assert.deepEqual(Object.keys(PERSONAJES).sort(), [...esperados].sort());
+  // (el DLC del Albacete Balompié trae los suyos aparte: ver juego-pack-alba.test.js)
+  assert.deepEqual(Object.keys(PERSONAJES).filter((k) => PERSONAJES[k].pack === 'atleti').sort(), [...esperados].sort());
   const delanteros = ['griezmann', 'torres', 'lookman', 'giuliano', 'julian', 'costa', 'forlan', 'falcao', 'aragones', 'kun'];
   delanteros.forEach((k) => assert.equal(PERSONAJES[k].posicion, 'delantero', k));
   // El vidaMax sale de la posición × los rasgos del jugador × el entrenador por defecto (Cholo, +5 % de vida)

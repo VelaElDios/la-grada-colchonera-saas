@@ -77,8 +77,8 @@ export function htmlLogro(k, conseguido, nuevo = false) {
 }
 
 /** Pantalla de logros: los conseguidos primero. */
-export function htmlLogros(conseguidos = {}) {
-  const claves = Object.keys(LOGROS);
+/** `claves`: qué logros enseñar (sin mod activo, los del mod no aparecen). */
+export function htmlLogros(conseguidos = {}, claves = Object.keys(LOGROS)) {
   const hechos = claves.filter((k) => conseguidos[k]);
   const orden = [...hechos, ...claves.filter((k) => !conseguidos[k])];
   return {

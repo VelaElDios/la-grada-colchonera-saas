@@ -26,7 +26,8 @@ export function lanzarUlti(mundo) {
   const def = ENTRENADORES[j.entrenador].ulti;
   mundo.fuente = 'ulti';
 
-  if (j.entrenador === 'cholo') {
+  // Dos tipos de ulti (config.js → ENTRENADORES[...].ulti.tipo): «onda» (Cholo, Floro) y «furia» (Luis, Ferrando)
+  if (def.tipo === 'onda') {
     const dano = def.dano + def.danoPorNivel * j.nivel;
     for (let i = 0; i < mundo.enemigos.length; i += 1) {
       const e = mundo.enemigos[i];

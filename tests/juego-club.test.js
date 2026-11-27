@@ -105,8 +105,8 @@ test('un punto de entrenamiento por cada 3 jefes de ese jugador y una ficha por 
 
 test('el contrato nunca repite jugador, da a todos y los de más habilidades salen menos', async () => {
   const club = await cargar('club.js');
-  const { PERSONAJES } = await cargar('config.js');
-  const todos = Object.keys(PERSONAJES);
+  const { PERSONAJES, jugadoresDePack } = await cargar('config.js');
+  const todos = jugadoresDePack('atleti'); // un contrato sin pack es del Atleti (el del Alba se prueba en juego-pack-alba.test.js)
   // Pesos: 8 habilidades pesan más que 16
   const poco = todos.find((k) => PERSONAJES[k].habilidades.length === 8);
   const mucho = todos.reduce((a, b) => (PERSONAJES[b].habilidades.length > PERSONAJES[a].habilidades.length ? b : a));
@@ -149,8 +149,8 @@ test('las estadísticas de entrenamiento mejoran de verdad al jugador en el camp
 });
 
 test('hay 36 jugadores, los 17 nuevos que se pidieron, cada uno con nacionalidad y descripción', async () => {
-  const { PERSONAJES } = await cargar('config.js');
-  assert.equal(Object.keys(PERSONAJES).length, 36);
+  const { PERSONAJES, jugadoresDePack } = await cargar('config.js');
+  assert.equal(jugadoresDePack('atleti').length, 36, 'los del Atleti (el DLC del Alba va aparte)');
   const pedidos = {
     portero: ['grbic', 'courtois'],
     defensa: ['trippier', 'savic', 'miranda', 'lodi'],
@@ -165,7 +165,7 @@ test('hay 36 jugadores, los 17 nuevos que se pidieron, cada uno con nacionalidad
     descripciones.add(p.descripcion);
     assert.ok(p.habilidades.length >= 8 && p.habilidades.length <= 16, `${k}: habilidades`);
   });
-  assert.equal(descripciones.size, 36, 'cada descripción es distinta');
+  assert.equal(descripciones.size, Object.keys(PERSONAJES).length, 'cada descripción es distinta');
   assert.equal(PERSONAJES.kun.nacionalidad, 'Argentina');
   assert.equal(PERSONAJES.courtois.nacionalidad, 'Bélgica');
 });

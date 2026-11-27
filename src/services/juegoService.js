@@ -107,6 +107,7 @@ function createJuegoService({
       fichasGanadas: club.fichasGanadas(datos),
       siguienteFichaEn: club.JEFES_POR_FICHA - (datos.jefesTotal % club.JEFES_POR_FICHA),
       totalJugadores: Object.keys(config.PERSONAJES).length,
+      packs: club.resumenPacks(datos), // jugadores que tienes de cada pack (Atleti y DLC del Alba) y si está activado
       logros: datos.logros ?? {},
       equipaciones: logros.equipacionesDe(Object.keys(datos.logros ?? {})),
     };
@@ -197,17 +198,38 @@ function createJuegoService({
       return { recompensas: resultado, record, perfil: await reglas(datos) };
     },
 
-    /** Gasta una ficha de contrato: un jugador nuevo al azar (nunca repetido; los de rareza común salen más). */
-    async contratar(user) {
+    /**
+     * Gasta una ficha de contrato: un jugador nuevo al azar del pack elegido (nunca repetido; los de rareza
+     * común salen más). Sin pack, del Atleti. Para fichar en un DLC hay que tenerlo activado.
+     */
+    async contratar(user, { pack } = {}) {
+      const { club: reglasClub } = await cargarReglas();
+      const elegido = pack ?? 'atleti';
+      if (!reglasClub.packValido(elegido)) throw new ValidationError('Ese pack no existe');
       const { datos, resultado } = await conPerfil(user, (d, { club, config, logros }) => {
+        if (!club.tienePack(d, elegido)) throw new ConflictError('Activa primero el DLC en el Vestuario para fichar en ese club');
         if (club.fichasDisponibles(d) < 1) throw new ConflictError('No tienes fichas de contrato (una por cada 3 jefes vencidos)');
-        const clave = club.sortearContrato(d, azar);
-        if (!clave) throw new ConflictError('Ya tienes a todos los jugadores');
+        const clave = club.sortearContrato(d, azar, elegido);
+        if (!clave) throw new ConflictError('Ya tienes a todos los jugadores de este club');
         d.fichasUsadas += 1;
         d.jugadores[clave] = club.fichaNueva();
         return { fichado: clave, logrosNuevos: anotarLogros(d, logros.logrosDeClub(d, config.PERSONAJES)) };
       });
       return { fichado: resultado.fichado, logrosNuevos: resultado.logrosNuevos, perfil: await reglas(datos) };
+    },
+
+    /**
+     * Activa un DLC (por ahora, el del Albacete Balompié): el club recibe gratis el equipo inicial de ese pack
+     * (un común por posición). Solo una vez: si ya estaba activado, no cambia nada.
+     */
+    async activarPack(user, pack) {
+      const { club: reglasClub, config: reglasConfig } = await cargarReglas();
+      if (!reglasClub.packValido(pack) || !reglasConfig.PACKS[pack].dlc) throw new ValidationError('Ese DLC no existe');
+      const { datos, resultado } = await conPerfil(user, (d, { club }) => {
+        const nuevos = club.activarPack(d, pack, azar);
+        return nuevos.length ? { nuevos } : { sinCambios: true, nuevos: [] };
+      });
+      return { nuevos: resultado.nuevos, perfil: await reglas(datos) };
     },
 
     /** Sube una estadística de un jugador con un punto de entrenamiento. */

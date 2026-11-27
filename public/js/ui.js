@@ -7,6 +7,7 @@ import { avisar } from './ui/avisos.js';
 import { montarCabecera } from './ui/cabecera.js';
 import { estadoError, spinner, mensajeDeError } from './ui/componentes.js';
 import { h } from './ui/dom.js';
+import { aplicarTema } from './mods.js';
 
 // protegida: requiere sesión · soloAdmin: requiere rol admin · soloInvitados: solo sin sesión
 // completa: el juego ocupa toda la pantalla (sin pie)
@@ -33,6 +34,9 @@ export function navegar(ruta) {
   if (rutaActual() === ruta) { renderizar(); return; }
   location.hash = ruta;
 }
+
+// Tema del mod activo (Ajustes → Mods) desde el primer momento, para que la cabecera ya salga con él.
+aplicarTema();
 
 const cabecera = montarCabecera(document.getElementById('cabecera'), { alSalir: cerrarSesion });
 

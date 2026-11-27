@@ -1,6 +1,9 @@
 // Datos de equilibrio del juego: todo lo que se puede "tocar" para retocar la dificultad está aquí.
 // Proyecto de aficionado sin relación oficial con ningún club ni jugador: los dibujos son originales
 // (muñecos «chibi» de píxeles) y no se usan escudos ni imágenes oficiales.
+import {
+  PACK_ALBA, PERSONAJES_ALBA, FICHAS_ALBA, RAREZA_ALBA, ENTRENADORES_ALBA, SELECCIONES_ALBA,
+} from './pack-alba.js';
 
 export const MUNDO = {
   duracionOleada: 30, // segundos por oleada
@@ -130,6 +133,7 @@ export const SELECCIONES = {
   Senegal: { camiseta: { c: '#ffffff', c2: '#0a8f4a', p: 'cuello' }, pantalon: '#ffffff', medias: '#ffffff', colores: ['#0a8f4a', '#ffd800', '#e30613'] },
   Dinamarca: { camiseta: { c: '#c8102e', c2: '#ffffff', p: 'cuello' }, pantalon: '#ffffff', medias: '#c8102e', colores: ['#c8102e', '#ffffff'] },
   Gales: { camiseta: { c: '#c8102e', c2: '#0a8f4a', p: 'cuello' }, pantalon: '#c8102e', medias: '#c8102e', colores: ['#c8102e', '#ffffff', '#0a8f4a'] },
+  ...SELECCIONES_ALBA, // las de los jugadores del DLC del Alba (Costa Rica, Ucrania)
 };
 /** En el Mundial cada equipo rival juega como una selección (y no repite la tuya: entonces sale Dinamarca). */
 export const SELECCION_DE_EQUIPO = {
@@ -561,11 +565,34 @@ const RAREZA_DE = {
   raro: ['kun', 'falcao', 'julian', 'llorente', 'savic', 'trippier', 'tiago', 'partey'],
   comun: ['musso', 'grbic', 'lenglet', 'pubill', 'molina', 'grimaldo', 'lodi', 'barrios', 'baena', 'lee', 'lookman', 'giuliano'],
 };
-Object.entries(RAREZA_DE).forEach(([r, claves]) => claves.forEach((k) => { if (PERSONAJES[k]) PERSONAJES[k].rareza = r; }));
+// ---------------------------------------------------------------------------------------------
+// Packs: el Atleti (el juego de siempre) y el DLC del Albacete Balompié (ver pack-alba.js). Cada jugador,
+// entrenador y equipación lleva su `pack`; los rivales, los jefes y el equilibrio son comunes a todos.
+// ---------------------------------------------------------------------------------------------
 
-Object.entries(FICHAS).forEach(([clave, [nacionalidad, epoca, descripcion]]) => {
+export const PACKS = {
+  atleti: {
+    clave: 'atleti', nombre: 'Atlético de Madrid', corto: 'Atleti', apodo: 'Los colchoneros', colores: ['#c8102e', '#ffffff'], dlc: false,
+    primera: 'La rojiblanca de toda la vida.',
+  },
+  alba: PACK_ALBA,
+};
+export const PACK_BASE = 'atleti';
+
+Object.values(PERSONAJES).forEach((p) => { p.pack = PACK_BASE; });
+Object.assign(PERSONAJES, PERSONAJES_ALBA);
+
+[RAREZA_DE, RAREZA_ALBA].forEach((tabla) => Object.entries(tabla).forEach(([r, claves]) => claves.forEach((k) => { if (PERSONAJES[k]) PERSONAJES[k].rareza = r; })));
+
+[FICHAS, FICHAS_ALBA].forEach((tabla) => Object.entries(tabla).forEach(([clave, [nacionalidad, epoca, descripcion]]) => {
   if (PERSONAJES[clave]) Object.assign(PERSONAJES[clave], { nacionalidad, epoca, descripcion });
-});
+}));
+
+/** Pack de un jugador o de un entrenador (el del Atleti si no se sabe). */
+export const packDe = (clave) => PERSONAJES[clave]?.pack ?? PACK_BASE;
+export const packDeEntrenador = (clave) => ENTRENADORES[clave]?.pack ?? PACK_BASE;
+/** Claves de los jugadores de un pack, en el orden en que se definen. */
+export const jugadoresDePack = (pack) => Object.keys(PERSONAJES).filter((k) => PERSONAJES[k].pack === pack);
 
 // ---------------------------------------------------------------------------------------------
 // Entrenadores: multiplican las estadísticas y aportan una ulti que se carga con las bajas.
@@ -580,6 +607,7 @@ export const ENTRENADORES = {
     mult: { dano: 1.1, vida: 1.05, vel: 1, xp: 1 },
     resumen: '+10 % de daño y +5 % de vida.',
     ulti: {
+      tipo: 'onda', // ver ulti.js: onda que daña y aparta + bonus de daño
       nombre: '¡Partido a partido!',
       descripcion: 'La grada ruge: onda gigante que daña y aparta a todos y +30 % de daño durante 6 s.',
       radio: 650, dano: 70, danoPorNivel: 2, empuje: 420, animo: 6, bonoDano: 1.3,
@@ -594,6 +622,7 @@ export const ENTRENADORES = {
     mult: { dano: 1, vida: 1, vel: 1.05, xp: 1.12 },
     resumen: '+5 % de velocidad y +12 % de experiencia.',
     ulti: {
+      tipo: 'furia', // ver ulti.js: recarga doble, velocidad e imán durante unos segundos
       nombre: 'Furia Roja',
       descripcion: 'Durante 7 s tus armas recargan el doble de rápido, vas un 25 % más veloz y atraes la experiencia desde lejos.',
       duracion: 7, bonoVel: 1.25, iman: 3,
@@ -604,6 +633,8 @@ export const ENTRENADORES = {
     },
   },
 };
+Object.values(ENTRENADORES).forEach((e) => { e.pack = PACK_BASE; });
+Object.assign(ENTRENADORES, ENTRENADORES_ALBA); // Benito Floro y César Ferrando (DLC del Alba)
 
 // ---------------------------------------------------------------------------------------------
 // Rivales: 16 equipos famosos con jugadores genéricos. Cada equipo se desbloquea en una oleada.

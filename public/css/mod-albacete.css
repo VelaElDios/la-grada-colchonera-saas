@@ -1,0 +1,115 @@
+/*
+ * Tema del mod «Albacete Balompié — El Queso Mecánico» (Ajustes → Mods, ver js/mods.js).
+ * Todo va bajo :root[data-mod-theme="albacete"]: sin el mod activo no se aplica NADA y la web se ve como siempre.
+ * Paleta del Alba: blanco, negro carbón y detalles de oro y granate. El escudo está dibujado con CSS (no es el oficial).
+ * Solo cambia la interfaz (menús, botones, tarjetas, vestuario, cabecera); el campo, los rivales y los jefes no.
+ */
+:root[data-mod-theme="albacete"] {
+  /* Marca: el rojo pasa a granate, los acentos a oro y el azul noche a negro carbón */
+  --rojo: #8a1c2b;
+  --rojo-hover: #a12434;
+  --rojo-texto: #e6c766;
+  --rojo-rgb: 138 28 43;
+  --rojo-club-rgb: 212 175 55;
+  --acento: #e0b84a;
+  --acento-rgb: 224 184 74;
+  --marino: #18181b;
+  --marino-vivo: #2b2b30;
+  --azul-900: #09090a;
+  --azul-800: #111113;
+  --azul-700: #1a1a1d;
+  --azul-600: #242428;
+  --azul-500: #36363c;
+  --noche-rgb: 9 9 10;
+  --velo-rgb: 5 5 6;
+  --superficie-rgb: 26 26 29;
+  --fondo-rgb: 17 17 19;
+  --gris-300: #cfcabd;
+  --gris-500: #918c80;
+  --foco: #e0b84a;
+  --anillo: 0 0 0 3px rgb(224 184 74 / 0.55);
+  --oro: #d4af37;
+  --oro-oscuro: #8f7420;
+}
+
+/* Fondo de la web: luces de oro y granate sobre negro */
+:root[data-mod-theme="albacete"] body {
+  background:
+    radial-gradient(900px 500px at 85% -10%, rgb(212 175 55 / 0.16), transparent 60%),
+    radial-gradient(800px 500px at -10% 0%, rgb(138 28 43 / 0.28), transparent 60%),
+    var(--azul-800);
+}
+
+/* ---------- Cabecera: escudo del Alba y distintivo de mod activo ---------- */
+:root[data-mod-theme="albacete"] .logo__escudo {
+  background: linear-gradient(180deg, #f5f5f2 0 46%, var(--oro) 46% 54%, #141414 54%);
+}
+:root[data-mod-theme="albacete"] .logo strong { color: var(--oro); }
+:root[data-mod-theme="albacete"] .logo::after {
+  content: "Mod Alba"; margin-left: 2px; padding: 1px 8px; border-radius: var(--r-pill);
+  background: var(--oro); color: #111; font-size: 10px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase;
+}
+
+/* ---------- Menú del juego: título, estrellas y distintivo ---------- */
+:root[data-mod-theme="albacete"] .hub__logo-sup { text-shadow: 0 3px 0 #000, 0 6px 18px rgb(0 0 0 / 0.7); }
+:root[data-mod-theme="albacete"] .hub__logo-titulo {
+  color: #f5f5f2; -webkit-text-stroke-color: #111;
+  filter: drop-shadow(0 4px 0 var(--oro)) drop-shadow(0 4px 0 var(--oro-oscuro)) drop-shadow(0 3px 0 #111) drop-shadow(0 16px 20px rgb(0 0 0 / 0.5));
+}
+:root[data-mod-theme="albacete"] .hub__logo-titulo > span { color: #f5f5f2; }
+:root[data-mod-theme="albacete"] .hub__logo-titulo::after { color: #fff6d6; }
+:root[data-mod-theme="albacete"] .hub__estrellas { background: rgb(17 17 19 / 0.9); border-color: var(--oro); color: var(--oro); }
+:root[data-mod-theme="albacete"] .hub__estrellas::before,
+:root[data-mod-theme="albacete"] .hub__estrellas::after { background: repeating-linear-gradient(90deg, #f5f5f2 0 4px, #141414 4px 8px); }
+:root[data-mod-theme="albacete"] .hub__cabecera::after {
+  content: "Mod activo · Albacete Balompié"; display: block; width: max-content; margin: 8px auto 0; padding: 2px 12px;
+  border-radius: var(--r-pill); border: 1px solid var(--oro); background: rgb(17 17 19 / 0.85); color: var(--oro);
+  font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase;
+}
+
+/* Botón de Jugar: la camiseta negra del Alba con ribete de oro (en vez de la rojiblanca) */
+:root[data-mod-theme="albacete"] .menu-item--jugar { border-color: var(--oro); }
+:root[data-mod-theme="albacete"] .menu-item--jugar small { color: #f3e6bd; }
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar {
+  border-color: var(--oro);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.12), transparent 45%, rgb(0 0 0 / 0.25)),
+    repeating-linear-gradient(90deg, #202024 0 22px, #141416 22px 44px);
+  box-shadow: 0 6px 0 var(--oro-oscuro), 0 14px 28px rgb(212 175 55 / 0.25);
+}
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar .icono { color: var(--rojo); box-shadow: 0 4px 0 var(--oro-oscuro); }
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar strong { color: #f5f5f2; text-shadow: 0 3px 0 #000; }
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar:active { box-shadow: 0 2px 0 var(--oro-oscuro); }
+:root[data-mod-theme="albacete"] .once__parte:hover .once__cambiar,
+:root[data-mod-theme="albacete"] .once__cambiar:focus-visible { border-color: var(--oro); }
+
+/* Ribete de los paneles (el cuello de la camiseta) y parche «LA GRADA»: blanco y negro con oro */
+:root[data-mod-theme="albacete"] .hub .panel::before { background: repeating-linear-gradient(90deg, #141414 0 14px, #f5f5f2 14px 28px); }
+:root[data-mod-theme="albacete"] .hub__logo-sup {
+  border-color: var(--oro); color: #f5f5f2;
+  background: repeating-linear-gradient(90deg, #1c1c1f 0 16px, #121214 16px 32px); box-shadow: 0 4px 0 var(--oro-oscuro), 0 10px 20px rgb(0 0 0 / 0.4);
+}
+/* Talón del botón de Jugar (la entrada) y su flecha */
+:root[data-mod-theme="albacete"] .entrada__talon { background: repeating-linear-gradient(90deg, #f5f5f2 0 13px, #141414 13px 26px); }
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar .entrada__talon .icono { color: #111; box-shadow: 0 0 0 3px var(--oro), 0 4px 0 3px var(--oro-oscuro); }
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar .entrada__flecha .icono { background: var(--rojo); }
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar:hover,
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar:focus-visible {
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 0.18), transparent 45%, rgb(0 0 0 / 0.2)),
+    repeating-linear-gradient(90deg, #26262b 0 22px, #19191c 22px 44px);
+}
+:root[data-mod-theme="albacete"] .hub__menu--v2 .menu-item--jugar:focus-visible { outline-color: var(--oro); }
+
+/* Bufanda del menú: blanca y negra */
+:root[data-mod-theme="albacete"] .bufanda__tramo--rojo { background: #141414; }
+:root[data-mod-theme="albacete"] .bufanda__tramo--azul { background: var(--oro); color: #111; }
+
+/* ---------- Tarjetas, pantallas y vestuario: ribetes de oro ---------- */
+:root[data-mod-theme="albacete"] .pantalla__sobretitulo { color: var(--oro); }
+:root[data-mod-theme="albacete"] .pantalla__caja { border-color: rgb(212 175 55 / 0.35); }
+:root[data-mod-theme="albacete"] .ficha[aria-pressed="true"],
+:root[data-mod-theme="albacete"] .tarjeta[aria-pressed="true"] { border-color: var(--oro); }
+:root[data-mod-theme="albacete"] .filtro[aria-pressed="true"],
+:root[data-mod-theme="albacete"] .ajustes__pestana[aria-selected="true"] { background: var(--oro); color: #111; border-color: var(--oro); }
+:root[data-mod-theme="albacete"] .equipacion[aria-pressed="true"] { border-color: var(--oro); background: rgb(212 175 55 / 0.12); }

@@ -104,8 +104,8 @@ describe('API /api/juego', () => {
     const [a] = Object.keys((await get(cookie, '/perfil')).body.jugadores);
     assert.equal((await post(cookie, '/contratar')).status, 409);
 
-    const { PERSONAJES } = await import('../public/js/game/config.js');
-    const total = Object.keys(PERSONAJES).length;
+    const { jugadoresDePack } = await import('../public/js/game/config.js');
+    const total = jugadoresDePack('atleti').length; // un contrato sin pack es del Atleti
     const vistos = new Set(Object.keys((await get(cookie, '/perfil')).body.jugadores));
     // Una partida de 600 s con 100 jefes sería increíble: se reparten en varias partidas largas
     for (let i = 0; i < total - 4; i += 1) {

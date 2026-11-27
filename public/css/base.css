@@ -10,7 +10,7 @@ body {
   line-height: 1.55;
   color: var(--blanco);
   background:
-    radial-gradient(900px 500px at 85% -10%, rgb(212 21 47 / 0.22), transparent 60%),
+    radial-gradient(900px 500px at 85% -10%, rgb(var(--rojo-rgb) / 0.22), transparent 60%),
     radial-gradient(800px 500px at -10% 0%, rgb(39 52 138 / 0.45), transparent 60%),
     var(--azul-800);
   background-attachment: fixed;
