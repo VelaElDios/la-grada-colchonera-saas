@@ -11,6 +11,7 @@ const { createJuegoService } = require('./services/juegoService');
 const { createPasswordHasher } = require('./services/passwordHasher');
 const { createUserService } = require('./services/userService');
 const { createAccountConfirmationService } = require('./services/accountConfirmationService');
+const { createPasswordResetService } = require('./services/passwordResetService');
 const { createTokenSigner } = require('./services/tokenSigner');
 const { createMailer } = require('./integrations/mailer');
 const { createOAuthClients } = require('./integrations/googleOAuth');
@@ -35,11 +36,9 @@ function createApp({
     passwordHasher,
     requireEmailConfirmation: config.requireEmailConfirmation,
   });
-  const accountConfirmation = createAccountConfirmationService({
-    userService,
-    mailer,
-    tokenSigner: createTokenSigner({ secret: config.sessionSecret }),
-  });
+  const tokenSigner = createTokenSigner({ secret: config.sessionSecret });
+  const accountConfirmation = createAccountConfirmationService({ userService, mailer, tokenSigner });
+  const passwordReset = createPasswordResetService({ userService, mailer, tokenSigner });
 
   const juegoService = createJuegoService({ juegoRepository, userRepository, ...juegoOpciones });
 
@@ -77,7 +76,7 @@ function createApp({
   }));
 
   // Capa API: toda la comunicación cliente-servidor pasa por /api
-  app.use('/api', createApiRouter({ userService, accountConfirmation, juegoService, oauthClients, config, logger }));
+  app.use('/api', createApiRouter({ userService, accountConfirmation, passwordReset, juegoService, oauthClients, config, logger }));
 
   // El backend sirve el frontend (mismo origen)
   app.use(express.static(path.join(__dirname, '..', 'public')));

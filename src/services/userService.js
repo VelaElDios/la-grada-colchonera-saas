@@ -1,6 +1,7 @@
 // Capa de lógica de negocio: reglas de gestión de usuarios.
 // No sabe nada de HTTP ni de cómo se guardan los datos: recibe sus dependencias por parámetro
 // (inyección de dependencias), así puede usar el repositorio en memoria o el de base de datos.
+const { createHash } = require('node:crypto');
 
 const { ROLES, STATUS, AUTH_PROVIDERS, toPublicUser } = require('../models/user');
 const {
@@ -14,6 +15,15 @@ const {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const MIN_PASSWORD_LENGTH = 8;
+
+/**
+ * Huella de las credenciales: cambia en cuanto cambia la contraseña. Se guarda en la sesión al entrar
+ * y en el enlace para restablecer la contraseña, así una contraseña nueva invalida las sesiones
+ * abiertas en otros dispositivos y el enlace solo sirve una vez. No revela nada de la contraseña.
+ */
+function credentialStamp(user) {
+  return createHash('sha256').update(`grada:${user.passwordHash || 'sin-clave'}`).digest('hex').slice(0, 16);
+}
 
 function normalizeEmail(email) {
   return typeof email === 'string' ? email.trim().toLowerCase() : '';
@@ -160,6 +170,62 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
     return toPublicUser(await findUserOrFail(id));
   }
 
+  /** Usuario de una sesión y la huella de sus credenciales (para cerrar sesiones antiguas tras cambiar la contraseña). */
+  async function getSessionUser(id) {
+    const user = await findUserOrFail(id);
+    return { user: toPublicUser(user), stamp: credentialStamp(user) };
+  }
+
+  /** Huella actual de las credenciales de un usuario (ver credentialStamp). */
+  async function getCredentialStamp(id) {
+    return credentialStamp(await findUserOrFail(id));
+  }
+
+  function validateNewPassword(password) {
+    if (typeof password !== 'string' || password.length < MIN_PASSWORD_LENGTH) {
+      throw new ValidationError(`La contraseña debe tener al menos ${MIN_PASSWORD_LENGTH} caracteres`);
+    }
+  }
+
+  /**
+   * Cambia la contraseña desde «Mi cuenta»: hay que dar la actual. Una cuenta creada con Google
+   * no tiene contraseña: para ponerle una se usa «¿Olvidaste tu contraseña?» (demuestra que el correo es suyo).
+   * @returns {Promise<{ user: object, stamp: string }>} El usuario y la huella nueva (para mantener la sesión actual)
+   */
+  async function changePassword(actor, { currentPassword, newPassword } = {}) {
+    if (!actor || actor.status !== STATUS.ACTIVE) {
+      throw new ForbiddenError('No tienes permiso para cambiar la contraseña');
+    }
+    const user = await findUserOrFail(actor.id);
+    if (!user.passwordHash) {
+      throw new ValidationError('Tu cuenta entra con Google y no tiene contraseña. Si quieres una, usa «¿Olvidaste tu contraseña?» al entrar.');
+    }
+    const hasher = requirePasswordHasher();
+    if (typeof currentPassword !== 'string' || !(await hasher.verify(currentPassword, user.passwordHash))) {
+      throw new UnauthorizedError('La contraseña actual no es correcta');
+    }
+    validateNewPassword(newPassword);
+    if (newPassword === currentPassword) {
+      throw new ValidationError('La contraseña nueva debe ser distinta de la actual');
+    }
+    const updated = await userRepository.update(user.id, { passwordHash: await hasher.hash(newPassword) });
+    return { user: toPublicUser(updated), stamp: credentialStamp(updated) };
+  }
+
+  /**
+   * Pone una contraseña nueva sin pedir la anterior (la usa el enlace de recuperación, que ya
+   * demuestra que el correo es de quien lo pide). Solo para cuentas activas.
+   */
+  async function resetPassword(id, newPassword) {
+    const user = await findUserOrFail(id);
+    if (user.status !== STATUS.ACTIVE) {
+      throw new NotFoundError('Usuario no encontrado');
+    }
+    validateNewPassword(newPassword);
+    const updated = await userRepository.update(id, { passwordHash: await requirePasswordHasher().hash(newPassword) });
+    return toPublicUser(updated);
+  }
+
   /** Busca un usuario por su email. Devuelve null si no existe. */
   async function findUserByEmail(email) {
     const user = await userRepository.findByEmail(normalizeEmail(email));
@@ -285,6 +351,10 @@ function createUserService({ userRepository, passwordHasher, requireEmailConfirm
     loginWithOAuth,
     confirmUser,
     getUserById,
+    getSessionUser,
+    getCredentialStamp,
+    changePassword,
+    resetPassword,
     findUserByEmail,
     listUsers,
     isUserActive,

@@ -150,3 +150,14 @@ test('combinaciones a la vista con filtros y firma del contrato animada al ficha
   assert.match(firma, /duracion = 5000/);
   assert.match(firma, /CLUB ATLETICO DE MADRID/);
 });
+
+test('al crear la cuenta hay que repetir la contraseña y deben coincidir', async () => {
+  const { validarRepeticion } = await import('../public/js/ui/formulario.js');
+  assert.equal(validarRepeticion('', 'secreta123'), 'Repite la contraseña.');
+  assert.equal(validarRepeticion('secreta12', 'secreta123'), 'Las contraseñas no coinciden.');
+  assert.equal(validarRepeticion('Secreta123', 'secreta123'), 'Las contraseñas no coinciden.');
+  assert.equal(validarRepeticion('secreta123', 'secreta123'), '');
+  const formulario = fs.readFileSync(path.join(PUBLIC, 'js', 'ui', 'formulario.js'), 'utf8');
+  assert.match(formulario, /id: 'password2'/);
+  assert.match(formulario, /registro \? campo\(/); // el segundo campo solo aparece al registrarse
+});

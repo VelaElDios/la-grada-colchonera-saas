@@ -1,0 +1,151 @@
+From e4432b630d4d3305b19541d9ad862e61724b04a0 Mon Sep 17 00:00:00 2001
+From: Javier Vela <05javiervela@gmail.com>
+Date: Fri, 23 Oct 2026 20:38:15 +0200
+Subject: [PATCH] =?UTF-8?q?[T26]=20P=C3=A1gina=20de=20pol=C3=ADtica=20de?=
+ =?UTF-8?q?=20privacidad=20(para=20publicar=20la=20app=20de=20Google)?=
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 8bit
+
+Co-Authored-By: Claude Sonnet 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01Xtk8uvSyqfF3HPAseuvUA2
+---
+ public/css/vistas.css  |  9 +++++
+ public/index.html      |  2 +-
+ public/privacidad.html | 76 ++++++++++++++++++++++++++++++++++++++++++
+ tests/frontend.test.js |  9 +++++
+ 4 files changed, 95 insertions(+), 1 deletion(-)
+ create mode 100644 public/privacidad.html
+
+diff --git a/public/css/vistas.css b/public/css/vistas.css
+index a48f005..fa46c28 100644
+--- a/public/css/vistas.css
++++ b/public/css/vistas.css
+@@ -63,3 +63,12 @@
+   .tabla td { border: 0; padding: var(--s-1) 0; display: flex; justify-content: space-between; gap: var(--s-3); align-items: center; }
+   .tabla td::before { content: attr(data-etiqueta); color: var(--gris-300); font-size: var(--t-xs); font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; }
+ }
++
++/* ---------- Páginas legales ---------- */
++.legal { max-width: 70ch; margin: 0 auto; display: grid; gap: var(--s-4); }
++.legal h2 { font-size: var(--t-xl); margin-top: var(--s-5); }
++.legal p, .legal li { color: var(--gris-300); }
++.legal strong { color: var(--blanco); }
++.legal code { padding: 1px 6px; border-radius: 6px; background: var(--azul-600); color: var(--blanco); font-size: 0.9em; }
++.legal__lista { display: grid; gap: var(--s-3); padding-left: var(--s-5); list-style: disc; }
++.pie a { color: var(--gris-300); }
+diff --git a/public/index.html b/public/index.html
+index 3eb3774..07b0f90 100644
+--- a/public/index.html
++++ b/public/index.html
+@@ -23,7 +23,7 @@
+       <noscript><p class="alerta alerta--error">La Grada Colchonera necesita JavaScript para funcionar.</p></noscript>
+     </div>
+   </main>
+-  <footer class="pie">Proyecto de aficionado sin relación oficial con el Club Atlético de Madrid.</footer>
++  <footer class="pie">Proyecto de aficionado sin relación oficial con el Club Atlético de Madrid. · <a href="/privacidad.html">Privacidad</a></footer>
+   <script type="module" src="/js/ui.js"></script>
+ </body>
+ </html>
+diff --git a/public/privacidad.html b/public/privacidad.html
+new file mode 100644
+index 0000000..77855a0
+--- /dev/null
++++ b/public/privacidad.html
+@@ -0,0 +1,76 @@
++<!DOCTYPE html>
++<html lang="es">
++<head>
++  <meta charset="UTF-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
++  <title>Política de privacidad · La Grada Colchonera</title>
++  <meta name="description" content="Qué datos guarda La Grada Colchonera, para qué y cómo puedes borrarlos.">
++  <meta name="theme-color" content="#0b1230">
++  <link rel="preload" href="/fonts/plus-jakarta-sans-latin-wght-normal.woff2" as="font" type="font/woff2" crossorigin>
++  <link rel="stylesheet" href="/css/tokens.css">
++  <link rel="stylesheet" href="/css/base.css">
++  <link rel="stylesheet" href="/css/componentes.css">
++  <link rel="stylesheet" href="/css/vistas.css">
++</head>
++<body>
++  <a class="salto" href="#contenido">Saltar al contenido</a>
++  <header class="cabecera">
++    <div class="cabecera__interior">
++      <a class="logo" href="/#/" aria-label="La Grada Colchonera, ir al inicio">
++        <span class="logo__escudo" aria-hidden="true"></span>
++        <span class="logo__texto">La Grada <strong>Colchonera</strong></span>
++      </a>
++      <nav class="nav" aria-label="Principal"><ul class="nav__lista"><li><a class="nav__enlace" href="/#/">Inicio</a></li></ul></nav>
++    </div>
++  </header>
++
++  <main class="contenido" id="contenido" tabindex="-1">
++    <article class="legal">
++      <h1 class="pagina__titulo">Política de privacidad</h1>
++      <p class="texto-suave">Última actualización: 23 de octubre de 2026</p>
++
++      <p>La Grada Colchonera es un proyecto de aficionado y académico (asignatura PIS), sin relación oficial con el Club Atlético de Madrid. Esta página explica, sin letra pequeña, qué datos guarda y qué hace con ellos.</p>
++
++      <h2>Quién es el responsable</h2>
++      <p>Javier Vela, estudiante de Ingeniería Informática. Contacto: <a href="mailto:05javiervela@gmail.com">05javiervela@gmail.com</a>.</p>
++
++      <h2>Qué datos guardamos</h2>
++      <ul class="legal__lista">
++        <li><strong>Email.</strong> Para identificar tu cuenta y enviarte el correo de confirmación.</li>
++        <li><strong>Contraseña.</strong> Solo si te registras con email: se guarda como hash bcrypt, nunca en claro. Si entras con Google, no recibimos ni guardamos ninguna contraseña tuya.</li>
++        <li><strong>Datos de la cuenta.</strong> Rol, estado (pendiente, activa o eliminada), proveedor de acceso (email o Google) y fecha de alta.</li>
++        <li><strong>Cookie de sesión.</strong> Una sola cookie técnica, <code>grada.sid</code>, que te mantiene conectado durante 7 días. No hay cookies de publicidad ni de seguimiento.</li>
++        <li><strong>En tu navegador.</strong> Tu mejor marca del juego y si has silenciado el sonido se guardan solo en tu dispositivo (almacenamiento local) y no se envían al servidor.</li>
++        <li><strong>Registros del servidor.</strong> Para detectar errores y abusos se anotan eventos como inicios de sesión fallidos (con el email y la dirección IP, sin contraseñas).</li>
++      </ul>
++
++      <h2>Qué recibimos de Google</h2>
++      <p>Si eliges «Entrar con Google» solo pedimos los permisos básicos de identidad (<code>openid</code>, <code>email</code> y <code>profile</code>) y usamos únicamente tu <strong>email verificado</strong> para crear o abrir tu cuenta. No accedemos a tu correo, contactos, archivos ni a ningún otro servicio de Google.</p>
++
++      <h2>Para qué los usamos</h2>
++      <p>Solo para que puedas registrarte, entrar y jugar, y para mantener la aplicación segura. No vendemos ni cedemos tus datos, no hacemos perfiles ni enviamos publicidad.</p>
++
++      <h2>Quién más interviene</h2>
++      <ul class="legal__lista">
++        <li><strong>Google Cloud (Cloud Run)</strong>: aloja la aplicación.</li>
++        <li><strong>Neon</strong>: base de datos PostgreSQL donde se guardan las cuentas.</li>
++        <li><strong>Gmail (SMTP)</strong>: envía los correos de confirmación.</li>
++        <li><strong>Google (inicio de sesión)</strong>: solo si eliges entrar con tu cuenta de Google.</li>
++      </ul>
++
++      <h2>Cuánto tiempo los conservamos y cómo borrarlos</h2>
++      <p>Mientras tengas la cuenta. Puedes darte de baja cuando quieras desde <a href="/#/perfil">Mi cuenta → Eliminar mi cuenta</a>: la cuenta queda eliminada y no se puede volver a usar. Si quieres que se borren por completo tus datos, escríbenos al correo de contacto y lo haremos.</p>
++
++      <h2>Tus derechos</h2>
++      <p>Según el Reglamento General de Protección de Datos (RGPD) puedes pedir acceso, rectificación, supresión, limitación u oposición al tratamiento de tus datos, escribiendo al correo de contacto. También puedes reclamar ante la Agencia Española de Protección de Datos (<a href="https://www.aepd.es" rel="noopener">aepd.es</a>).</p>
++
++      <h2>Cambios</h2>
++      <p>Si esta política cambia, se actualizará la fecha de arriba.</p>
++
++      <p><a class="btn btn--secundario" href="/#/">Volver a la web</a></p>
++    </article>
++  </main>
++
++  <footer class="pie">Proyecto de aficionado sin relación oficial con el Club Atlético de Madrid. · <a href="/privacidad.html">Privacidad</a></footer>
++</body>
++</html>
+diff --git a/tests/frontend.test.js b/tests/frontend.test.js
+index c90a92e..ce70420 100644
+--- a/tests/frontend.test.js
++++ b/tests/frontend.test.js
+@@ -78,3 +78,12 @@ test('los módulos del frontend se pueden importar (sin errores de sintaxis ni d
+   for (const f of modulos) await import(pathToFileURL(f).href);
+   await import(pathToFileURL(path.join(PUBLIC, 'js', 'api.js')).href);
+ });
++
++test('la política de privacidad existe, se sirve y está enlazada desde el pie', async () => {
++  const res = await fetch(`${baseUrl}/privacidad.html`);
++  assert.equal(res.status, 200);
++  const html = await res.text();
++  assert.match(html, /Política de privacidad/);
++  assert.match(html, /RGPD/);
++  assert.match(fs.readFileSync(path.join(PUBLIC, 'index.html'), 'utf8'), /href="\/privacidad\.html"/);
++});
+-- 
+2.43.0
+

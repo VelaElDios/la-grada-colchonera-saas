@@ -135,6 +135,7 @@
 
 .alerta { padding: var(--s-3) var(--s-4); border-radius: var(--r-md); font-size: var(--t-sm); font-weight: 600; border: 1px solid; }
 .alerta--error { background: rgb(var(--rojo-rgb) / 0.18); border-color: rgb(255 123 139 / 0.6); color: #ffd5da; }
+.alerta--exito { background: rgb(46 204 113 / 0.14); border-color: rgb(46 204 113 / 0.55); color: #d4f8e2; }
 
 /* ---------- Carga, vacío y error ---------- */
 .spinner { display: inline-flex; align-items: center; gap: var(--s-2); color: var(--gris-300); font-size: var(--t-sm); }

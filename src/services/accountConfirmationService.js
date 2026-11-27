@@ -7,14 +7,11 @@
 // No sabe nada de HTTP ni de SMTP: recibe el servicio de usuarios, el de correo y el firmador.
 const { STATUS } = require('../models/user');
 const { ValidationError } = require('./errors');
+const { crearCorreo } = require('./plantillaCorreo');
 
 const PURPOSE = 'confirmar-correo';
 const DEFAULT_TTL_MS = 24 * 60 * 60 * 1000; // el enlace caduca a las 24 horas
 const CONFIRM_PATH = '/api/auth/confirm';
-
-const escapeHtml = (texto) => texto.replace(/[&<>"']/g, (c) => ({
-  '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-}[c]));
 
 /**
  * @param {object} deps
@@ -30,27 +27,17 @@ function createAccountConfirmationService({ userService, mailer, tokenSigner, tt
 
   function buildMessage(user, link) {
     const horas = Math.round(ttlMs / (60 * 60 * 1000));
-    const text = [
-      '¡Hola!',
-      '',
-      'Gracias por unirte a La Grada Colchonera. Para activar tu cuenta, abre este enlace:',
-      link,
-      '',
-      `El enlace caduca en ${horas} horas. Si no has sido tú, ignora este correo.`,
-    ].join('\n');
-    const html = `
-      <p>¡Hola!</p>
-      <p>Gracias por unirte a <strong>La Grada Colchonera</strong>. Para activar tu cuenta, pulsa el botón:</p>
-      <p><a href="${escapeHtml(link)}" style="background:#c8102e;color:#fff;padding:10px 18px;border-radius:6px;text-decoration:none">Confirmar mi cuenta</a></p>
-      <p>O copia este enlace en el navegador:<br>${escapeHtml(link)}</p>
-      <p>El enlace caduca en ${horas} horas. Si no has sido tú, ignora este correo.</p>`;
-    return {
-      to: user.email,
-      subject: 'Confirma tu cuenta en La Grada Colchonera',
-      text,
-      html,
-      link,
-    };
+    const correo = crearCorreo({
+      asunto: 'Confirma tu cuenta en La Grada Colchonera',
+      titulo: '¡Bienvenido a la grada!',
+      previa: 'Confirma tu correo para empezar a jugar.',
+      parrafos: [
+        'Gracias por unirte a La Grada Colchonera. Solo falta un paso: confirma que este correo es tuyo para activar tu cuenta y empezar a jugar.',
+      ],
+      boton: { texto: 'Confirmar mi cuenta', url: link },
+      aviso: `El enlace caduca en ${horas} horas. Si no has creado tú esta cuenta, ignora este correo.`,
+    });
+    return { to: user.email, ...correo, link };
   }
 
   /**

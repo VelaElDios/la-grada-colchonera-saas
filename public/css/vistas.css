@@ -28,6 +28,7 @@
 .auth__titulo { font-size: var(--t-2xl); }
 .auth__texto { color: var(--gris-300); }
 .auth__pie { font-size: var(--t-sm); color: var(--gris-300); text-align: center; }
+.auth__olvido { font-size: var(--t-sm); text-align: center; }
 
 /* ---------- Perfil ---------- */
 .perfil { display: grid; gap: var(--s-4); grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); align-items: start; margin-top: var(--s-5); }
@@ -36,6 +37,9 @@
 .perfil__chapas { display: flex; gap: var(--s-2); flex-wrap: wrap; justify-content: center; }
 .perfil__desde { font-size: var(--t-xs); color: var(--gris-300); }
 .perfil__marca { display: grid; gap: var(--s-3); justify-items: start; }
+.perfil__contrasena { display: grid; gap: var(--s-3); grid-column: 1 / -1; }
+.perfil__contrasena .formulario { max-width: 440px; }
+.perfil__nota { font-size: var(--t-sm); color: var(--gris-300); }
 .zona-peligro { display: grid; gap: var(--s-3); justify-items: start; border-color: rgb(255 123 139 / 0.4); grid-column: 1 / -1; }
 .zona-peligro p { color: var(--gris-300); }
 

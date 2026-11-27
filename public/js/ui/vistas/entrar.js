@@ -51,6 +51,7 @@ export function montar(raiz, { navegar, destino }) {
     h('h1', { class: 'auth__titulo', tabIndex: -1 }, 'Entrar'),
     h('p', { class: 'auth__texto' }, 'Vuelve a la grada con tu email y contraseña.'),
     formulario.nodo,
+    h('p', { class: 'auth__olvido' }, h('a', { href: '#/recuperar' }, '¿Olvidaste tu contraseña?')),
     reenvio,
     crearBloqueGoogle('Entrar con Google'),
     h('p', { class: 'auth__pie' }, '¿Aún no tienes cuenta? ', h('a', { href: '#/registro' }, 'Créala gratis')),

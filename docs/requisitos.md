@@ -52,6 +52,8 @@ Los requisitos del enunciado (Hitos 1–4) y la prueba técnica. La revisión fr
 | RF-11 | Inicio de sesión con un proveedor externo (Google, OAuth 2.0) | hecho | 4 | P15 | `googleOAuth.js`, `GET /api/auth/google`, `GET /api/auth/google/callback`, `userService.loginWithOAuth` | `googleOAuth`, `userService` |
 | RF-12 | Manejo de errores con información clara al usuario | hecho | 4 | P17 | `errorHandler.js`, `componentes.js`, `avisos.js`, `api.js` (timeout) | `api.*`, `frontend` |
 | RF-13 | Prueba técnica: solo dominios de correo permitidos | hecho | Prueba | — | `domainPolicy.js`, `POST /api/prueba/dominio` | `domainPolicy` (13) |
+| RF-14 | Repetir la contraseña al registrarse, recuperarla por correo y cambiarla desde «Mi cuenta»; al cambiarla se cierran las sesiones de otros dispositivos (issue #61) | hecho | Sprint 3 | — | `formulario.js`, `passwordResetService`, `userService.changePassword`, `POST /api/auth/forgot-password`, `POST /api/auth/reset-password`, `PUT /api/users/me/password`, `currentUser` (huella) | `contrasenas`, `frontend` |
+| RF-15 | Correos (confirmación y recuperación) con una plantilla HTML con la marca y versión en texto plano (issue #61) | hecho | Sprint 3 | — | `plantillaCorreo.js` | `contrasenas` |
 
 ## Requisitos funcionales del juego (Sprint 2)
 

@@ -526,9 +526,12 @@ Todas las rutas están bajo `/api`, reciben y devuelven JSON y usan la cookie de
 | GET | `/api/auth/me` | Sesión | Devuelve el usuario con sesión iniciada |
 | GET | `/api/auth/confirm?token=…` | Público | Confirma la cuenta (enlace del correo) y redirige a la web con un aviso |
 | POST | `/api/auth/resend-confirmation` | Público | Reenvía el correo de confirmación (`{ "email": "..." }`): `202`, igual exista o no la cuenta |
+| POST | `/api/auth/forgot-password` | Público | «¿Olvidaste tu contraseña?» (`{ "email": "..." }`): envía un enlace de un solo uso que caduca en 1 hora; `202`, igual exista o no la cuenta |
+| POST | `/api/auth/reset-password` | Público | Contraseña nueva con el token del enlace (`{ "token", "password" }`); cierra las sesiones abiertas de esa cuenta |
 | GET | `/api/auth/providers` | Público | Qué proveedores externos hay disponibles (`{ "google": true \| false }`) |
 | GET | `/api/auth/google` | Público | Inicia el acceso con Google (redirige a Google) |
 | GET | `/api/auth/google/callback` | Público | Vuelta de Google: abre sesión y redirige a la web |
+| PUT | `/api/users/me/password` | Sesión | Cambia la propia contraseña (`{ "currentPassword", "newPassword" }`): `204`; mantiene esta sesión y cierra las de otros dispositivos |
 | GET | `/api/users` | Admin | Listado de usuarios (email, rol, estado, proveedor y alta; nunca el hash) |
 | GET | `/api/users/:id/active` | Admin | Indica si un usuario está activo: confirmado y no eliminado (no si está conectado) |
 | PATCH | `/api/users/:id/role` | Admin | Cambia el rol (`{ "role": "admin" \| "user" }`) |

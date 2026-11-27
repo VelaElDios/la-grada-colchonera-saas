@@ -14,6 +14,18 @@ function createUsersRouter({ userService, juegoService = null }) {
   const soloAdmin = requireRole(ROLES.ADMIN);
   const propioOAdmin = requireSelfOrRole(ROLES.ADMIN);
 
+  // Cambiar la propia contraseña: { currentPassword, newPassword }. Esta sesión sigue abierta;
+  // las de otros dispositivos se cierran (cambia la huella de las credenciales).
+  router.put('/me/password', async (req, res) => {
+    const { stamp } = await userService.changePassword(req.user, {
+      currentPassword: req.body?.currentPassword,
+      newPassword: req.body?.newPassword,
+    });
+    req.session.huella = stamp;
+    req.log.info('auth.password_changed', 'Contraseña cambiada desde Mi cuenta', { userId: req.user.id });
+    res.status(204).end();
+  });
+
   // Listado de usuarios con email, rol y estado (panel de administración)
   router.get('/', soloAdmin, async (req, res) => {
     res.json(await userService.listUsers());

@@ -68,6 +68,9 @@ export const api = {
   me: () => peticion('GET', '/auth/me'),
   getProviders: () => peticion('GET', '/auth/providers'),
   resendConfirmation: (email) => peticion('POST', '/auth/resend-confirmation', { email }),
+  forgotPassword: (email) => peticion('POST', '/auth/forgot-password', { email }),
+  resetPassword: (token, password) => peticion('POST', '/auth/reset-password', { token, password }),
+  changePassword: (currentPassword, newPassword) => peticion('PUT', '/users/me/password', { currentPassword, newPassword }),
 
   // Usuarios
   listUsers: () => peticion('GET', '/users'),
