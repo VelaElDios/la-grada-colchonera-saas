@@ -22,7 +22,7 @@ function publicBaseUrl(req, publicUrl) {
   return publicUrl || `${req.protocol}://${req.get('host')}`;
 }
 
-function createAuthRouter({ userService, accountConfirmation, oauthClients = {}, sessionCookieName, publicUrl }) {
+function createAuthRouter({ userService, accountConfirmation, passwordReset, oauthClients = {}, sessionCookieName, publicUrl }) {
   const router = express.Router();
 
   router.post('/register', async (req, res) => {
@@ -83,6 +83,31 @@ function createAuthRouter({ userService, accountConfirmation, oauthClients = {},
     });
   });
 
+  // «¿Olvidaste tu contraseña?»: envía un enlace para poner otra. La respuesta es la misma
+  // exista o no la cuenta (y aunque falle el correo), para no revelar qué emails están registrados.
+  router.post('/forgot-password', async (req, res) => {
+    const email = req.body?.email;
+    if (typeof email !== 'string' || !email.trim()) {
+      throw new ValidationError('Escribe el email de tu cuenta');
+    }
+    try {
+      const sent = await passwordReset.requestReset(email, { baseUrl: publicBaseUrl(req, publicUrl) });
+      if (sent) req.log.info('mail.password_reset_sent', 'Correo para cambiar la contraseña enviado', { email: email.trim().toLowerCase() });
+    } catch (error) {
+      req.log.error('mail.failed', 'No se ha podido enviar el correo para cambiar la contraseña', { error });
+    }
+    res.status(202).json({
+      message: 'Si hay una cuenta con ese email, te hemos enviado un enlace para cambiar la contraseña. Mira también en spam.',
+    });
+  });
+
+  // Contraseña nueva con el token del enlace: { token, password }
+  router.post('/reset-password', async (req, res) => {
+    const user = await passwordReset.resetPassword(req.body?.token, req.body?.password);
+    req.log.info('auth.password_reset', 'Contraseña cambiada con el enlace del correo', { userId: user.id });
+    res.json({ message: 'Contraseña cambiada. Ya puedes entrar con la nueva.' });
+  });
+
   router.post('/login', async (req, res) => {
     let user;
     try {
@@ -102,6 +127,7 @@ function createAuthRouter({ userService, accountConfirmation, oauthClients = {},
     // Nueva sesión al iniciar sesión (evita la fijación de sesión)
     await regenerate(req.session);
     req.session.userId = user.id;
+    req.session.huella = await userService.getCredentialStamp(user.id);
     req.log.info('auth.login', 'Inicio de sesión', { userId: user.id, role: user.role });
     res.json(user);
   });
@@ -154,6 +180,7 @@ function createAuthRouter({ userService, accountConfirmation, oauthClients = {},
       });
       await regenerate(req.session);
       req.session.userId = user.id;
+      req.session.huella = await userService.getCredentialStamp(user.id);
       req.log.info('auth.login', 'Inicio de sesión con Google', { userId: user.id, role: user.role, created });
       return res.redirect(303, `/?aviso=${created ? 'google-cuenta-creada' : 'google-ok'}#/jugar`);
     } catch (error) {

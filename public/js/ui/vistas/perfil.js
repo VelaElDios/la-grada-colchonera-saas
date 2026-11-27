@@ -6,6 +6,56 @@ import { avisar } from '../avisos.js';
 import { confirmar } from '../modal.js';
 import { insignia, enlaceBoton, mensajeDeError } from '../componentes.js';
 import { leerMarca, textoMarca } from '../../game/marca.js';
+import { campo, crearFormulario, botonVerContrasenas, validarPassword, validarRepeticion, MIN_PASSWORD } from '../formulario.js';
+
+/** Tarjeta «Cambiar contraseña»: pide la actual y la nueva dos veces. Cierra las sesiones de otros dispositivos. */
+function tarjetaContrasena() {
+  const actual = campo({
+    id: 'password-actual',
+    etiqueta: 'Contraseña actual',
+    tipo: 'password',
+    autocompletar: 'current-password',
+    validar: (v) => (v ? '' : 'Escribe tu contraseña actual.'),
+  });
+  const nueva = campo({
+    id: 'password-nueva',
+    etiqueta: 'Contraseña nueva',
+    tipo: 'password',
+    autocompletar: 'new-password',
+    ayuda: `Mínimo ${MIN_PASSWORD} caracteres.`,
+    validar: (v) => validarPassword(v, { registro: true }) || (v === actual.input.value ? 'Debe ser distinta de la actual.' : ''),
+  });
+  const repetida = campo({
+    id: 'password-nueva2',
+    etiqueta: 'Repite la contraseña nueva',
+    tipo: 'password',
+    autocompletar: 'new-password',
+    validar: (v) => validarRepeticion(v, nueva.input.value),
+  });
+  actual.nodo.querySelector('.campo__caja').append(botonVerContrasenas(actual.input, nueva.input, repetida.input));
+  nueva.input.addEventListener('input', () => { if (repetida.input.value) repetida.comprobar(); });
+
+  const formulario = crearFormulario({
+    campos: [actual, nueva, repetida],
+    textoBoton: 'Cambiar contraseña',
+    textoOcupado: 'Guardando…',
+    contexto: 'cambiar contraseña',
+    claseBoton: 'btn--secundario btn--ancho',
+    alEnviar: async () => {
+      await api.changePassword(actual.input.value, nueva.input.value);
+      [actual, nueva, repetida].forEach((c) => c.vaciar());
+      avisar('Contraseña cambiada. Se ha cerrado la sesión en tus otros dispositivos.', 'exito');
+    },
+  });
+
+  return h(
+    'section',
+    { class: 'tarjeta perfil__contrasena', attrs: { 'aria-labelledby': 'contrasena-t' } },
+    h('h2', { class: 'tarjeta__titulo', id: 'contrasena-t' }, 'Cambiar contraseña'),
+    h('p', { class: 'perfil__nota' }, '¿Entras con Google y no tienes contraseña? Puedes crear una con «¿Olvidaste tu contraseña?» en la pantalla de entrar.'),
+    formulario.nodo,
+  );
+}
 
 export function montar(raiz, { navegar }) {
   const u = estado.usuario;
@@ -63,6 +113,7 @@ export function montar(raiz, { navegar }) {
         h('p', {}, textoMarca(marca)),
         enlaceBoton(marca ? 'Superar mi marca' : 'Jugar mi primera partida', '/jugar'),
       ),
+      tarjetaContrasena(),
       h(
         'section',
         { class: 'tarjeta zona-peligro', attrs: { 'aria-labelledby': 'baja-t' } },

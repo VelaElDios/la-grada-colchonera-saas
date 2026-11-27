@@ -158,8 +158,8 @@ La lista completa de rutas, con su acceso y su contrato, está en el [README](..
 | Grupo | Rutas | Acceso |
 |---|---|---|
 | Salud | `GET /api/health` | Público |
-| Autenticación | `POST register`, `POST login`, `POST logout`, `GET me`, `GET confirm`, `POST resend-confirmation`, `GET providers`, `GET google`, `GET google/callback` | Público (salvo `me`) |
-| Usuarios | `GET /users`, `GET /users/:id/active`, `PATCH /users/:id/role`, `DELETE /users/:id` | Admin (la baja, propio o admin) |
+| Autenticación | `POST register`, `POST login`, `POST logout`, `GET me`, `GET confirm`, `POST resend-confirmation`, `POST forgot-password`, `POST reset-password`, `GET providers`, `GET google`, `GET google/callback` | Público (salvo `me`) |
+| Usuarios | `PUT /users/me/password`, `GET /users`, `GET /users/:id/active`, `PATCH /users/:id/role`, `DELETE /users/:id` | Admin (la contraseña y la baja, el propio usuario) |
 | Juego | `GET perfil`, `POST partidas`, `POST partidas/:id/fin`, `POST contratar`, `POST entrenar`, `PUT identidad`, `GET ranking`, `POST desbloquear` | Sesión (`desbloquear`, admin) |
 | Prueba técnica | `POST /api/prueba/dominio` | Público |
 

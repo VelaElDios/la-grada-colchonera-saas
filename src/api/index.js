@@ -9,7 +9,7 @@ const { currentUser, requireAuth } = require('./currentUser');
 const { errorHandler, notFoundHandler } = require('./errorHandler');
 const { requestLogger } = require('./requestLogger');
 
-function createApiRouter({ userService, accountConfirmation, juegoService, oauthClients, config, logger }) {
+function createApiRouter({ userService, accountConfirmation, passwordReset, juegoService, oauthClients, config, logger }) {
   const router = express.Router();
 
   router.use(requestLogger({ logger }));
@@ -23,6 +23,7 @@ function createApiRouter({ userService, accountConfirmation, juegoService, oauth
   router.use('/auth', createAuthRouter({
     userService,
     accountConfirmation,
+    passwordReset,
     oauthClients,
     sessionCookieName: config.sessionCookieName,
     publicUrl: config.publicUrl,

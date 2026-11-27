@@ -1,6 +1,7 @@
 // Identifica al usuario que hace la petición a partir de su sesión.
-// La sesión solo guarda el id del usuario; en cada petición se vuelve a leer de la capa de lógica,
-// así un usuario eliminado deja de estar autenticado aunque conserve la cookie.
+// La sesión solo guarda el id del usuario y la huella de sus credenciales; en cada petición se vuelve a
+// leer de la capa de lógica, así un usuario eliminado deja de estar autenticado aunque conserve la cookie,
+// y al cambiar la contraseña se cierran las sesiones abiertas en otros dispositivos.
 
 const { STATUS } = require('../models/user');
 
@@ -10,12 +11,14 @@ function currentUser({ userService }) {
     const userId = req.session?.userId;
     if (userId) {
       try {
-        const user = await userService.getUserById(userId);
-        if (user.status === STATUS.ACTIVE) req.user = user;
+        const { user, stamp } = await userService.getSessionUser(userId);
+        // Las sesiones anteriores a la huella (sin `huella`) siguen valiendo hasta que caduquen
+        const huellaValida = req.session.huella === undefined || req.session.huella === stamp;
+        if (user.status === STATUS.ACTIVE && huellaValida) req.user = user;
       } catch {
         // el usuario ya no existe
       }
-      if (!req.user) delete req.session.userId;
+      if (!req.user) { delete req.session.userId; delete req.session.huella; }
     }
     next();
   };
